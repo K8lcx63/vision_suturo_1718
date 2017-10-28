@@ -1,0 +1,8 @@
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/CMakeFiles/_catkin_empty_exported_target.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/CMakeFiles/clean_test_results.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/CMakeFiles/download_extra_data.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/CMakeFiles/doxygen.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/gtest/CMakeFiles/gtest.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/gtest/CMakeFiles/gtest_main.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/CMakeFiles/run_tests.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/vision_base/CMakeFiles/tests.dir

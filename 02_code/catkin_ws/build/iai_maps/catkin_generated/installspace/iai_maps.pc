@@ -1,0 +1,8 @@
+prefix=/home/tammo/Git/suturo-vision/02_code/catkin_ws/install
+
+Name: iai_maps
+Description: Description of iai_maps
+Version: 1.0.0
+Cflags: 
+Libs: -L/home/tammo/Git/suturo-vision/02_code/catkin_ws/install/lib 
+Requires: 

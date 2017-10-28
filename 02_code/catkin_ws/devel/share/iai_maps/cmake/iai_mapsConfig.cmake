@@ -1,0 +1,1 @@
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/iai_maps/share/iai_maps/cmake/iai_mapsConfig.cmake

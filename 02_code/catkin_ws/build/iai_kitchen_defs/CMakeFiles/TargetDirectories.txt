@@ -1,0 +1,8 @@
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/CMakeFiles/_catkin_empty_exported_target.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/CMakeFiles/clean_test_results.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/CMakeFiles/download_extra_data.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/CMakeFiles/doxygen.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/gtest/CMakeFiles/gtest.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/gtest/CMakeFiles/gtest_main.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/CMakeFiles/run_tests.dir
+/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/CMakeFiles/tests.dir

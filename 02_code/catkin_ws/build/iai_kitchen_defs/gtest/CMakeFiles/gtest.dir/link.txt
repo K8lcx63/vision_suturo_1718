@@ -1,0 +1,1 @@
+/usr/bin/c++  -fPIC    -shared -Wl,-soname,libgtest.so -o libgtest.so CMakeFiles/gtest.dir/src/gtest-all.cc.o  -L/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/gtest/src -lpthread -Wl,-rpath,/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_kitchen_defs/gtest/src 

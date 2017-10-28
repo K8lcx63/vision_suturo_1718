@@ -1,0 +1,6 @@
+devel_space: /home/tammo/Git/suturo-vision/02_code/catkin_ws/devel
+install: false
+install_space: /home/tammo/Git/suturo-vision/02_code/catkin_ws/install
+profile: default
+source_space: /home/tammo/Git/suturo-vision/02_code/catkin_ws/src
+workspace: /home/tammo/Git/suturo-vision/02_code/catkin_ws

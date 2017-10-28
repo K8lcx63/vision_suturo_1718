@@ -1,0 +1,8 @@
+prefix=/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/chemistry_laboratory
+
+Name: chemistry_laboratory
+Description: Description of chemistry_laboratory
+Version: 0.0.0
+Cflags: 
+Libs: -L/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/chemistry_laboratory/lib 
+Requires: 
