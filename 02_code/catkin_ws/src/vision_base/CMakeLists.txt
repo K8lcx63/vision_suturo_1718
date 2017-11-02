@@ -132,7 +132,7 @@ include_directories(
 # add_executable(${PROJECT_NAME}_node src/vision_base_node.cpp)
 add_executable(listener src/listener.cpp)
 target_link_libraries(listener ${catkin_LIBRARIES})
-add_dependencies(listener beginner_tutorials_generate_messages_cpp)
+add_dependencies(listener beginner_tutorials_generate_messages_cpp gazebo_ros)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
