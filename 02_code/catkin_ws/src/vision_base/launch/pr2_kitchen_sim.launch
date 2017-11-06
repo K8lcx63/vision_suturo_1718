@@ -11,6 +11,7 @@
     <arg name="gui" value="true"/>
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
+    <!--arg name="physics" default="ode"/-->
   </include>
   <!--
   <node
@@ -28,4 +29,5 @@
   <!-- Load and Start Default Controllers -->
   <include file="$(find pr2_controller_configuration_gazebo)/launch/pr2_default_controllers.launch" />
    <node name="spawn_eistee" pkg="gazebo_ros" type="spawn_model" args="-file $(find vision_base)/models/pfanner_grune_icetea/model.sdf -sdf -model eistee" respawn="false" output="screen"/>
+   <node name="listener" pkg="vision_base" type="listener" output="screen"/>
 </launch>

@@ -1,14 +1,14 @@
 <?xml version="1.0" ?>
 <sdf version="1.4">
-    <world name="default">
-  
 <model name="eistee">
+  <pose>1.35 0.0 1.1212 0 0 0</pose>
+
     <static>false</static>
-    
     <link name="eistee_link">
-      <pose>-1 1 1.1 0 0 0</pose>
       <gravity>true</gravity>
+      <!--kinematic>true</kinematic-->	
       <collision name="collision">
+        <pose>0 0 0 0 0 0</pose>
         <geometry>
           <mesh>
             <uri>model://pfanner_grune_icetea/pfanner_grune_icetea.dae</uri>
@@ -16,13 +16,13 @@
         </geometry>
       </collision>
       <visual name="visual">
+        <!--pose>0 0 0 0 0 0</pose-->
         <geometry>
           <mesh>
             <uri>model://pfanner_grune_icetea/pfanner_grune_icetea.dae</uri>
           </mesh>
         </geometry>
-      </visual>
+      </visual-->
     </link>
   </model>
-</world>
 </sdf>

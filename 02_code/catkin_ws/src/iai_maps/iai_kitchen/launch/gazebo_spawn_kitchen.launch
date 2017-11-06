@@ -38,4 +38,7 @@
     <remap from="joint_states" to="kitchen_joint_states"/>
     <param name="publish_frequency" value="3"/>
   </node>
+
+  <!--node name="spawn_eistee" pkg="gazebo_ros" type="spawn_model" args="-sdf -file ${find vision_base}/models/pfanner_grune_icetea/model.sdf -model eistee"/-->
+
 </launch>
