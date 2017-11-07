@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <sdf version="1.4">
 <model name="eistee">
-  <pose>1.35 0.5 1.1212 0 0 0</pose>
+  <pose>1.35 0.5 1.02 0 0 0</pose>
 
     <static>false</static>
     <link name="eistee_link">
@@ -14,7 +14,7 @@
             <iyz>0</iyz>
             <izz>1</izz>
           </inertia>
-          <mass>150.0</mass>
+          <mass>2000.0</mass>
         </inertial>
       <gravity>true</gravity>
       <!--kinematic>true</kinematic-->	
