@@ -1,1 +1,0 @@
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/vision_base/share/vision_base/cmake/vision_baseConfig.cmake

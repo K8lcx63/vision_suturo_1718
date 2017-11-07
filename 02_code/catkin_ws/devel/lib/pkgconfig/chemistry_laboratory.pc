@@ -1,1 +1,0 @@
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/chemistry_laboratory/lib/pkgconfig/chemistry_laboratory.pc

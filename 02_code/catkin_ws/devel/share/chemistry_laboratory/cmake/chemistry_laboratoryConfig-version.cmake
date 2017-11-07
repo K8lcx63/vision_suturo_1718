@@ -1,1 +1,0 @@
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/chemistry_laboratory/share/chemistry_laboratory/cmake/chemistry_laboratoryConfig-version.cmake

@@ -1,8 +1,0 @@
-prefix=/home/tammo/Git/suturo-vision/02_code/catkin_ws/install
-
-Name: vision_base
-Description: Description of vision_base
-Version: 0.0.0
-Cflags: 
-Libs: -L/home/tammo/Git/suturo-vision/02_code/catkin_ws/install/lib 
-Requires: 

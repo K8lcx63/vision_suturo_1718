@@ -1,1 +1,0 @@
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/iai_kitchen/share/iai_kitchen/cmake/iai_kitchenConfig-version.cmake

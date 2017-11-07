@@ -1,8 +1,0 @@
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/CMakeFiles/_catkin_empty_exported_target.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/CMakeFiles/clean_test_results.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/CMakeFiles/download_extra_data.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/CMakeFiles/doxygen.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/gtest/CMakeFiles/gtest.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/gtest/CMakeFiles/gtest_main.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/CMakeFiles/run_tests.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/chemistry_laboratory/CMakeFiles/tests.dir

@@ -1,4 +1,0 @@
-iai_maps/chemistry_laboratory
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/chemistry_laboratory/share/chemistry_laboratory/cmake/chemistry_laboratoryConfig.cmake /home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/share/chemistry_laboratory/cmake/chemistry_laboratoryConfig.cmake
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/chemistry_laboratory/share/chemistry_laboratory/cmake/chemistry_laboratoryConfig-version.cmake /home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/share/chemistry_laboratory/cmake/chemistry_laboratoryConfig-version.cmake
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/.private/chemistry_laboratory/lib/pkgconfig/chemistry_laboratory.pc /home/tammo/Git/suturo-vision/02_code/catkin_ws/devel/lib/pkgconfig/chemistry_laboratory.pc

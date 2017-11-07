@@ -1,8 +1,0 @@
-prefix=/home/tammo/Git/suturo-vision/02_code/catkin_ws/install
-
-Name: iai_kitchen_defs
-Description: Description of iai_kitchen_defs
-Version: 1.0.0
-Cflags: 
-Libs: -L/home/tammo/Git/suturo-vision/02_code/catkin_ws/install/lib 
-Requires: xacro

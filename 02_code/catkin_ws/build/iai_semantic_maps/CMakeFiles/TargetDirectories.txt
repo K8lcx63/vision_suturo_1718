@@ -1,8 +1,0 @@
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/CMakeFiles/_catkin_empty_exported_target.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/CMakeFiles/clean_test_results.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/CMakeFiles/download_extra_data.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/CMakeFiles/doxygen.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/gtest/CMakeFiles/gtest.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/gtest/CMakeFiles/gtest_main.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/CMakeFiles/run_tests.dir
-/home/tammo/Git/suturo-vision/02_code/catkin_ws/build/iai_semantic_maps/CMakeFiles/tests.dir
