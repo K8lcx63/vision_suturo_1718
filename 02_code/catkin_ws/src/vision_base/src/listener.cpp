@@ -7,9 +7,55 @@
 #include "object_detection/ObjectDetection.h"
 #include "object_detection/VisObjectInfo.h"
 
+// includes for pcl
+
+#include <pcl/conversions.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/point_types.h>
+#include <pcl/PCLPointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
+
+// Includes for planar-segmentation
+
+#include <iostream>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/sample_consensus/method_types.h>
+#include <pcl/sample_consensus/model_types.h>
+#include <pcl/segmentation/sac_segmentation.h>
+
+// Includes for cluster extraction
+#include <pcl/features/normal_3d.h>
+#include <pcl/kdtree/kdtree.h>
+#include <pcl/segmentation/extract_clusters.h>
+
+
+// #include <type_traits>
+
+
+
 // Zum Verhindern von "was not declared in this scope"-Fehlern:
 gazebo_msgs::GetModelState getmodelstate;
 ros::ServiceClient client;
+
+
+// required variables
+int min_plane_inliers = 1000;
+int min_cluster_size = 100;
+float radius_search = 0.03; // for normals estimation
+
+// Pointer to the most recent normals
+pcl::PointCloud<pcl::Normal>::Ptr normals_out(new pcl::PointCloud<pcl::Normal>);
+
+// Pointer to supporting plane
+pcl::PointCloud<pcl::PointXYZ>::Ptr plane_out (new pcl::PointCloud<pcl::PointXYZ>);
+
+// Pointer to object cluster object
+pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_out (new pcl::PointCloud<pcl::PointXYZ>);
+
+
 
 void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
@@ -28,8 +74,71 @@ bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detecti
 	res.object.type = "";
 
 	// ROS_INFO("x=%ld, y=%ld, z=%ld", res.object.position.x, res.object.position.y, res.object.position.z);
-		
+
 	return true;
+}
+
+void planar_segmentation(const sensor_msgs::PointCloud2 cloud_msg)
+{
+	// Sensor_msgs to PCL_Pointcloud
+ pcl::PCLPointCloud2 pcl_pc;
+ pcl_conversions::toPCL(cloud_msg, pcl_pc);
+
+ // PCL Pointcloud to Pointcloud<pcl::PointXYZ> for segmentation
+ pcl::PointCloud<pcl::PointXYZ> *oldcloud(new pcl::PointCloud<pcl::PointXYZ>);
+ pcl::fromPCLPointCloud2(pcl_pc, *oldcloud);
+ pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(oldcloud);
+
+ pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_p(
+		 new pcl::PointCloud<pcl::PointXYZ>),
+		 cloud_f(new pcl::PointCloud<pcl::PointXYZ>);
+
+ pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients());
+ pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
+ // Create the segmentation object
+ pcl::SACSegmentation<pcl::PointXYZ> seg;
+ // Optional
+ seg.setOptimizeCoefficients(true);
+ // Set ModelType, Algorithm, Iterations and distances between Points and
+ // neighbors
+ seg.setModelType(pcl::SACMODEL_PLANE);
+ seg.setMethodType(pcl::SAC_RANSAC);
+ seg.setMaxIterations(1000);
+ seg.setDistanceThreshold(0.01);
+
+ // Extract and filter plane
+ pcl::ExtractIndices<pcl::PointXYZ> extract;
+
+ int i = 0, nr_points = (int)cloud->points.size();
+ // While 30% of the original cloud is still there
+ while (cloud->points.size() > 0.3 * nr_points) {
+	 // Segment the largest planar component from the remaining cloud
+	 seg.setInputCloud(cloud);
+	 seg.segment(*inliers, *coefficients);
+
+	 // Check for minimum inliers required for estimation
+	 if (inliers->indices.size() < min_plane_inliers) {
+		 std::cerr << "No estimation possible. Please adjust min_plane_inliers or "
+									"dataset!"
+							 << std::endl;
+		 break;
+	 }
+
+	 // Extract planar component
+	 extract.setInputCloud(cloud);
+	 extract.setIndices(inliers);
+	 extract.setNegative(false);
+	 extract.filter(*cloud_p);
+	 std::cerr << "Planar component: " << cloud_p->width * cloud_p->height
+						 << " data points." << std::endl;
+
+	 // Create the filtering object
+	 extract.setNegative(true);
+	 extract.filter(*cloud_f);
+	 cloud.swap(cloud_f);
+	 i++;
+ }
+ *plane_out = *cloud_f;
 }
 
 int main(int argc, char **argv)
@@ -48,7 +157,7 @@ int main(int argc, char **argv)
 	ROS_INFO("Service steht bereit.");
 
 
-	
+
 	// DEBUG! Hier kann der Service abgerufen werden, oben aber nicht?
 	while (ros::ok()){
 		client.call(getmodelstate);
