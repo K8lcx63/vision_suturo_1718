@@ -33,7 +33,7 @@
             <uri>model://pfanner_grune_icetea/pfanner_grune_icetea.dae</uri>
           </mesh>
         </geometry>
-      </visual-->
+      </visual>
     </link>
   </model>
 </sdf>
