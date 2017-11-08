@@ -40,6 +40,13 @@
 gazebo_msgs::GetModelState getmodelstate;
 ros::ServiceClient client;
 
+//
+
+//
+
+//
+
+//
 
 // required variables
 int min_plane_inliers = 1000;
@@ -55,7 +62,107 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr plane_out (new pcl::PointCloud<pcl::PointXYZ
 // Pointer to object cluster object
 pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_out (new pcl::PointCloud<pcl::PointXYZ>);
 
+/**
+ ** Find an object-cluster (i.e. Box of passierte Tomaten)
+**/
+void findCluster(const sensor_msgs::PointCloud2 cloud_msg) {
+  pcl::PCLPointCloud2 pcl_pc;
+  pcl_conversions::toPCL(cloud_msg, pcl_pc);
 
+  pcl::PointCloud<pcl::PointXYZ> *oldcloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromPCLPointCloud2(pcl_pc, *oldcloud);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(oldcloud);
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f(
+      new pcl::PointCloud<pcl::PointXYZ>);
+
+  pcl::SACSegmentation<pcl::PointXYZ> seg; // Das (RAN)SAC Segmentations-Objekt
+  pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+  pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane(
+      new pcl::PointCloud<pcl::PointXYZ>());
+  pcl::PCDWriter writer;
+  // Parameter für das Segmentations-Objekt
+  seg.setOptimizeCoefficients(true);
+  seg.setModelType(pcl::SACMODEL_PLANE);
+  seg.setMethodType(pcl::SAC_RANSAC);
+  seg.setMaxIterations(100);
+  seg.setDistanceThreshold(0.02);
+
+  int i = 0, nr_points = (int)cloud->points.size();
+  while (cloud->points.size() > 0.3 * nr_points) { // Während noch mindestens 30% der originalen Punktwolke da sind... (diesen Wert anpassen?)
+    seg.setInputCloud(cloud);
+    seg.segment(*inliers, *coefficients);
+    if (inliers->indices.size() < min_plane_inliers) {
+      std::cerr << "No estimation possible. Please adjust min_plane_inliers or "
+                   "dataset!"
+                << std::endl;
+      break;
+    }
+
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+    extract.setInputCloud(cloud);
+    extract.setIndices(inliers);
+    extract.setNegative(false);
+
+    extract.filter(*cloud_plane);
+
+    extract.setNegative(true);
+    extract.filter(*cloud_f);
+    *cloud = *cloud_f;
+    // *cluster_out = *cloud_f;
+
+  }
+
+	// --- END same as findSupportPlane --- //
+
+  // Creating the KdTree object for searching the extraction
+  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(
+      new pcl::search::KdTree<pcl::PointXYZ>);
+  tree->setInputCloud(cloud);
+
+  std::vector<pcl::PointIndices> cluster_indices;
+  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+  ec.setClusterTolerance(0.02); // 2cm
+  ec.setMinClusterSize(min_cluster_size);
+  ec.setMaxClusterSize(25000);
+  ec.setSearchMethod(tree);
+  ec.setInputCloud(cloud);
+  ec.extract(cluster_indices);
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr result_cluster(
+      new pcl::PointCloud<pcl::PointXYZ>);
+  int j = 0;
+  for (std::vector<pcl::PointIndices>::const_iterator it =
+           cluster_indices.begin();
+       it != cluster_indices.end(); ++it) {
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(
+        new pcl::PointCloud<pcl::PointXYZ>);
+    for (std::vector<int>::const_iterator pit = it->indices.begin();
+         pit != it->indices.end(); ++pit)
+      cloud_cluster->points.push_back(cloud->points[*pit]); //*
+    cloud_cluster->width = cloud_cluster->points.size();
+    cloud_cluster->height = 1;
+    cloud_cluster->is_dense = true;
+
+    std::cout << "Cluster: "
+              << cloud_cluster->points.size() << " data points." << std::endl;
+    j++;
+    *result_cluster = *cloud_cluster;
+  }
+  *cluster_out = *result_cluster;
+
+
+}
+
+
+//
+
+//
+
+//
+
+//
 
 void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
