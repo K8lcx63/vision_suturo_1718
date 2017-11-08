@@ -17,21 +17,18 @@
           <mass>2000.0</mass>
         </inertial>
       <gravity>true</gravity>
+ 
       <!--kinematic>true</kinematic-->	
       <collision name="collision">
         <pose>0 0 0 0 0 0</pose>
         <geometry>
-          <mesh>
-            <uri>model://pfanner_grune_icetea/pfanner_grune_icetea.dae</uri>
-          </mesh>
+          <mesh><uri>model:///pfanner_grune_icetea/pfanner_grune_icetea.dae</uri></mesh>
         </geometry>
       </collision>
       <visual name="visual">
         <!--pose>0 0 0 0 0 0</pose-->
         <geometry>
-          <mesh>
-            <uri>model://pfanner_grune_icetea/pfanner_grune_icetea.dae</uri>
-          </mesh>
+          <mesh><uri>model:///pfanner_grune_icetea/pfanner_grune_icetea.dae</uri></mesh>
         </geometry>
       </visual>
     </link>
