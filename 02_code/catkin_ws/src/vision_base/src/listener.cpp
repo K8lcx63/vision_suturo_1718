@@ -34,19 +34,9 @@
 
 // #include <type_traits>
 
-
-
 // Zum Verhindern von "was not declared in this scope"-Fehlern:
 gazebo_msgs::GetModelState getmodelstate;
 ros::ServiceClient client;
-
-//
-
-//
-
-//
-
-//
 
 // required variables
 int min_plane_inliers = 1000;
@@ -65,104 +55,56 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_out (new pcl::PointCloud<pcl::PointX
 /**
  ** Find an object-cluster (i.e. Box of passierte Tomaten)
 **/
-void findCluster(const sensor_msgs::PointCloud2 cloud_msg) {
-  pcl::PCLPointCloud2 pcl_pc;
-  pcl_conversions::toPCL(cloud_msg, pcl_pc);
-
-  pcl::PointCloud<pcl::PointXYZ> *oldcloud(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromPCLPointCloud2(pcl_pc, *oldcloud);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(oldcloud);
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f(
-      new pcl::PointCloud<pcl::PointXYZ>);
-
-  pcl::SACSegmentation<pcl::PointXYZ> seg; // Das (RAN)SAC Segmentations-Objekt
-  pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
-  pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_plane(
-      new pcl::PointCloud<pcl::PointXYZ>());
-  pcl::PCDWriter writer;
-  // Parameter für das Segmentations-Objekt
-  seg.setOptimizeCoefficients(true);
-  seg.setModelType(pcl::SACMODEL_PLANE);
-  seg.setMethodType(pcl::SAC_RANSAC);
-  seg.setMaxIterations(100);
-  seg.setDistanceThreshold(0.02);
-
-  int i = 0, nr_points = (int)cloud->points.size();
-  while (cloud->points.size() > 0.3 * nr_points) { // Während noch mindestens 30% der originalen Punktwolke da sind... (diesen Wert anpassen?)
-    seg.setInputCloud(cloud);
-    seg.segment(*inliers, *coefficients);
-    if (inliers->indices.size() < min_plane_inliers) {
-      std::cerr << "No estimation possible. Please adjust min_plane_inliers or "
-                   "dataset!"
-                << std::endl;
-      break;
-    }
-
-    pcl::ExtractIndices<pcl::PointXYZ> extract;
-    extract.setInputCloud(cloud);
-    extract.setIndices(inliers);
-    extract.setNegative(false);
-
-    extract.filter(*cloud_plane);
-
-    extract.setNegative(true);
-    extract.filter(*cloud_f);
-    *cloud = *cloud_f;
-    // *cluster_out = *cloud_f;
-
-  }
-
-	// --- END same as findSupportPlane --- //
-
-  // Creating the KdTree object for searching the extraction
-  pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(
-      new pcl::search::KdTree<pcl::PointXYZ>);
-  tree->setInputCloud(cloud);
-
-  std::vector<pcl::PointIndices> cluster_indices;
-  pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-  ec.setClusterTolerance(0.02); // 2cm
-  ec.setMinClusterSize(min_cluster_size);
-  ec.setMaxClusterSize(25000);
-  ec.setSearchMethod(tree);
-  ec.setInputCloud(cloud);
-  ec.extract(cluster_indices);
-
-  pcl::PointCloud<pcl::PointXYZ>::Ptr result_cluster(
-      new pcl::PointCloud<pcl::PointXYZ>);
-  int j = 0;
-  for (std::vector<pcl::PointIndices>::const_iterator it =
-           cluster_indices.begin();
-       it != cluster_indices.end(); ++it) {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster(
-        new pcl::PointCloud<pcl::PointXYZ>);
-    for (std::vector<int>::const_iterator pit = it->indices.begin();
-         pit != it->indices.end(); ++pit)
-      cloud_cluster->points.push_back(cloud->points[*pit]); //*
-    cloud_cluster->width = cloud_cluster->points.size();
-    cloud_cluster->height = 1;
-    cloud_cluster->is_dense = true;
-
-    std::cout << "Cluster: "
-              << cloud_cluster->points.size() << " data points." << std::endl;
-    j++;
-    *result_cluster = *cloud_cluster;
-  }
-  *cluster_out = *result_cluster;
+void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
+  pcl::PointCloud<pcl::PointXYZ>::Ptr plane_cloud (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::ExtractIndices<pcl::PointXYZ> extract;
 
 
-}
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_f (new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::PCLPointCloud2 pcl_cloud;
+  pcl_conversions::toPCL(kinect_cloud, pcl_cloud);
+
+  pcl::PointCloud<pcl::PointXYZ> *dummy_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+  pcl::fromPCLPointCloud2(pcl_cloud, *dummy_cloud);
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(dummy_cloud);
+
+      std::cerr << "Point cloud data: " << cloud->points.size () << " points" << std::endl;
 
 
-//
+      pcl::ModelCoefficients::Ptr coefficients (new pcl::ModelCoefficients);
+        pcl::PointIndices::Ptr inliers (new pcl::PointIndices);
+        // Create the segmentation object
+        pcl::SACSegmentation<pcl::PointXYZ> seg;
+        // Optional
+        seg.setOptimizeCoefficients (true);
+        // Mandatory
+        seg.setModelType (pcl::SACMODEL_PLANE);
+        seg.setMethodType (pcl::SAC_RANSAC);
+        seg.setDistanceThreshold (0.01);
 
-//
+        seg.setInputCloud (cloud);
+        seg.segment (*inliers, *coefficients);
 
-//
+        if (inliers->indices.size () == 0)
+        {
+          PCL_ERROR ("Could not estimate a planar model for the given dataset.");
+        }
+        // Extract the inliers
+            extract.setInputCloud(cloud);
+            extract.setIndices (inliers);
+            extract.setNegative (false);
+            extract.filter (*plane_cloud);
+            std::cerr << "PointCloud representing the planar component: " << plane_cloud->width * plane_cloud->height << " data points." << std::endl;
 
-//
+            // Create the filtering object
+            extract.setNegative (true);
+            extract.filter (*cloud_f);
+            cloud.swap (cloud_f);
+            //i++;
+            plane_out = plane_cloud;
+          }
+
+
 
 void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
@@ -185,77 +127,14 @@ bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detecti
 	return true;
 }
 
-void findSupportPlane(const sensor_msgs::PointCloud2 cloud_msg)
-{
-	// Sensor_msgs to PCL_Pointcloud
- pcl::PCLPointCloud2 pcl_pc;
- pcl_conversions::toPCL(cloud_msg, pcl_pc);
-
- // PCL Pointcloud to Pointcloud<pcl::PointXYZ> for segmentation
- pcl::PointCloud<pcl::PointXYZ> *oldcloud(new pcl::PointCloud<pcl::PointXYZ>);
- pcl::fromPCLPointCloud2(pcl_pc, *oldcloud);
- pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(oldcloud);
-
- pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_p(
-		 new pcl::PointCloud<pcl::PointXYZ>),
-		 cloud_f(new pcl::PointCloud<pcl::PointXYZ>);
-
- pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients());
- pcl::PointIndices::Ptr inliers(new pcl::PointIndices());
- // Create the segmentation object
- pcl::SACSegmentation<pcl::PointXYZ> seg;
- // Optional
- seg.setOptimizeCoefficients(true);
- // Set ModelType, Algorithm, Iterations and distances between Points and
- // neighbors
- seg.setModelType(pcl::SACMODEL_PLANE);
- seg.setMethodType(pcl::SAC_RANSAC);
- seg.setMaxIterations(1000);
- seg.setDistanceThreshold(0.01);
-
- // Extract and filter plane
- pcl::ExtractIndices<pcl::PointXYZ> extract;
-
- int i = 0, nr_points = (int)cloud->points.size();
- // While 30% of the original cloud is still there
- while (cloud->points.size() > 0.3 * nr_points) {
-	 // Segment the largest planar component from the remaining cloud
-	 seg.setInputCloud(cloud);
-	 seg.segment(*inliers, *coefficients);
-
-	 // Check for minimum inliers required for estimation
-	 if (inliers->indices.size() < min_plane_inliers) {
-		 std::cerr << "No estimation possible. Please adjust min_plane_inliers or "
-									"dataset!"
-							 << std::endl;
-		 break;
-	 }
-
-	 // Extract planar component
-	 extract.setInputCloud(cloud);
-	 extract.setIndices(inliers);
-	 extract.setNegative(false);
-	 extract.filter(*cloud_p);
-	 std::cerr << "Planar component: " << cloud_p->width * cloud_p->height
-						 << " data points." << std::endl;
-
-	 // Create the filtering object
-	 extract.setNegative(true);
-	 extract.filter(*cloud_f);
-	 cloud.swap(cloud_f);
-	 i++;
- }
- *plane_out = *cloud_f;
-}
 
 int main(int argc, char **argv)
 {
 	// Subscriber für das points-Topic des Kinect-Sensors.
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n;
-	ros::Subscriber sub = n.subscribe("/head_mount_kinect/depth_registered/points", 1000, callback);
-  ros::Subscriber subPlane = n.subscribe("/head_mount_kinect/depth_registered/points", 1000, &findSupportPlane);
-  ros::Subscriber subCluster = n.subscribe("/head_mount_kinect/depth_registered/points", 1000, &findCluster);
+	ros::Subscriber sub = n.subscribe("/head_mount_kinect/depth_registered/points", 1, callback);
+  ros::Subscriber sub_kinect = n.subscribe("/head_mount_kinect/depth_registered/points", 1, &findCluster);
 
 	// ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
 	ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
@@ -268,22 +147,14 @@ int main(int argc, char **argv)
 
 
 	// DEBUG! Hier kann der Service abgerufen werden, oben aber nicht?
-  sensor_msgs::PointCloud2 cloud_conv;
+
   ros::Rate r(20.0);
 	while (n.ok()){
 		client.call(getmodelstate);
-
-    // plane_cloud Publisher
-   sensor_msgs::PointCloud2 plane_cloud;
-   ros::Publisher plane_pub = n.advertise<sensor_msgs::PointCloud2>("plane_cloud_pubby", 1000);
-   pcl::toROSMsg(*plane_out, plane_cloud);
-   plane_pub.publish(plane_cloud);
-
-   //cluster_cloud Publisher
-   sensor_msgs::PointCloud2 cluster_cloud;
-   ros::Publisher cluster_pub = n.advertise<sensor_msgs::PointCloud2>("cluster_cloud_pubby", 1000);
-   pcl::toROSMsg(*cluster_out, cluster_cloud);
-   cluster_pub.publish(cluster_cloud);
+    ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("plane_model",1);
+    sensor_msgs::PointCloud2 plane_out_msg;
+    pcl::toROSMsg(plane_out, plane_out_msg);
+    pub_plane_model.publish(plane_out_msg);
 
    ros::spinOnce();
    r.sleep();
