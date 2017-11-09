@@ -82,6 +82,9 @@ void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
         seg.setMethodType (pcl::SAC_RANSAC);
         seg.setDistanceThreshold (0.01);
 
+	int nr_points = (int) cloud->points.size();
+	while(cloud->points.size() > 0.05 * nr_points) // Während noch mindestens 10% der ursprünglichen Cloud erhalten sind...
+	{
         seg.setInputCloud (cloud);
         seg.segment (*inliers, *coefficients);
 
@@ -92,7 +95,7 @@ void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
         // Extract the inliers
             extract.setInputCloud(cloud);
             extract.setIndices (inliers);
-            extract.setNegative (false);
+            extract.setNegative (true);
             extract.filter (*plane_cloud);
             std::cerr << "PointCloud representing the planar component: " << plane_cloud->width * plane_cloud->height << " data points." << std::endl;
 
@@ -101,9 +104,9 @@ void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
             extract.filter (*cloud_f);
             cloud.swap (cloud_f);
             //i++;
+	}
             plane_out = plane_cloud;
-          }
-
+}
 
 
 void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
@@ -134,7 +137,7 @@ int main(int argc, char **argv)
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n;
 	ros::Subscriber sub = n.subscribe("/head_mount_kinect/depth_registered/points", 1, callback);
-  ros::Subscriber sub_kinect = n.subscribe("/head_mount_kinect/depth_registered/points", 1, &findCluster);
+	ros::Subscriber sub_kinect = n.subscribe("/head_mount_kinect/depth_registered/points", 1, &findCluster);
 
 	// ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
 	ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
@@ -148,16 +151,16 @@ int main(int argc, char **argv)
 
 	// DEBUG! Hier kann der Service abgerufen werden, oben aber nicht?
 
-  ros::Rate r(20.0);
+	ros::Rate r(20.0);
 	while (n.ok()){
 		client.call(getmodelstate);
-    ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("plane_model",1);
-    sensor_msgs::PointCloud2 plane_out_msg;
-    pcl::toROSMsg(plane_out, plane_out_msg);
-    pub_plane_model.publish(plane_out_msg);
+		ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("plane_model",1);
+		sensor_msgs::PointCloud2 plane_out_msg;
+		pcl::toROSMsg(*plane_out, plane_out_msg);
+		pub_plane_model.publish(plane_out_msg);
 
-   ros::spinOnce();
-   r.sleep();
+		ros::spinOnce();
+		r.sleep();
 	}
 
 	return 0;
