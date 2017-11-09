@@ -166,7 +166,7 @@ void findCluster(const sensor_msgs::PointCloud2 cloud_msg) {
 
 void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
 {
-	ROS_INFO("I heard: [%s]"); // Gib das aus, funktioniert nicht so richtig
+	ROS_INFO("I heard: something"); // Gib das aus, funktioniert nicht so richtig
 }
 
 bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detection::VisObjectInfo::Response &res)
@@ -185,7 +185,7 @@ bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detecti
 	return true;
 }
 
-void planar_segmentation(const sensor_msgs::PointCloud2 cloud_msg)
+void findSupportPlane(const sensor_msgs::PointCloud2 cloud_msg)
 {
 	// Sensor_msgs to PCL_Pointcloud
  pcl::PCLPointCloud2 pcl_pc;
@@ -254,6 +254,8 @@ int main(int argc, char **argv)
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n;
 	ros::Subscriber sub = n.subscribe("/head_mount_kinect/depth_registered/points", 1000, callback);
+  ros::Subscriber subPlane = n.subscribe("/head_mount_kinect/depth_registered/points", 1000, &findSupportPlane);
+  ros::Subscriber subCluster = n.subscribe("/head_mount_kinect/depth_registered/points", 1000, &findCluster);
 
 	// ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
 	ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
@@ -266,9 +268,25 @@ int main(int argc, char **argv)
 
 
 	// DEBUG! Hier kann der Service abgerufen werden, oben aber nicht?
-	while (ros::ok()){
+  sensor_msgs::PointCloud2 cloud_conv;
+  ros::Rate r(20.0);
+	while (n.ok()){
 		client.call(getmodelstate);
-		ros::spinOnce();
+
+    // plane_cloud Publisher
+   sensor_msgs::PointCloud2 plane_cloud;
+   ros::Publisher plane_pub = n.advertise<sensor_msgs::PointCloud2>("plane_cloud_pubby", 1000);
+   pcl::toROSMsg(*plane_out, plane_cloud);
+   plane_pub.publish(plane_cloud);
+
+   //cluster_cloud Publisher
+   sensor_msgs::PointCloud2 cluster_cloud;
+   ros::Publisher cluster_pub = n.advertise<sensor_msgs::PointCloud2>("cluster_cloud_pubby", 1000);
+   pcl::toROSMsg(*cluster_out, cluster_cloud);
+   cluster_pub.publish(cluster_cloud);
+
+   ros::spinOnce();
+   r.sleep();
 	}
 
 	return 0;
