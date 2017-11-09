@@ -14,7 +14,7 @@
             <iyz>0</iyz>
             <izz>1</izz>
           </inertia>
-          <mass>2000.0</mass>
+          <mass>250</mass>
         </inertial>
       <gravity>true</gravity>
  
