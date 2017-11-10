@@ -28,14 +28,6 @@
 gazebo_msgs::GetModelState getmodelstate;
 ros::ServiceClient client;
 
-// required variables
-int min_plane_inliers = 1000;
-int min_cluster_size = 100;
-float radius_search = 0.03; // for normals estimation
-
-// Pointer to the most recent normals
-pcl::PointCloud<pcl::Normal>::Ptr normals_out(new pcl::PointCloud<pcl::Normal>);
-
 // Pointer to supporting plane
 pcl::PointCloud<pcl::PointXYZ>::Ptr plane_out (new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -43,7 +35,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr plane_out (new pcl::PointCloud<pcl::PointXYZ
 pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_out (new pcl::PointCloud<pcl::PointXYZ>);
 
 /**
- ** Find an object-cluster (i.e. Box of passierte Tomaten)
+ ** Finde den Eistee!
 **/
 void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
   pcl::PCLPointCloud2 pcl_cloud;
@@ -93,7 +85,7 @@ void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
   		prism.setInputPlanarHull(convexHull);
   		// First parameter: minimum Z value. Set to 0, segments objects lying on the plane (can be negative).
   		// Second parameter: maximum Z value, set to 10cm. Tune it according to the height of the objects you expect.
-  		prism.setHeightLimits(0.0f, 0.5f);
+  		prism.setHeightLimits(-1.0f, 2.0f);
   		pcl::PointIndices::Ptr objectIndices(new pcl::PointIndices);
 
   		prism.segment(*objectIndices);
@@ -111,6 +103,7 @@ void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
   	}
   	else std::cout << "The chosen hull is not planar." << std::endl;
   	}
+
     // plane_out for advertising
     plane_out = objects;
 
