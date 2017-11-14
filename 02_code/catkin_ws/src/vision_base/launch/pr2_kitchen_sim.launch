@@ -1,33 +1,43 @@
 <?xml version="1.0"?>
 
 <launch>
-  <!-- Build Kitchen in Gazebo (iai_kitchen_gazebo.launch from iai_kitchen pkg)-->
+<!-- set ROBOT_POSE-->
+<!--arg name="ROBOT_INITIAL_POSE" default="-x 0.5 -y 1 -z 0 -Y 3.1"/-->
+<arg name="ROBOT_INITIAL_POSE" default="-x 0 -y 0.5 -z 0"/>
+   <!-- bring up an empty world -->
 <include file="$(find gazebo_ros)/launch/empty_world.launch">
-      <!--
-    <arg name="world_name" value="$(find iai_kitchen)/worlds/kitchen_env_2015.world"/>
-      -->
     <arg name="paused" value="true"/>
     <arg name="use_sim_time" value="true"/>
     <arg name="gui" value="true"/>
     <arg name="headless" value="false"/>
     <arg name="debug" value="false"/>
-    <!--arg name="physics" default="ode"/-->
   </include>
-  <!--
-  <node
-    name="joint_state_publisher"
-    pkg="joint_state_publisher"
-    type="joint_state_publisher" >
-  </node>
-  -->
-  <include file="$(find iai_kitchen)/launch/gazebo_spawn_kitchen.launch"/>
- 
+
+  <!-- Build Kitchen in Gazebo (iai_kitchen_gazebo.launch from iai_kitchen pkg)-->
+  <arg name="model" default="$(find iai_kitchen)/urdf/IAI_kitchen.urdf.xacro"/>
+  <param name="kitchen_description" command="$(find xacro)/xacro.py '$(arg model)'" />
+
+  <node name="spawn_kitchen" pkg="gazebo_ros" type="spawn_model" args="
+    -param kitchen_description
+    -urdf
+    -model IAI_kitchen
+  "/>
+
   <!-- Startup PR2 from (pr2.launch from pr2_gazebo package)-->
   <!-- Startup PR2 without any mechanism controllers -->
-  <include file="$(find pr2_gazebo)/launch/pr2_no_controllers.launch" />
+  <!-- send pr2 urdf to param server -->
+  <include file="$(find pr2_description)/robots/upload_pr2.launch" />
+
+  <!-- push robot_description to factory and spawn robot in gazebo -->
+  <node name="spawn_pr2_model" pkg="gazebo_ros" type="spawn_model" args="$(arg ROBOT_INITIAL_POSE) -unpause -urdf -param robot_description -model pr2 -ros_namespace /gazebo" respawn="false" output="screen" />
+
+  <!-- default bringup script -->
+  <include file="$(find pr2_gazebo)/launch/pr2_bringup.launch" />
 
   <!-- Load and Start Default Controllers -->
   <include file="$(find pr2_controller_configuration_gazebo)/launch/pr2_default_controllers.launch" />
+   <!--node name="spawn_sun" pkg="gazebo_ros" type="spawn_model" args="-file home/tammo/.gazebo/sun/model.sdf -sdf -model sonne" respawn="false" output="screen"/-->
+
    <node name="spawn_eistee" pkg="gazebo_ros" type="spawn_model" args="-file $(find vision_base)/models/pfanner_grune_icetea/model.sdf -sdf -model eistee" respawn="false" output="screen"/>
    <node name="listener" pkg="vision_base" type="listener" output="screen"/>
 </launch>
