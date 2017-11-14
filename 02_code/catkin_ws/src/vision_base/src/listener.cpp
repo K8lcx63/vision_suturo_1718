@@ -20,6 +20,7 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/visualization/cloud_viewer.h>
+#include <pcl_ros/point_cloud.h>
 
 
 // #include <type_traits>
@@ -37,83 +38,76 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_out (new pcl::PointCloud<pcl::PointX
 /**
  ** Finde den Eistee!
 **/
-void findCluster(const sensor_msgs::PointCloud2 kinect_cloud) {
-  pcl::PCLPointCloud2 pcl_cloud;
-  pcl_conversions::toPCL(kinect_cloud, pcl_cloud);
-  pcl::PointCloud<pcl::PointXYZ> *dummy_cloud(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::fromPCLPointCloud2(pcl_cloud, *dummy_cloud);
+void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+    pcl::visualization::CloudViewer viewerObjects("Objects");
 
-  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(dummy_cloud);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr plane(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr convexHull(new pcl::PointCloud<pcl::PointXYZ>);
-  pcl::PointCloud<pcl::PointXYZ>::Ptr objects(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr plane(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr convexHull(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr objects(new pcl::PointCloud<pcl::PointXYZ>);
 
-  // Get the plane model, if present.
-  pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-  pcl::SACSegmentation<pcl::PointXYZ> segmentation;
-  segmentation.setInputCloud(cloud);
-  segmentation.setModelType(pcl::SACMODEL_PLANE);
-  segmentation.setMethodType(pcl::SAC_RANSAC);
-  segmentation.setDistanceThreshold(0.01);
-  segmentation.setOptimizeCoefficients(true);
-  pcl::PointIndices::Ptr planeIndices(new pcl::PointIndices);
-  segmentation.segment(*planeIndices, *coefficients);
+    // Get the plane model, if present.
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::SACSegmentation<pcl::PointXYZ> segmentation;
 
-  if (planeIndices->indices.size() == 0)
-  	std::cout << "Could not find a plane in the scene." << std::endl;
-  else
-  {
-  	// Copy the points of the plane to a new cloud.
-  	pcl::ExtractIndices<pcl::PointXYZ> extract;
-  	extract.setInputCloud(cloud);
-  	extract.setIndices(planeIndices);
-  	extract.filter(*plane);
 
-  	// Retrieve the convex hull.
-  	pcl::ConvexHull<pcl::PointXYZ> hull;
-  	hull.setInputCloud(plane);
-  	// Make sure that the resulting hull is bidimensional.
-  	hull.setDimension(2);
-  	hull.reconstruct(*convexHull);
+    segmentation.setInputCloud(cloud);
+    segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+    segmentation.setMethodType(pcl::SAC_RANSAC);
+    segmentation.setAxis(Eigen::Vector3f(0,0,1));
+    segmentation.setDistanceThreshold(0.01);
+    segmentation.setOptimizeCoefficients(false);
+    pcl::PointIndices::Ptr planeIndices(new pcl::PointIndices);
+    segmentation.segment(*planeIndices, *coefficients);
 
-  	// Redundant check.
-  	if (hull.getDimension() == 2)
-  	{
-  		// Prism object.
-  		pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
-  		prism.setInputCloud(cloud);
-  		prism.setInputPlanarHull(convexHull);
-  		// First parameter: minimum Z value. Set to 0, segments objects lying on the plane (can be negative).
-  		// Second parameter: maximum Z value, set to 10cm. Tune it according to the height of the objects you expect.
-  		prism.setHeightLimits(-1.0f, 2.0f);
-  		pcl::PointIndices::Ptr objectIndices(new pcl::PointIndices);
 
-  		prism.segment(*objectIndices);
+        if (planeIndices->indices.size() == 0)
+        std::cout << "Could not find a plane in the scene." << std::endl;
+    else {
+        pcl::ExtractIndices<pcl::PointXYZ> extract;
 
-  		// Get and show all points retrieved by the hull.
-  		extract.setIndices(objectIndices);
-  		extract.filter(*objects);
-  		pcl::visualization::CloudViewer viewerObjects("Objects on table");
-  		viewerObjects.showCloud(objects);
+        // Copy the points of the plane to a new cloud.
 
-  		while (!viewerObjects.wasStopped())
-  		{
-  			// Do nothing but wait.
-  		}
-  	}
-  	else std::cout << "The chosen hull is not planar." << std::endl;
-  	}
+        extract.setInputCloud(cloud);
+        extract.setIndices(planeIndices);
+        extract.setNegative(true);
+        extract.filter(*plane);
+        viewerObjects.showCloud(plane, "object_cloud");
 
-    // plane_out for advertising
-    plane_out = objects;
 
+        // Retrieve the convex hull.
+        pcl::ConvexHull<pcl::PointXYZ> hull;
+        hull.setInputCloud(plane);
+        // Make sure that the resulting hull is bidimensional.
+        hull.setDimension(2);
+        hull.reconstruct(*convexHull);
+
+        // Redundant check.
+        if (hull.getDimension() == 2) {
+            // Prism object.
+            pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
+            prism.setInputCloud(plane);
+            prism.setInputPlanarHull(convexHull);
+            // First parameter: minimum Z value. Set to 0, segments objects lying on the plane (can be negative).
+            // Second parameter: maximum Z value, set to 10cm. Tune it according to the height of the objects you expect.
+            prism.setHeightLimits(0.0f, 0.6f);
+
+            pcl::PointIndices::Ptr objectIndices(new pcl::PointIndices);
+
+            prism.segment(*objectIndices);
+
+            // Get and show all points retrieved by the hull.
+            extract.setIndices(objectIndices);
+            extract.filter(*objects);
+            plane_out = objects;
+
+            while (!viewerObjects.wasStopped()) {
+                // do nothing
+            }
+        } else std::cout << "The chosen hull is not planar." << std::endl;
+    }
 }
 
 
-void callback(const sensor_msgs::PointCloud2::ConstPtr& msg)
-{
-	ROS_INFO("I heard: something"); // Gib das aus, funktioniert nicht so richtig
-}
 
 bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detection::VisObjectInfo::Response &res)
 {
@@ -137,8 +131,7 @@ int main(int argc, char **argv)
 	// Subscriber für das points-Topic des Kinect-Sensors.
 	ros::init(argc, argv, "listener");
 	ros::NodeHandle n;
-	ros::Subscriber sub = n.subscribe("/head_mount_kinect/depth_registered/points", 1, &callback);
-	ros::Subscriber sub_kinect = n.subscribe("/head_mount_kinect/depth_registered/points", 1, &findCluster);
+	ros::Subscriber sub_kinect = n.subscribe("/head_mount_kinect/depth_registered/points", 1000, &findCluster);
 
 	// ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
 	ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
@@ -152,10 +145,10 @@ int main(int argc, char **argv)
 
 	// DEBUG! Hier kann der Service abgerufen werden, oben aber nicht?
 
-	ros::Rate r(20.0);
+	ros::Rate r(10.0);
 	while (n.ok()){
 		client.call(getmodelstate);
-		ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("plane_model",1);
+		ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("plane_model",1000);
 		sensor_msgs::PointCloud2 plane_out_msg;
 		pcl::toROSMsg(*plane_out, plane_out_msg);
 		pub_plane_model.publish(plane_out_msg);
