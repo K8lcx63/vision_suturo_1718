@@ -3,7 +3,7 @@
 <launch>
 <!-- set ROBOT_POSE-->
 <!--arg name="ROBOT_INITIAL_POSE" default="-x 0.5 -y 1 -z 0 -Y 3.1"/-->
-<arg name="ROBOT_INITIAL_POSE" default="-x 0 -y 0.5 -z 0"/>
+<arg name="ROBOT_INITIAL_POSE" default="-x 0.2 -y 0.5 -z 0"/>
    <!-- bring up an empty world -->
 <include file="$(find gazebo_ros)/launch/empty_world.launch">
     <arg name="paused" value="true"/>
