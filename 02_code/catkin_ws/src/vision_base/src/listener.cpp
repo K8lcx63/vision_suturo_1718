@@ -21,6 +21,8 @@
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl_ros/point_cloud.h>
+#include <pcl/segmentation/extract_clusters.h>
+
 
 
 // #include <type_traits>
@@ -41,6 +43,9 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_out (new pcl::PointCloud<pcl::PointX
 void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     pcl::visualization::CloudViewer viewerObjects("Objects");
 
+    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_before(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_before2(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_before3(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr plane(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr convexHull(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr objects(new pcl::PointCloud<pcl::PointXYZ>);
@@ -70,41 +75,90 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
         extract.setInputCloud(cloud);
         extract.setIndices(planeIndices);
         extract.setNegative(true);
-        extract.filter(*plane);
-        viewerObjects.showCloud(plane, "object_cloud");
+        extract.filter(*plane_before);
+
+            segmentation.setInputCloud(plane_before);
+            segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+            segmentation.setMethodType(pcl::SAC_RANSAC);
+            segmentation.setAxis(Eigen::Vector3f(1,0,0));
+            segmentation.setDistanceThreshold(0.01);
+            segmentation.setOptimizeCoefficients(false);
+            segmentation.segment(*planeIndices, *coefficients);
+
+            if (planeIndices->indices.size() == 0)
+                std::cout << "Could not find a plane in the scene." << std::endl;
+            else {
+                pcl::ExtractIndices<pcl::PointXYZ> extract2;
+
+                extract2.setInputCloud(plane_before);
+                extract2.setIndices(planeIndices);
+                extract2.setNegative(true);
+                extract2.filter(*plane_before2);
+
+                segmentation.setInputCloud(plane_before2);
+                segmentation.setModelType(pcl::SACMODEL_PLANE);
+                segmentation.setMethodType(pcl::SAC_RANSAC);
+                segmentation.setDistanceThreshold(0.01);
+                segmentation.setOptimizeCoefficients(false);
+                segmentation.segment(*planeIndices, *coefficients);
+
+                if (planeIndices->indices.size() == 0)
+                    std::cout << "Could not find a plane in the scene." << std::endl;
+                else {
+                    pcl::ExtractIndices<pcl::PointXYZ> extract2;
+
+                    extract2.setInputCloud(plane_before2);
+                    extract2.setIndices(planeIndices);
+                    extract2.setNegative(true);
+                    extract2.filter(*plane);
 
 
-        // Retrieve the convex hull.
-        pcl::ConvexHull<pcl::PointXYZ> hull;
-        hull.setInputCloud(plane);
-        // Make sure that the resulting hull is bidimensional.
-        hull.setDimension(2);
-        hull.reconstruct(*convexHull);
 
-        // Redundant check.
-        if (hull.getDimension() == 2) {
-            // Prism object.
-            pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
-            prism.setInputCloud(plane);
-            prism.setInputPlanarHull(convexHull);
-            // First parameter: minimum Z value. Set to 0, segments objects lying on the plane (can be negative).
-            // Second parameter: maximum Z value, set to 10cm. Tune it according to the height of the objects you expect.
-            prism.setHeightLimits(0.0f, 0.6f);
 
-            pcl::PointIndices::Ptr objectIndices(new pcl::PointIndices);
 
-            prism.segment(*objectIndices);
 
-            // Get and show all points retrieved by the hull.
-            extract.setIndices(objectIndices);
-            extract.filter(*objects);
-            plane_out = objects;
+                    // Creating the KdTree object for the search method of the extraction
+                    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+                    tree->setInputCloud (plane);
 
-            while (!viewerObjects.wasStopped()) {
-                // do nothing
+                    std::vector<pcl::PointIndices> cluster_indices;
+                    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+                    ec.setClusterTolerance (0.02); // 2cm
+                    ec.setMinClusterSize (1000);
+                    ec.setMaxClusterSize (25000);
+                    ec.setSearchMethod (tree);
+                    ec.setInputCloud (plane);
+                    ec.extract (cluster_indices);
+
+                    pcl::PointCloud<pcl::PointXYZ>::Ptr objects (new pcl::PointCloud<pcl::PointXYZ>);
+
+                    int j = 0;
+                    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+                    {
+                        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+                        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+                            cloud_cluster->points.push_back (plane->points[*pit]); //*
+                        cloud_cluster->width = cloud_cluster->points.size ();
+                        cloud_cluster->height = 1;
+                        cloud_cluster->is_dense = true;
+
+                        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+                        std::stringstream ss;
+                        objects = cloud_cluster;
+
+                        j++;
+                    }
+                    viewerObjects.showCloud(objects, "object_cloud");
+                    while (!viewerObjects.wasStopped())
+                    {
+                        // Do nothing but wait.
+                    }
+
+                }
+
             }
-        } else std::cout << "The chosen hull is not planar." << std::endl;
     }
+
 }
 
 
