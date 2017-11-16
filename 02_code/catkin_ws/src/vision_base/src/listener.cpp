@@ -48,10 +48,10 @@ int main(int argc, char **argv)
 	ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
 	getmodelstate.request.model_name = "eistee"; // Name des Objekts in Gazebo.
 
+
 	// Service für das Übergeben der Eistee-Position aus Gazebo.
 	ros::ServiceServer service = n.advertiseService("VisObjectInfo", getObjectInfo);
 	ROS_INFO("Service steht bereit.");
-
 
 
 	// DEBUG! Hier kann der Service abgerufen werden, oben aber nicht?
@@ -59,6 +59,8 @@ int main(int argc, char **argv)
 	ros::Rate r(10.0);
 	while (n.ok()){
 		client.call(getmodelstate);
+
+
 		ros::spinOnce();
 		r.sleep();
 	}
@@ -127,12 +129,14 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
         extract.setNegative(true);
         extract.filter(*objects);
 
-        pcl::visualization::CloudViewer viewerObjects("Objects on table");
+        //pcl::visualization::CloudViewer viewerObjects("Objects on table");
         kinect_point = findCenter(objects);
+				/*
         viewerObjects.showCloud(objects);
         while (!viewerObjects.wasStopped()) {
             // Do nothing but wait.
         }
+				*/
     }
 }
 
