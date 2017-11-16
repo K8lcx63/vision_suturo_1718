@@ -24,6 +24,7 @@
 #include <pcl/filters/passthrough.h>
 
 gazebo_msgs::GetModelState getmodelstate;
+geometry_msgs::Point kinect_point;
 ros::ServiceClient client;
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr objects_output (new pcl::PointCloud<pcl::PointXYZ>);
@@ -31,7 +32,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr objects_output (new pcl::PointCloud<pcl::Poi
 // pcl::PointCloud<pcl::PointXYZ>::Ptr computeCentroids(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
 
 void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect);
-void findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud);
+geometry_msgs::Point findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud);
 void findCenterNKN(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud);
 
 bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detection::VisObjectInfo::Response &res);
@@ -58,11 +59,6 @@ int main(int argc, char **argv)
 	ros::Rate r(10.0);
 	while (n.ok()){
 		client.call(getmodelstate);
-		ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("vision_base/objects",1000);
-		sensor_msgs::PointCloud2 objects_output_msg;
-		pcl::toROSMsg(*objects_output, objects_output_msg);
-		pub_plane_model.publish(objects_output_msg);
-
 		ros::spinOnce();
 		r.sleep();
 	}
@@ -132,7 +128,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
         extract.filter(*objects);
 
         pcl::visualization::CloudViewer viewerObjects("Objects on table");
-        findCenter(objects);
+        kinect_point = findCenter(objects);
         viewerObjects.showCloud(objects);
         while (!viewerObjects.wasStopped()) {
             // Do nothing but wait.
@@ -140,7 +136,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
     }
 }
 
-void findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
+geometry_msgs::Point findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
 {
 
 	int cloud_size = object_cloud->points.size();
@@ -163,55 +159,28 @@ void findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
 
 	std::cout << "Zentrum des Eistee-Objekts: " << centroid.x << " " << centroid.y << " " << centroid.z << std::endl;
 
-
-
-    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-
-    kdtree.setInputCloud (object_cloud);
-
-    int K = 10;
-
-    std::vector<int> pointIdxNKNSearch(K);
-    std::vector<float> pointNKNSquaredDistance(K);
-
-    pcl::PointXYZ searchPoint;
-
-    searchPoint.x = centroid.x;
-    searchPoint.y = centroid.y;
-    searchPoint.z = centroid.z;
-
-    kdtree.nearestKSearch(searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance);
-
-    sum_x = 0, sum_y = 0, sum_z = 0;
-
-    for(int i = 0; i < pointIdxNKNSearch.size(); i++)
-    {
-        pcl::PointXYZ point = object_cloud->points[ pointIdxNKNSearch[i] ];
-
-        sum_x += point.x;
-        sum_y += point.y;
-        sum_z += point.z;
-    }
-
-    geometry_msgs::Point centroidNKN;
-    centroidNKN.x = sum_x/cloud_size;
-    centroidNKN.y = sum_y/cloud_size;
-    centroidNKN.z = sum_z/cloud_size;
-
-    std::cout << "Zentrum des Eistee-Objekts (KNN): " << centroidNKN.x << " " << centroidNKN.y << " " << centroidNKN.z << std::endl;
+    return centroid;
 
 }
 
 bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detection::VisObjectInfo::Response &res)
 {
 	ROS_INFO("Der Service wurde abgerufen.");
-	geometry_msgs::Point point; // Der Punkt, der später übergeben wird.
-	point.x = getmodelstate.response.pose.position.x;
-	point.y = getmodelstate.response.pose.position.y;
-	point.z = getmodelstate.response.pose.position.z;
+    if(kinect_point.x == 0 && kinect_point.y == 0 && kinect_point.z == 0)
+    {
+        ROS_INFO("Kein Punkt aus den kinect-Daten verfügbar. Verwende stattdessen Daten aus gazebo.");
+        geometry_msgs::Point point; // Der Punkt, der später übergeben wird.
+        point.x = getmodelstate.response.pose.position.x;
+        point.y = getmodelstate.response.pose.position.y;
+        point.z = getmodelstate.response.pose.position.z;
 
-	res.object.position = point;
-	res.object.type = "";
+        res.object.position = point;
+    }
+    else
+    {
+        res.object.position = kinect_point;
+    }
+    res.object.type = "";
 
 	// ROS_INFO("x=%ld, y=%ld, z=%ld", res.object.position.x, res.object.position.y, res.object.position.z);
 
