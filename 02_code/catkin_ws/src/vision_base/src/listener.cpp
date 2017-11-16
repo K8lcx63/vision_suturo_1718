@@ -11,8 +11,7 @@
 
 #include <pcl/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
-
-#include <pcl/io/pcd_io.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/sample_consensus/method_types.h>
 #include <pcl/sample_consensus/model_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
@@ -22,163 +21,20 @@
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl_ros/point_cloud.h>
 #include <pcl/segmentation/extract_clusters.h>
+#include <pcl/filters/passthrough.h>
 
-
-
-// #include <type_traits>
-
-// Zum Verhindern von "was not declared in this scope"-Fehlern:
 gazebo_msgs::GetModelState getmodelstate;
 ros::ServiceClient client;
 
-// Pointer to supporting plane
-pcl::PointCloud<pcl::PointXYZ>::Ptr plane_out (new pcl::PointCloud<pcl::PointXYZ>);
+pcl::PointCloud<pcl::PointXYZ>::Ptr objects_output (new pcl::PointCloud<pcl::PointXYZ>);
 
-// Pointer to object cluster object
-pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_out (new pcl::PointCloud<pcl::PointXYZ>);
+// pcl::PointCloud<pcl::PointXYZ>::Ptr computeCentroids(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
 
-/**
- ** Finde den Eistee!
-**/
-void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
-    pcl::visualization::CloudViewer viewerObjects("Objects");
+void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect);
+void findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud);
+void findCenterNKN(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud);
 
-    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_before(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_before2(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr plane_before3(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr plane(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr convexHull(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr objects(new pcl::PointCloud<pcl::PointXYZ>);
-
-    // Get the plane model, if present.
-    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-    pcl::SACSegmentation<pcl::PointXYZ> segmentation;
-
-
-    segmentation.setInputCloud(cloud);
-    segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
-    segmentation.setMethodType(pcl::SAC_RANSAC);
-    segmentation.setAxis(Eigen::Vector3f(0,0,1));
-    segmentation.setDistanceThreshold(0.01);
-    segmentation.setOptimizeCoefficients(false);
-    pcl::PointIndices::Ptr planeIndices(new pcl::PointIndices);
-    segmentation.segment(*planeIndices, *coefficients);
-
-
-        if (planeIndices->indices.size() == 0)
-        std::cout << "Could not find a plane in the scene." << std::endl;
-    else {
-        pcl::ExtractIndices<pcl::PointXYZ> extract;
-
-        // Copy the points of the plane to a new cloud.
-
-        extract.setInputCloud(cloud);
-        extract.setIndices(planeIndices);
-        extract.setNegative(true);
-        extract.filter(*plane_before);
-
-            segmentation.setInputCloud(plane_before);
-            segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
-            segmentation.setMethodType(pcl::SAC_RANSAC);
-            segmentation.setAxis(Eigen::Vector3f(1,0,0));
-            segmentation.setDistanceThreshold(0.01);
-            segmentation.setOptimizeCoefficients(false);
-            segmentation.segment(*planeIndices, *coefficients);
-
-            if (planeIndices->indices.size() == 0)
-                std::cout << "Could not find a plane in the scene." << std::endl;
-            else {
-                pcl::ExtractIndices<pcl::PointXYZ> extract2;
-
-                extract2.setInputCloud(plane_before);
-                extract2.setIndices(planeIndices);
-                extract2.setNegative(true);
-                extract2.filter(*plane_before2);
-
-                segmentation.setInputCloud(plane_before2);
-                segmentation.setModelType(pcl::SACMODEL_PLANE);
-                segmentation.setMethodType(pcl::SAC_RANSAC);
-                segmentation.setDistanceThreshold(0.01);
-                segmentation.setOptimizeCoefficients(false);
-                segmentation.segment(*planeIndices, *coefficients);
-
-                if (planeIndices->indices.size() == 0)
-                    std::cout << "Could not find a plane in the scene." << std::endl;
-                else {
-                    pcl::ExtractIndices<pcl::PointXYZ> extract2;
-
-                    extract2.setInputCloud(plane_before2);
-                    extract2.setIndices(planeIndices);
-                    extract2.setNegative(true);
-                    extract2.filter(*plane);
-
-
-
-
-
-
-                    // Creating the KdTree object for the search method of the extraction
-                    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-                    tree->setInputCloud (plane);
-
-                    std::vector<pcl::PointIndices> cluster_indices;
-                    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
-                    ec.setClusterTolerance (0.02); // 2cm
-                    ec.setMinClusterSize (1000);
-                    ec.setMaxClusterSize (25000);
-                    ec.setSearchMethod (tree);
-                    ec.setInputCloud (plane);
-                    ec.extract (cluster_indices);
-
-                    pcl::PointCloud<pcl::PointXYZ>::Ptr objects (new pcl::PointCloud<pcl::PointXYZ>);
-
-                    int j = 0;
-                    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-                    {
-                        pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
-                        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-                            cloud_cluster->points.push_back (plane->points[*pit]); //*
-                        cloud_cluster->width = cloud_cluster->points.size ();
-                        cloud_cluster->height = 1;
-                        cloud_cluster->is_dense = true;
-
-                        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
-                        std::stringstream ss;
-                        objects = cloud_cluster;
-
-                        j++;
-                    }
-                    viewerObjects.showCloud(objects, "object_cloud");
-                    while (!viewerObjects.wasStopped())
-                    {
-                        // Do nothing but wait.
-                    }
-
-                }
-
-            }
-    }
-
-}
-
-
-
-bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detection::VisObjectInfo::Response &res)
-{
-	ROS_INFO("Der Service wurde abgerufen.");
-	geometry_msgs::Point point; // Der Punkt, der später übergeben wird.
-	point.x = getmodelstate.response.pose.position.x;
-	point.y = getmodelstate.response.pose.position.y;
-	point.z = getmodelstate.response.pose.position.z;
-
-	res.object.position = point;
-	res.object.type = "";
-
-	// ROS_INFO("x=%ld, y=%ld, z=%ld", res.object.position.x, res.object.position.y, res.object.position.z);
-
-	return true;
-}
-
+bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detection::VisObjectInfo::Response &res);
 
 int main(int argc, char **argv)
 {
@@ -202,14 +58,224 @@ int main(int argc, char **argv)
 	ros::Rate r(10.0);
 	while (n.ok()){
 		client.call(getmodelstate);
-		ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("plane_model",1000);
-		sensor_msgs::PointCloud2 plane_out_msg;
-		pcl::toROSMsg(*plane_out, plane_out_msg);
-		pub_plane_model.publish(plane_out_msg);
+		ros::Publisher pub_plane_model = n.advertise<sensor_msgs::PointCloud2>("vision_base/objects",1000);
+		sensor_msgs::PointCloud2 objects_output_msg;
+		pcl::toROSMsg(*objects_output, objects_output_msg);
+		pub_plane_model.publish(objects_output_msg);
 
 		ros::spinOnce();
 		r.sleep();
 	}
 
 	return 0;
+}
+
+/**
+ ** Finde den Eistee!
+**/
+void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
+    ROS_INFO("STARTING CLUSTER EXTRACTION");
+    // Objects for storing the point clouds.
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>), cloud_y(new pcl::PointCloud<pcl::PointXYZ>), cloud_x(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr plane(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr convexHull(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr objects(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::PointCloud<pcl::PointXYZ>::Ptr result(new pcl::PointCloud<pcl::PointXYZ>);
+
+    // writer for saving pcd-files
+    pcl::PCDWriter writer;
+    std::stringstream ss;
+
+    /** Create the filtering object **/
+    // Create the filtering object (x-axis)
+    pcl::PassThrough<pcl::PointXYZ> pass;
+    pass.setInputCloud (kinect);
+    pass.setFilterFieldName ("x");
+    pass.setFilterLimits (-0.5, 0.5);
+    pass.setKeepOrganized(false);
+    pass.filter (*cloud_x);
+
+    // Create the filtering object (y-axis)
+    pass.setInputCloud (cloud_x);
+    pass.setFilterFieldName ("y");
+    pass.setFilterLimits (-1.0, 1.0);
+    pass.setKeepOrganized(false);
+    pass.filter (*cloud_y);
+
+    // Create the filtering object (z-axis)
+    pass.setInputCloud (cloud_y);
+    pass.setFilterFieldName ("z");
+    pass.setFilterLimits (0.0, 2.0);
+    pass.setKeepOrganized(false);
+    pass.filter (*cloud);
+
+    /** Get the plane model, if present **/
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::SACSegmentation<pcl::PointXYZ> segmentation;
+    segmentation.setInputCloud(cloud);
+    segmentation.setModelType(pcl::SACMODEL_PLANE);
+    segmentation.setMethodType(pcl::SAC_RANSAC);
+    segmentation.setDistanceThreshold(0.01); // Distance to model points
+    segmentation.setOptimizeCoefficients(true);
+    pcl::PointIndices::Ptr planeIndices(new pcl::PointIndices);
+    segmentation.segment(*planeIndices, *coefficients);
+
+    if (planeIndices->indices.size() == 0)
+        std::cout << "Could not find a plane in the scene." << std::endl;
+    else {
+
+        /** copy objects to new cloud **/
+        pcl::ExtractIndices<pcl::PointXYZ> extract;
+        extract.setInputCloud(cloud);
+        extract.setIndices(planeIndices);
+        extract.setNegative(true);
+        extract.filter(*objects);
+
+        pcl::visualization::CloudViewer viewerObjects("Objects on table");
+        findCenter(objects);
+        viewerObjects.showCloud(objects);
+        while (!viewerObjects.wasStopped()) {
+            // Do nothing but wait.
+        }
+    }
+}
+
+void findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
+{
+
+	int cloud_size = object_cloud->points.size();
+
+	float sum_x = 0, sum_y = 0, sum_z = 0;
+
+	for(int i = 0; i < cloud_size; i++)
+	{
+		pcl::PointXYZ point = object_cloud->points[i];
+
+		sum_x += point.x;
+		sum_y += point.y;
+		sum_z += point.z;
+	}
+
+	geometry_msgs::Point centroid;
+	centroid.x = sum_x/cloud_size;
+	centroid.y = sum_y/cloud_size;
+	centroid.z = sum_z/cloud_size;
+
+	std::cout << "Zentrum des Eistee-Objekts: " << centroid.x << " " << centroid.y << " " << centroid.z << std::endl;
+
+
+
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+
+    kdtree.setInputCloud (object_cloud);
+
+    int K = 10;
+
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    pcl::PointXYZ searchPoint;
+
+    searchPoint.x = centroid.x;
+    searchPoint.y = centroid.y;
+    searchPoint.z = centroid.z;
+
+    kdtree.nearestKSearch(searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance);
+
+    sum_x = 0, sum_y = 0, sum_z = 0;
+
+    for(int i = 0; i < pointIdxNKNSearch.size(); i++)
+    {
+        pcl::PointXYZ point = object_cloud->points[ pointIdxNKNSearch[i] ];
+
+        sum_x += point.x;
+        sum_y += point.y;
+        sum_z += point.z;
+    }
+
+    geometry_msgs::Point centroidNKN;
+    centroidNKN.x = sum_x/cloud_size;
+    centroidNKN.y = sum_y/cloud_size;
+    centroidNKN.z = sum_z/cloud_size;
+
+    std::cout << "Zentrum des Eistee-Objekts (KNN): " << centroidNKN.x << " " << centroidNKN.y << " " << centroidNKN.z << std::endl;
+
+}
+
+bool getObjectInfo(object_detection::VisObjectInfo::Request &req, object_detection::VisObjectInfo::Response &res)
+{
+	ROS_INFO("Der Service wurde abgerufen.");
+	geometry_msgs::Point point; // Der Punkt, der später übergeben wird.
+	point.x = getmodelstate.response.pose.position.x;
+	point.y = getmodelstate.response.pose.position.y;
+	point.z = getmodelstate.response.pose.position.z;
+
+	res.object.position = point;
+	res.object.type = "";
+
+	// ROS_INFO("x=%ld, y=%ld, z=%ld", res.object.position.x, res.object.position.y, res.object.position.z);
+
+	return true;
+}
+
+void findCenterNKN(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
+{
+
+    int cloud_size = object_cloud->points.size();
+
+    float sum_x = 0, sum_y = 0, sum_z = 0;
+
+    for(int i = 0; i < cloud_size; i++)
+    {
+        pcl::PointXYZ point = object_cloud->points[i];
+
+        sum_x += point.x;
+        sum_y += point.y;
+        sum_z += point.z;
+    }
+
+    geometry_msgs::Point centroid;
+    centroid.x = sum_x/cloud_size;
+    centroid.y = sum_y/cloud_size;
+    centroid.z = sum_z/cloud_size;
+
+    std::cout << "Zentrum des Eistee-Objekts: " << centroid.x << " " << centroid.y << " " << centroid.z << std::endl;
+
+
+
+    pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+
+    kdtree.setInputCloud (object_cloud);
+
+    int K = 10;
+
+    std::vector<int> pointIdxNKNSearch(K);
+    std::vector<float> pointNKNSquaredDistance(K);
+
+    pcl::PointXYZ searchPoint;
+
+    searchPoint.x = centroid.x;
+    searchPoint.y = centroid.y;
+    searchPoint.z = centroid.z;
+
+    kdtree.nearestKSearch(searchPoint, K, pointIdxNKNSearch, pointNKNSquaredDistance);
+
+    sum_x = 0, sum_y = 0, sum_z = 0;
+
+    for(int i = 0; i < pointIdxNKNSearch.size(); i++)
+    {
+        pcl::PointXYZ point = object_cloud->points[ pointIdxNKNSearch[i] ];
+
+        sum_x += point.x;
+        sum_y += point.y;
+        sum_z += point.z;
+    }
+
+    geometry_msgs::Point centroidNKN;
+    centroidNKN.x = sum_x/cloud_size;
+    centroidNKN.y = sum_y/cloud_size;
+    centroidNKN.z = sum_z/cloud_size;
+
+    std::cout << "Zentrum des Eistee-Objekts (KNN): " << centroidNKN.x << " " << centroidNKN.y << " " << centroidNKN.z << std::endl;
+
 }
