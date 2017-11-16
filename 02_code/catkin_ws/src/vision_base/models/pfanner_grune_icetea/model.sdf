@@ -1,10 +1,8 @@
 <?xml version="1.0" ?>
 <sdf version="1.4">
 <model name="eistee">
-  <pose>1.35 0.5 1.1 0 0 0</pose><!-- arbeitsflaeche kueche-->
-  <!--pose>-1 1 1.1 0 0 0</pose--><!-- tisch kueche-->
-
     <static>false</static>
+
     <link name="eistee_link">
        <inertial>
           <inertia>
@@ -17,26 +15,25 @@
           </inertia>
           <mass>25</mass>
         </inertial>
-      <gravity>true</gravity>
+        <gravity>true</gravity>
+        <self_collide>true</self_collide>
+        <kinematic>true</kinematic>
 
+        <collision name="collision">
+          <pose>0 0 0 0 0 0</pose>
+          <geometry>
+	           <box>
+	              <size>0.1 0.1 0.4</size>
+	             </box>
+             </geometry>
+           </collision>
 
-      <!--kinematic>true</kinematic-->
-      <collision name="collision">
-        <pose>0 0 0 0 0 0</pose>
-        <geometry>
-	  <box>
-	    <size>0.1 0.1 0.4</size>
-	  </box>
-          <!--mesh><uri>model:///pfanner_grune_icetea/pfanner_grune_icetea.dae</uri></mesh-->
-        </geometry>
-      </collision>
-      <visual name="visual">
-        <!--pose>0 0 0 0 0 0</pose-->
-        <geometry>
-          <mesh><uri>model:///pfanner_grune_icetea/pfanner_grune_icetea.dae</uri></mesh>
-        </geometry>
-      </visual>
+           <visual name="visual">
+             <geometry>
+               <mesh><uri>model:///pfanner_grune_icetea/pfanner_grune_icetea.dae</uri></mesh>
+             </geometry>
+           </visual>
+
     </link>
-
   </model>
 </sdf>
