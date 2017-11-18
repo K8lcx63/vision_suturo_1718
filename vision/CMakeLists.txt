@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(vision_base)
+project(vision)
 
 
 find_package(catkin REQUIRED COMPONENTS
@@ -33,7 +33,7 @@ add_definitions(${PCL_DEFINITIONS})
 
 add_executable(
   listener
-  src/listener.cpp
+  src/main.cpp
 )
 
 target_link_libraries(

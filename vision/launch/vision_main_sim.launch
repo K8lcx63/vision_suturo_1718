@@ -23,7 +23,7 @@
    <arg name="ICETEA_POSE_TABLE" default="-x -1.0 -y 1.0 -z 1.1"/>
 
    <!-- bring up an empty world -->
-   <include file="$(find vision_base)/launch/custom_world.launch">
+   <include file="$(find vision)/launch/vision_custom_world.launch">
      <arg name="paused" value="true"/>
      <arg name="use_sim_time" value="true"/>
      <arg name="gui" value="true"/>
@@ -67,9 +67,9 @@
    <node name="spawn_eistee"
      pkg="gazebo_ros"
      type="spawn_model"
-     args="$(arg ICETEA_POSE_KITCHEN) -file $(find vision_base)/models/pfanner_grune_icetea/model.sdf -sdf -model eistee"
+     args="$(arg ICETEA_POSE_KITCHEN) -file $(find vision)/models/pfanner_grune_icetea/model.sdf -sdf -model eistee"
      respawn="false"
      output="screen"/>
-   <node name="listener" pkg="vision_base" type="listener" output="screen"/>
+   <node name="listener" pkg="vision" type="listener" output="screen"/>
 
 </launch>
