@@ -53,7 +53,7 @@
    <node name="spawn_pr2_model" 
 	pkg="gazebo_ros" 
 	type="spawn_model" 
-	args="$(arg ROBOT_POSE_FACE_KITCHEN) $(arg ROBOT_INITIAL_JOINTS) -urdf -param robot_description -model -unpause pr2 -ros_namespace /gazebo" 
+	args="$(arg ROBOT_POSE_FACE_KITCHEN) $(arg ROBOT_INITIAL_JOINTS) -urdf -param robot_description -unpause -model pr2 -ros_namespace /gazebo"
 	respawn="false" 
 	output="screen" /> 
 
