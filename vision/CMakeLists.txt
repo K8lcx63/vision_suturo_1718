@@ -5,21 +5,18 @@ project(vision)
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
-  message_generation
   pcl_ros
   sensor_msgs
   pcl_conversions
-  object_detection
+  vision_msgs
+  message_generation
 )
 
 catkin_package(CATKIN_DEPENDS
-  object_detection
+  vision_msgs
 )
 
-find_package(PCL 1.3 REQUIRED COMPONENTS
-  common
-  io
-)
+find_package(PCL 1.3 REQUIRED)
 
 include_directories(
   ${PCL_INCLUDE_DIRS}
@@ -39,8 +36,7 @@ add_executable(
 target_link_libraries(
   listener
   ${catkin_LIBRARIES}
-  ${PCL_COMMON_LIBRARIES}
-  ${PCL_IO_LIBRARIES}
+  ${PCL_LIBRARIES}
 )
 
 add_dependencies(listener beginner_tutorials_generate_messages_cpp gazebo_ros)
