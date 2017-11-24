@@ -79,6 +79,6 @@
      args="$(arg ICETEA_POSE_KITCHEN) -file $(find vision)/models/pfanner_grune_icetea/model.sdf -sdf -model eistee"
      respawn="false"
      output="screen"/>
-   <node name="listener" pkg="vision" type="listener" output="screen"/>
+   <node name="vision_main" pkg="vision" type="vision_main" output="screen"/>
 
 </launch>
