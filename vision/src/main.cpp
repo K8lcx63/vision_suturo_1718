@@ -209,10 +209,10 @@ findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud) {
         centroid.y = sum_y / cloud_size;
         centroid.z = sum_z / cloud_size;
 
-        ROS_INFO("CURRENT CLUSTER CENTER: ");
-        ROS_WARN("X: %f", centroid.y);
-        ROS_WARN("Y: %f", centroid.x);
-        ROS_WARN("Z: %f", centroid.z);
+        ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
+        ROS_INFO("\x1B[32mX: %f\n", centroid.y);
+        ROS_INFO("\x1B[32mY: %f\n", centroid.x);
+        ROS_INFO("\x1B[32mZ: %f\n", centroid.z);
 
         return centroid;
     } else {
