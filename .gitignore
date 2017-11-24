@@ -3,7 +3,6 @@
 **/build
 **/logs
 **/.catkin_tools
-**/msgs_suturo_1718
 **/.idea
 **/cmake-build-debug
 

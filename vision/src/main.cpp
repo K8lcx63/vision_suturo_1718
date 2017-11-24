@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     ros::init(argc, argv, "listener");
     ros::NodeHandle n;
     ros::Subscriber sub_kinect = n.subscribe(
-            "/head_mount_kinect/depth_registered/points", 1000, &findCluster);
+            "/head_mount_kinect/depth_registered/points", 100, &findCluster);
 
     // ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
     ros::ServiceClient client =
@@ -111,6 +111,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
     if (kinect->points.size() < input_noise_threshold){ // if PR2 is not looking at anything
         ROS_ERROR("INPUT CLOUD EMPTY (PR2: \"OH, MY GOD! I AM BLIND!\"");
+
 
     } else {
         ROS_INFO("CLUSTER EXTRACTION STARTED");
@@ -223,25 +224,24 @@ findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud) {
 
 bool getObjectInfo(object_detection::VisObjectInfo::Request &req,
                    object_detection::VisObjectInfo::Response &res) {
-    ROS_WARN("POINT SERVICE CALLED");
+    ROS_INFO("POINT SERVICE CALLED");
+    geometry_msgs::PointStamped kinect_point_stamped;
+    kinect_point_stamped.point = kinect_point;
+    // Eventuell doch ...kinect_rgb_optical...
+    kinect_point_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
+    res.object.position = kinect_point_stamped;
     if (kinect_point.x == 0 && kinect_point.y == 0 && kinect_point.z == 0) {
-        ROS_ERROR("NO POINT FOUND");
-        return false;
-
-    } else {
-        geometry_msgs::PointStamped kinect_point_stamped;
-        kinect_point_stamped.point = kinect_point;
-        // Eventuell doch ...kinect_rgb_optical...
-        kinect_point_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
-        res.object.position = kinect_point_stamped;
-        res.object.error = "";
-        //ROS_INFO("GOT EXTRACTED POINT");
-
-        // when service is called, input cloud (kinect) and output cloud (extracted
-        // objects) from findCluster are saved to ./data
-        savePointCloud(objects_global, kinect_global);
+        ROS_ERROR("No point found. Is the input point cloud empty?");
+        res.object.error = "No point found. Is the input point cloud empty?";
     }
-
+    else
+    {
+        res.object.error = "";
+    }
+    //ROS_INFO("GOT EXTRACTED POINT");
+    // when service is called, input cloud (kinect) and output cloud (extracted
+    // objects) from findCluster are saved to ./data
+    // savePointCloud(objects_global, kinect_global);
     return true;
 }
 
