@@ -25,7 +25,7 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr kinect_global;
 pcl::PointCloud<pcl::PointXYZ>::Ptr objects_global;
 unsigned int filenr;
 
-unsigned int input_noise_threshold = 12;
+unsigned int input_noise_threshold = 42;
 
 
 /** function heads **/
@@ -43,17 +43,20 @@ bool getObjectInfo(object_detection::VisObjectInfo::Request &req,
 /** main function **/
 int main(int argc, char **argv) {
     // Subscriber für das points-Topic des Kinect-Sensors.
-    ros::init(argc, argv, "listener");
+    ros::init(argc, argv, "vision_main");
+
+    /** nodehandle, subscribers and publishers**/
     ros::NodeHandle n;
     ros::Subscriber sub_kinect = n.subscribe(
             "/head_mount_kinect/depth_registered/points", 100, &findCluster);
 
-    // ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
-    ros::ServiceClient client =
-            n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
-    getmodelstate.request.model_name = "eistee"; // Name des Objekts in Gazebo.
 
-    // Service für das Übergeben der Eistee-Position aus Gazebo.
+    /** services and clients **/
+    // ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
+    // ros::ServiceClient client =  n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
+    // getmodelstate.request.model_name = "eistee"; // Name des Objekts in Gazebo.
+
+    // service that returns object point
     ros::ServiceServer service =
             n.advertiseService("VisObjectInfo", getObjectInfo);
     ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
@@ -67,7 +70,9 @@ int main(int argc, char **argv) {
 
 
     while (n.ok()) {
-        client.call(getmodelstate);
+        //ros::Publisher pub_objects = n.advertise<sensor_msgs::PointCloud2>("/vision_main/objects",1000);
+        // pub_objects.publish(objects_global);
+        // client.call(getmodelstate); // continously call model state
 
         // Parameter testing stuff... MAYBE rather automatically check if getmodelstate is valid after starting the node
         if (n.getParam("/simulation", simulation))

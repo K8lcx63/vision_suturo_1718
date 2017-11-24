@@ -29,14 +29,14 @@ add_definitions(${PCL_DEFINITIONS})
 
 
 add_executable(
-  listener
+  vision_main
   src/main.cpp
 )
 
 target_link_libraries(
-  listener
+  vision_main
   ${catkin_LIBRARIES}
   ${PCL_LIBRARIES}
 )
 
-add_dependencies(listener beginner_tutorials_generate_messages_cpp gazebo_ros)
+add_dependencies(vision_main beginner_tutorials_generate_messages_cpp gazebo_ros)
