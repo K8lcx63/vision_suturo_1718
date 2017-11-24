@@ -8,12 +8,12 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   sensor_msgs
   pcl_conversions
-  vision_msgs
+  object_detection
   message_generation
 )
 
 catkin_package(CATKIN_DEPENDS
-  vision_msgs
+  object_detection
 )
 
 find_package(PCL 1.3 REQUIRED)

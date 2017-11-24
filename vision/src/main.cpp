@@ -2,8 +2,8 @@
 #include "gazebo_msgs/GetModelState.h"
 #include "gazebo_msgs/ModelState.h"
 #include "sensor_msgs/PointCloud2.h"
-#include "vision_msgs/ObjectDetection.h"
-#include "vision_msgs/VisObjectInfo.h"
+#include "object_detection/ObjectDetection.h"
+#include "object_detection/VisObjectInfo.h"
 
 // includes for pcl
 
@@ -37,8 +37,8 @@ findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud);
 void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
                     pcl::PointCloud<pcl::PointXYZ>::Ptr kinect);
 
-bool getObjectInfo(vision_msgs::VisObjectInfo::Request &req,
-                   vision_msgs::VisObjectInfo::Response &res);
+bool getObjectInfo(object_detection::VisObjectInfo::Request &req,
+                   object_detection::VisObjectInfo::Response &res);
 
 /** main function **/
 int main(int argc, char **argv) {
@@ -56,13 +56,37 @@ int main(int argc, char **argv) {
     // Service für das Übergeben der Eistee-Position aus Gazebo.
     ros::ServiceServer service =
             n.advertiseService("VisObjectInfo", getObjectInfo);
-    ROS_WARN("POINT SERVICE READY");
+    ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
 
     filenr = 0; // apply numbers for saving pcd files
     kinect_point.x = 0, kinect_point.y = 0, kinect_point.z = 0; // dummy point
     ros::Rate r(2.0);
+
+    // Parameter testing stuff...
+    bool simulation;
+
+
     while (n.ok()) {
         client.call(getmodelstate);
+
+        // Parameter testing stuff... MAYBE rather automatically check if getmodelstate is valid after starting the node
+        if (n.getParam("/simulation", simulation))
+        {
+            ROS_INFO("Parameter simulation exists!");
+            if(simulation)
+            {
+                ROS_INFO("Parameter simulation is true!");
+            }
+            else
+            {
+                ROS_INFO("Parameter simulation is false!");
+            }
+        }
+        else
+        {
+            ROS_WARN("Parameter simulation does not exist!");
+        }
+
 
         ros::spinOnce();
         r.sleep();
@@ -197,16 +221,20 @@ findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud) {
 
 }
 
-bool getObjectInfo(vision_msgs::VisObjectInfo::Request &req,
-                   vision_msgs::VisObjectInfo::Response &res) {
+bool getObjectInfo(object_detection::VisObjectInfo::Request &req,
+                   object_detection::VisObjectInfo::Response &res) {
     ROS_WARN("POINT SERVICE CALLED");
     if (kinect_point.x == 0 && kinect_point.y == 0 && kinect_point.z == 0) {
         ROS_ERROR("NO POINT FOUND");
         return false;
 
     } else {
-        res.object.position = kinect_point;
-        res.object.type = "Point";
+        geometry_msgs::PointStamped kinect_point_stamped;
+        kinect_point_stamped.point = kinect_point;
+        // Eventuell doch ...kinect_rgb_optical...
+        kinect_point_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
+        res.object.position = kinect_point_stamped;
+        res.object.error = "";
         //ROS_INFO("GOT EXTRACTED POINT");
 
         // when service is called, input cloud (kinect) and output cloud (extracted
