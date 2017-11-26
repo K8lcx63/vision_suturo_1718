@@ -14,6 +14,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package(CATKIN_DEPENDS
   object_detection
+  vision_msgs
 )
 
 find_package(PCL 1.3 REQUIRED)
