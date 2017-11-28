@@ -21,10 +21,15 @@
 
 /** global variables **/
 gazebo_msgs::GetModelState getmodelstate;
-geometry_msgs::Point kinect_point;
+geometry_msgs::PointStamped centroid_stamped;
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr kinect_global;
 pcl::PointCloud<pcl::PointXYZ>::Ptr objects_global;
+
+ros::ServiceClient client;
+
+bool simulation;
+
 unsigned int filenr;
 
 unsigned int input_noise_threshold = 42;
@@ -33,8 +38,10 @@ unsigned int input_noise_threshold = 42;
 /** function heads **/
 void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect);
 
-geometry_msgs::Point
+geometry_msgs::PointStamped
 findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud);
+
+geometry_msgs::PointStamped findCenterGazebo();
 
 void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
                     pcl::PointCloud<pcl::PointXYZ>::Ptr kinect);
@@ -49,7 +56,8 @@ bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object);
 
 
 /** main function **/
-int main(int argc, char **argv) {
+int main(int argc, char **argv)
+{
     // Subscriber für das points-Topic des Kinect-Sensors.
     ros::init(argc, argv, "vision_main");
 
@@ -77,7 +85,7 @@ int main(int argc, char **argv) {
 
 
     filenr = 0; // apply numbers for saving pcd files
-    kinect_point.x = 0, kinect_point.y = 0, kinect_point.z = 0; // dummy point
+    centroid_stamped.point.x = 0, centroid_stamped.point.y = 0, centroid_stamped.point.z = 0; // dummy point
     ros::Rate r(2.0);
 
 
@@ -88,7 +96,8 @@ int main(int argc, char **argv) {
     //n_private_.param("simulation", simulation, true);
     //n.param("/vision_base/simulation", simulation, false);
 
-    while (n.ok()) {
+    while (n.ok())
+    {
         //ros::Publisher pub_objects = n.advertise<sensor_msgs::PointCloud2>("/vision_main/objects",1000);
         //pub_objects.publish(objects_global);
         //client.call(getmodelstate); // continously call model state
@@ -129,7 +138,8 @@ int main(int argc, char **argv) {
 /**
  ** Find the object!
 **/
-void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
+void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
+{
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>),
             cloud_y(new pcl::PointCloud<pcl::PointXYZ>),
             cloud_x(new pcl::PointCloud<pcl::PointXYZ>); // Initializes clouds for the PassThroughFilter
@@ -139,11 +149,12 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
     pcl::PointIndices::Ptr planeIndices(new pcl::PointIndices);
 
 
-    if (kinect->points.size() < input_noise_threshold){ // if PR2 is not looking at anything
+    if (kinect->points.size() < input_noise_threshold) // if PR2 is not looking at anything
+    {
         ROS_ERROR("INPUT CLOUD EMPTY (PR2: \"OH, MY GOD! I AM BLIND!\"");
-
-
-    } else {
+    }
+    else
+    {
         ROS_INFO("CLUSTER EXTRACTION STARTED");
         // Objects for storing the point clouds.
 
@@ -171,10 +182,13 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
         pass.setKeepOrganized(false);
         pass.filter(*cloud);
 
-        if (cloud->points.size() == 0){
+        if (cloud->points.size() == 0)
+        {
             ROS_ERROR("NO CLOUD AFTER FILTERING");
-            kinect_point = findCenterGazebo(); // Use gazebo data instead
-        } else {
+            centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+        }
+        else
+        {
             // ROS_INFO("FINDING PLANE");
             pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
             pcl::SACSegmentation<pcl::PointXYZ> segmentation;
@@ -187,9 +201,12 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
 
             if (planeIndices->indices.size() == 0)
+            {
                 ROS_ERROR("NO PLANE FOUND");
-                kinect_point = findCenterGazebo(); // Use gazebo data instead
-            else {
+                centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+            }
+            else
+            {
 
                 // ROS_INFO("EXTRACT CLUSTER");
                 pcl::ExtractIndices<pcl::PointXYZ> extract;
@@ -198,12 +215,13 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                 extract.setNegative(true);
                 extract.filter(*objects);
 
-                if (objects->points.size() == 0) {
+                if (objects->points.size() == 0)
+                {
                     ROS_ERROR("EXTRACTED CLUSTER IS EMPTY");
-                    kinect_point = findCenterGazebo(); // Use gazebo data instead
+                    centroid_stamped = findCenterGazebo(); // Use gazebo data instead
                 }
 
-                    kinect_point = findCenter(objects);
+                    centroid_stamped = findCenter(objects);
 
                     // clouds for saving
                     kinect_global = kinect;
@@ -219,15 +237,18 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
 }
 
-geometry_msgs::Point
-findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud) {
+geometry_msgs::PointStamped
+findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
+{
 
-    if (object_cloud->points.size() != 0){
+    if (object_cloud->points.size() != 0)
+    {
         int cloud_size = object_cloud->points.size();
 
         float sum_x = 0, sum_y = 0, sum_z = 0;
 
-        for (int i = 0; i < cloud_size; i++) {
+        for (int i = 0; i < cloud_size; i++)
+        {
             pcl::PointXYZ point = object_cloud->points[i];
 
             sum_x += point.x;
@@ -236,50 +257,51 @@ findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud) {
         }
 
         geometry_msgs::Point centroid;
-        centroid.x = sum_x / cloud_size;
-        centroid.y = sum_y / cloud_size;
-        centroid.z = sum_z / cloud_size;
+        centroid_stamped.point.x = sum_x / cloud_size;
+        centroid_stamped.point.y = sum_y / cloud_size;
+        centroid_stamped.point.z = sum_z / cloud_size;
 
         ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
-        ROS_INFO("\x1B[32mX: %f\n", centroid.y);
-        ROS_INFO("\x1B[32mY: %f\n", centroid.x);
-        ROS_INFO("\x1B[32mZ: %f\n", centroid.z);
+        ROS_INFO("\x1B[32mX: %f\n", centroid_stamped.point.y);
+        ROS_INFO("\x1B[32mY: %f\n", centroid_stamped.point.x);
+        ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped.point.z);
 
-        return centroid;
-    } else {
+        centroid_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
+        return centroid_stamped;
+    }
+    else
+    {
         ROS_ERROR("CLOUD EMPTY. NO POINT EXTRACTED");
     }
 
 }
 
-geometry_msgs::Point findCenterGazebo() // Only called if something went wrong in findCluster()
+geometry_msgs::PointStamped findCenterGazebo() // Only called if something went wrong in findCluster()
 {
-    geometry_msgs::Point centroid
     if(simulation) // Check if this is a simulation. This function is useless if it isn't :(
     {
         ROS_WARN("Something went wrong! Using gazebo data...");
         client.call(getmodelstate); // Call client and fill the data
-        centroid.x = getmodelstate.pose.position.x;
-        centroid.y = getmodelstate.pose.position.y;
-        centroid.z = getmodelstate.pose.position.z;
+        centroid_stamped.point.x = getmodelstate.response.pose.position.x;
+        centroid_stamped.point.y = getmodelstate.response.pose.position.y;
+        centroid_stamped.point.z = getmodelstate.response.pose.position.z;
+        centroid_stamped.header.frame_id = "world"; // gazebo uses the world frame!
     }
     else
     {
-        ROS_ERROR("Something went wrong! Gazebo data can't be used: This is not a simulation.")
+        ROS_ERROR("Something went wrong! Gazebo data can't be used: This is not a simulation.");
     }
 
-    return centroid;
+    return centroid_stamped;
 }
 
 bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
-                       object_detection::VisObjectInfo::Response &res) {
+                       object_detection::VisObjectInfo::Response &res)
+{
     ROS_INFO("POINT SERVICE CALLED");
-    geometry_msgs::PointStamped kinect_point_stamped;
-    kinect_point_stamped.point = kinect_point;
-    // Eventuell doch ...kinect_rgb_optical...
-    kinect_point_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
-    res.object.position = kinect_point_stamped;
-    if (kinect_point.x == 0 && kinect_point.y == 0 && kinect_point.z == 0) {
+    res.object.position = centroid_stamped;
+    if (centroid_stamped.point.x == 0 && centroid_stamped.point.y == 0 && centroid_stamped.point.z == 0)
+    {
         ROS_ERROR("No point found. Is the input point cloud empty?");
         res.object.error = "No point found. Is the input point cloud empty?";
     }
@@ -295,8 +317,8 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 }
 
 void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
-                    pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
-
+                    pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
+{
         ROS_INFO("SAVING FILES");
         std::stringstream ss;
         std::stringstream ss_input;
@@ -312,12 +334,16 @@ void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
 }
 
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
-                   vision_msgs::GetObjectInfo::Response &res){
-    if (objectIsStanding(objects_global) == true){
+                   vision_msgs::GetObjectInfo::Response &res)
+{
+    if (objectIsStanding(objects_global) == true)
+    {
         res.info.isStanding = true;
         res.info.information = "Objekt steht";
         return true;
-    } else {
+    }
+    else
+    {
         res.info.isStanding = false;
         res.info.information = "Objekt liegt";
         return false;
@@ -326,6 +352,7 @@ bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
 
 }
 
-bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object){
+bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object)
+{
     return true;
 }
