@@ -55,9 +55,10 @@ int main(int argc, char **argv) {
 
     /** nodehandle, subscribers and publishers**/
     ros::NodeHandle n;
+
+    // Subscriber for the kinect points. Also calls findCluster.
     ros::Subscriber sub_kinect = n.subscribe(
             "/head_mount_kinect/depth_registered/points", 100, &findCluster);
-
 
     /** services and clients **/
     // ServiceClient for calling the object position through gazebo
@@ -172,6 +173,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
         if (cloud->points.size() == 0){
             ROS_ERROR("NO CLOUD AFTER FILTERING");
+            kinect_point = findCenterGazebo(); // Use gazebo data instead
         } else {
             // ROS_INFO("FINDING PLANE");
             pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
@@ -186,6 +188,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
             if (planeIndices->indices.size() == 0)
                 ROS_ERROR("NO PLANE FOUND");
+                kinect_point = findCenterGazebo(); // Use gazebo data instead
             else {
 
                 // ROS_INFO("EXTRACT CLUSTER");
@@ -197,16 +200,14 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
                 if (objects->points.size() == 0) {
                     ROS_ERROR("EXTRACTED CLUSTER IS EMPTY");
-                } else{
+                    kinect_point = findCenterGazebo(); // Use gazebo data instead
+                }
 
                     kinect_point = findCenter(objects);
 
                     // clouds for saving
                     kinect_global = kinect;
                     objects_global = objects;
-
-                }
-
             }
         }
     }
@@ -249,6 +250,25 @@ findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud) {
         ROS_ERROR("CLOUD EMPTY. NO POINT EXTRACTED");
     }
 
+}
+
+geometry_msgs::Point findCenterGazebo() // Only called if something went wrong in findCluster()
+{
+    geometry_msgs::Point centroid
+    if(simulation) // Check if this is a simulation. This function is useless if it isn't :(
+    {
+        ROS_WARN("Something went wrong! Using gazebo data...");
+        client.call(getmodelstate); // Call client and fill the data
+        centroid.x = getmodelstate.pose.position.x;
+        centroid.y = getmodelstate.pose.position.y;
+        centroid.z = getmodelstate.pose.position.z;
+    }
+    else
+    {
+        ROS_ERROR("Something went wrong! Gazebo data can't be used: This is not a simulation.")
+    }
+
+    return centroid;
 }
 
 bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
