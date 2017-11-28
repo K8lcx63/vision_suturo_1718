@@ -28,6 +28,8 @@ pcl::PointCloud<pcl::PointXYZ>::Ptr objects_global;
 
 ros::ServiceClient client;
 
+std::string error_message; // Wird durch den Object Position Service mit ausgegeben
+
 bool simulation;
 
 unsigned int filenr;
@@ -152,6 +154,8 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
     if (kinect->points.size() < input_noise_threshold) // if PR2 is not looking at anything
     {
         ROS_ERROR("INPUT CLOUD EMPTY (PR2: \"OH, MY GOD! I AM BLIND!\"");
+        error_message = "Cloud empty. ";
+        centroid_stamped = findCenterGazebo(); // Use gazebo data instead
     }
     else
     {
@@ -185,6 +189,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
         if (cloud->points.size() == 0)
         {
             ROS_ERROR("NO CLOUD AFTER FILTERING");
+            error_message = "Cloud was empty after filtering. ";
             centroid_stamped = findCenterGazebo(); // Use gazebo data instead
         }
         else
@@ -203,6 +208,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
             if (planeIndices->indices.size() == 0)
             {
                 ROS_ERROR("NO PLANE FOUND");
+                error_message = "No plane found. ";
                 centroid_stamped = findCenterGazebo(); // Use gazebo data instead
             }
             else
@@ -218,6 +224,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
                 if (objects->points.size() == 0)
                 {
                     ROS_ERROR("EXTRACTED CLUSTER IS EMPTY");
+                    error_message = "Final extracted cluster was empty. ";
                     centroid_stamped = findCenterGazebo(); // Use gazebo data instead
                 }
 
@@ -281,6 +288,7 @@ geometry_msgs::PointStamped findCenterGazebo() // Only called if something went 
     if(simulation) // Check if this is a simulation. This function is useless if it isn't :(
     {
         ROS_WARN("Something went wrong! Using gazebo data...");
+        error_message.append("Gazebo data has been used instead. ");
         client.call(getmodelstate); // Call client and fill the data
         centroid_stamped.point.x = getmodelstate.response.pose.position.x;
         centroid_stamped.point.y = getmodelstate.response.pose.position.y;
@@ -299,20 +307,20 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
                        object_detection::VisObjectInfo::Response &res)
 {
     ROS_INFO("POINT SERVICE CALLED");
-    res.object.position = centroid_stamped;
-    if (centroid_stamped.point.x == 0 && centroid_stamped.point.y == 0 && centroid_stamped.point.z == 0)
-    {
-        ROS_ERROR("No point found. Is the input point cloud empty?");
-        res.object.error = "No point found. Is the input point cloud empty?";
-    }
-    else
-    {
-        res.object.error = "";
-    }
-    //ROS_INFO("GOT EXTRACTED POINT");
+    centroid_stamped.header.stamp = ros::Time::now(); // Timestamp
+    res.object.position = centroid_stamped; // Result of findCenter or findCenterGazebo
+    res.object.error = error_message; // Let planning know if any problems occured
+
+
     // when service is called, input cloud (kinect) and output cloud (extracted
     // objects) from findCluster are saved to ./data
-    savePointCloud(objects_global, kinect_global);
+
+    /**
+    Tammo: Hier failed der savePCDFileASCII-Kram, wenn man den Service aufruft.
+    **/
+    // savePointCloud(objects_global, kinect_global);
+
+
     return true;
 }
 
