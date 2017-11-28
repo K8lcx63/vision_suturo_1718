@@ -60,41 +60,45 @@ int main(int argc, char **argv) {
 
 
     /** services and clients **/
-    // ServiceClient für das Abrufen der Eistee-Position aus Gazebo.
-    // ros::ServiceClient client =  n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
-    // getmodelstate.request.model_name = "eistee"; // Name des Objekts in Gazebo.
+    // ServiceClient for calling the object position through gazebo
+    ros::ServiceClient client =  n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
+    getmodelstate.request.model_name = "eistee"; // Name des Objekts in Gazebo.
 
-    // service that returns object point
+    // Service for returning the object centroid
     ros::ServiceServer point_service =
             n.advertiseService("vision_main/visObjectInfo", getObjectPosition);
     ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
 
-
+    // Service for returning if the object has fallen over already
     ros::ServiceServer pose_service =
             n.advertiseService("vision_main/objectPose", getObjectPose);
     ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
-
 
 
     filenr = 0; // apply numbers for saving pcd files
     kinect_point.x = 0, kinect_point.y = 0, kinect_point.z = 0; // dummy point
     ros::Rate r(2.0);
 
-    // Parameter testing stuff...
-    bool simulation;
 
+
+    // Parameter testing stuff. Private node handle.
+    //bool simulation;
+    //ros::NodeHandle n_private_("~");
+    //n_private_.param("simulation", simulation, true);
+    //n.param("/vision_base/simulation", simulation, false);
 
     while (n.ok()) {
         //ros::Publisher pub_objects = n.advertise<sensor_msgs::PointCloud2>("/vision_main/objects",1000);
-        // pub_objects.publish(objects_global);
-        // client.call(getmodelstate); // continously call model state
-
-        // Parameter testing stuff... MAYBE rather automatically check if getmodelstate is valid after starting the node
-
+        //pub_objects.publish(objects_global);
+        //client.call(getmodelstate); // continously call model state
 
         /** simulation parameter start **/
         /*
-        if (n.getParam("/simulation", simulation))
+        // DOESNT WORK :(
+        n.param<bool>("simulation", simulation, "true");
+        ROS_INFO("%s", simulation.c_str());
+
+        if (n_private_.getParam("simulation", simulation))
         {
             ROS_INFO("Parameter simulation exists!");
             if(simulation)
@@ -110,10 +114,10 @@ int main(int argc, char **argv) {
         {
             ROS_WARN("Parameter simulation does not exist!");
         }
-         */
+        */
         /** simulation parameter stop **/
 
-
+        bool simulation = client.exists(); // Periodically check if this is a simulation
         ros::spinOnce();
         r.sleep();
     }
@@ -122,13 +126,12 @@ int main(int argc, char **argv) {
 }
 
 /**
- ** Finde den Eistee!
+ ** Find the object!
 **/
 void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
     pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>),
             cloud_y(new pcl::PointCloud<pcl::PointXYZ>),
-            cloud_x(new pcl::PointCloud<pcl::PointXYZ>);
-    pcl::PointCloud<pcl::PointXYZ>::Ptr plane(new pcl::PointCloud<pcl::PointXYZ>);
+            cloud_x(new pcl::PointCloud<pcl::PointXYZ>); // Initializes clouds for the PassThroughFilter
     pcl::PointCloud<pcl::PointXYZ>::Ptr objects(new pcl::PointCloud<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr result(
             new pcl::PointCloud<pcl::PointXYZ>);
