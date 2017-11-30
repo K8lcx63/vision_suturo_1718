@@ -19,12 +19,17 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
 
+#include <pcl/point_types.h>
+#include <pcl/features/normal_3d.h>
+
+
 /** global variables **/
 gazebo_msgs::GetModelState getmodelstate;
 geometry_msgs::PointStamped centroid_stamped;
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr kinect_global;
 pcl::PointCloud<pcl::PointXYZ>::Ptr objects_global;
+pcl::PointCloud<pcl::Normal>::Ptr normals_global;
 
 ros::ServiceClient client;
 
@@ -33,8 +38,9 @@ std::string error_message; // Wird durch den Object Position Service mit ausgege
 bool simulation;
 
 unsigned int filenr;
-
 unsigned int input_noise_threshold = 42;
+int one_loop = 0;
+
 
 
 /** function heads **/
@@ -55,6 +61,8 @@ bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res);
 
 bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object);
+
+pcl::PointCloud<pcl::Normal>::Ptr estimateSurfaceNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr input);
 
 
 /** main function **/
@@ -88,6 +96,7 @@ int main(int argc, char **argv)
 
     filenr = 0; // apply numbers for saving pcd files
     centroid_stamped.point.x = 0, centroid_stamped.point.y = 0, centroid_stamped.point.z = 0; // dummy point
+    one_loop = 0; // for one loop normal estimation
     ros::Rate r(2.0);
 
 
@@ -163,6 +172,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
         // Objects for storing the point clouds.
 
 
+
         /** Create the filtering object **/
         // Create the filtering object (x-axis)
         pcl::PassThrough<pcl::PointXYZ> pass;
@@ -233,6 +243,15 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
                     // clouds for saving
                     kinect_global = kinect;
                     objects_global = objects;
+
+                    /** estimate surface normals one time only **/
+
+                    if(one_loop == 0) {
+                        normals_global = estimateSurfaceNormals(objects);
+                        one_loop++;
+                    }
+                }
+
             }
         }
     }
@@ -242,7 +261,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect)
 
 
 
-}
+
 
 geometry_msgs::PointStamped
 findCenter(const pcl::PointCloud<pcl::PointXYZ>::Ptr object_cloud)
@@ -330,14 +349,23 @@ void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
         ROS_INFO("SAVING FILES");
         std::stringstream ss;
         std::stringstream ss_input;
+        std::stringstream ss_normals;
 
-        ss << getenv("HOME") << "/catkin_ws/src/vision_suturo_1718/vision/data/object_" << filenr << ".pcd";
-        ss_input << getenv("HOME") << "/catkin_ws/src/vision_suturo_1718/vision/data/kinect_" << filenr << ".pcd";
+
+
+        // automatc save to $HOME/.ros folder
+
+        ss << "./object_" << filenr << ".pcd";
+        ss_input << "./kinect_" << filenr << ".pcd";
+        ss_normals << "./kinect_normals_" << filenr << ".pcd";
+
 
         pcl::io::savePCDFileASCII(ss.str(), *objects);
         pcl::io::savePCDFileASCII(ss_input.str(), *kinect);
+        pcl::io::savePCDFileASCII(ss_normals.str(), *normals_global);
 
-        filenr++;
+
+    filenr++;
 
 }
 
@@ -360,7 +388,48 @@ bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
 
 }
 
-bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object)
-{
-    return true;
+bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object){
+
+    if (object->points.size() != 0) {
+        int cloud_size = object->points.size();
+
+        float sum_x = 0, sum_y = 0, sum_z = 0;
+
+        for (int i = 0; i < cloud_size; i++) {
+            pcl::PointXYZ point = object->points[i];
+
+            sum_x += point.x;
+            sum_y += point.y;
+            sum_z += point.z;
+        }
+
+        if (sum_y > sum_x) {
+            return true;
+        } else {
+            return false;
+
+        }
+    }
+}
+
+
+pcl::PointCloud<pcl::Normal>::Ptr estimateSurfaceNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr input) {
+
+    ROS_INFO("ESTIMATING SURFACE NORMALS (ONE TIME ONLY)");
+
+    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+    ne.setInputCloud(input);
+
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+    ne.setSearchMethod(tree);
+
+    pcl::PointCloud<pcl::Normal>::Ptr cloud_normals(new pcl::PointCloud<pcl::Normal>);
+
+
+    ne.setRadiusSearch(0.03); // Use all neighbors in a sphere of radius 3cm
+
+    ne.compute(*cloud_normals);
+    return cloud_normals;
+
+    // cloud_normals->points.size () should have the same size as the input cloud->points.size ()*
 }
