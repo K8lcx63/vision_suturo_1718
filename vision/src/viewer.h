@@ -1,0 +1,4 @@
+#ifndef VISION_VIEWER_H
+#define VISION_VIEWER_H
+
+#endif  // VISION_VIEWER_H
