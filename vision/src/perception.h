@@ -110,6 +110,8 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                     centroid_stamped = findCenterGazebo();  // Use gazebo data instead
                 }
 
+
+                error_message = "";
                 centroid_stamped = findCenter(objects);
 
                 // clouds for saving
