@@ -23,7 +23,7 @@ Is the perceived object standing up or lying down?
 sudo apt install ros-indigo-freenect-launch freenect libfreenect-bin
 
 #### startup
-roslaunch freenect_launch roslaunch freenect_launch freenect-registered-xyzrgb.launch
+roslaunch freenect_launch freenect-registered-xyzrgb.launch
 oder
 roslaunch vision vision_kinect.launch
 
