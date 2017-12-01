@@ -41,7 +41,7 @@ int main(int argc, char **argv) {
 
     // Service for returning the object centroid
     ros::ServiceServer point_service =
-            n.advertiseService("vision_main/visObjectInfo", getObjectPosition);
+            n.advertiseService("vision_main/objectPoint", getObjectPosition); //VisObjectInfo
     ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
 
     // Service for returning if the object has fallen over already
