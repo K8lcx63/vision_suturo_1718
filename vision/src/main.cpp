@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
 
         bool simulation =
                 client.exists();  // Periodically check if this is a simulation
+
         ros::spinOnce();
         r.sleep();
     }
@@ -82,6 +83,7 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
     // objects) from findCluster are saved to ./data
 
     /** estimate object normals **/
+    ROS_INFO("Estimating Normals for Reference");
     normals_global = estimateSurfaceNormals(objects_global);
 
     /** save clouds**/
@@ -92,7 +94,7 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res) {
-    if (objectIsStanding(objects_global) == true) {
+    if (objectIsStanding()) {
         res.info.isStanding = true;
         res.info.information = "Objekt steht";
         return true;

@@ -3,6 +3,8 @@
 
 #include <gazebo_msgs/GetModelState.h>
 #include <geometry_msgs/PointStamped.h>
+#include <Eigen/Geometry>
+
 #include <pcl/ModelCoefficients.h>
 #include <pcl/PointIndices.h>
 #include <pcl/features/normal_3d.h>
@@ -12,8 +14,12 @@
 #include <pcl/segmentation/sac_segmentation.h>
 #include <ros/ros.h>
 #include <pcl/impl/point_types.hpp>
+#include <pcl/point_types.h>
+#include <pcl/conversions.h>
+#include <pcl/features/normal_3d.h>
 
-unsigned int input_noise_threshold = 42;
+unsigned int input_noise_threshold = 142;
+
 
 bool simulation;
 
@@ -27,7 +33,10 @@ geometry_msgs::PointStamped findCenter(
 pcl::PointCloud<pcl::Normal>::Ptr estimateSurfaceNormals(
         pcl::PointCloud<pcl::PointXYZ>::Ptr input);
 
-bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object);
+bool objectIsStanding();
+
+void createCovarianceMatrix(pcl::PointCloud<pcl::PointXYZ> input,   Eigen::Matrix3f covariance_matrix);
+
 
 /**
  ** Find the object!
@@ -149,6 +158,7 @@ geometry_msgs::PointStamped findCenter(
     if (object_cloud->points.size() != 0) {
         int cloud_size = object_cloud->points.size();
 
+
         float sum_x = 0, sum_y = 0, sum_z = 0;
 
         for (int i = 0; i < cloud_size; i++) {
@@ -159,15 +169,19 @@ geometry_msgs::PointStamped findCenter(
             sum_z += point.z;
         }
 
+
         geometry_msgs::Point centroid;
         centroid_stamped.point.x = sum_x / cloud_size;
         centroid_stamped.point.y = sum_y / cloud_size;
         centroid_stamped.point.z = sum_z / cloud_size;
 
+
+
         ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
         ROS_INFO("\x1B[32mX: %f\n", centroid_stamped.point.y);
         ROS_INFO("\x1B[32mY: %f\n", centroid_stamped.point.x);
         ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped.point.z);
+
 
         centroid_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
         return centroid_stamped;
@@ -196,26 +210,30 @@ pcl::PointCloud<pcl::Normal>::Ptr estimateSurfaceNormals(
     return cloud_normals;
 }
 
-bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object) {
-    if (object->points.size() != 0) {
-        int cloud_size = object->points.size();
+bool objectIsStanding() {
 
-        float sum_x = 0, sum_y = 0, sum_z = 0;
+        normals_estimation_1 = estimateSurfaceNormals(objects_global);
 
-        for (int i = 0; i < cloud_size; i++) {
-            pcl::PointXYZ point = object->points[i];
 
-            sum_x += point.x;
-            sum_y += point.y;
-            sum_z += point.z;
-        }
 
-        if (sum_y > sum_x) {
-            return true;
-        } else {
+        if (normals_global.get() != normals_estimation_1.get()){
             return false;
         }
-    }
+    return true;
+
+
+}
+
+void createCovarianceMatrix(pcl::PointCloud<pcl::PointXYZ> input,   Eigen::Matrix3f covariance_matrix)
+{
+  // 16-bytes aligned placeholder for the XYZ centroid of a surface patch
+  Eigen::Vector4f xyz_centroid;
+
+  // Estimate the XYZ centroid
+  pcl::compute3DCentroid (input, xyz_centroid);
+
+  // Compute the 3x3 covariance matrix
+  pcl::computeCovarianceMatrix (input, xyz_centroid, covariance_matrix);
 }
 
 #endif  // VISION_PERCEPTION_H
