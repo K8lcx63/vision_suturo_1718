@@ -33,6 +33,7 @@ add_executable(
   vision_main
   src/main.cpp
 )
+
 target_link_libraries(
   vision_main
   ${catkin_LIBRARIES}
