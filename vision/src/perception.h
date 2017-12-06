@@ -211,17 +211,7 @@ pcl::PointCloud<pcl::Normal>::Ptr estimateSurfaceNormals(
 }
 
 bool objectIsStanding() {
-
-        normals_estimation_1 = estimateSurfaceNormals(objects_global);
-
-
-
-        if (normals_global.get() != normals_estimation_1.get()){
-            return false;
-        }
-    return true;
-
-
+    // TODO
 }
 
 void createCovarianceMatrix(pcl::PointCloud<pcl::PointXYZ> input,   Eigen::Matrix3f covariance_matrix)
