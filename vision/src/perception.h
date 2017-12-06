@@ -27,7 +27,7 @@ geometry_msgs::PointStamped findCenter(
 pcl::PointCloud<pcl::Normal>::Ptr estimateSurfaceNormals(
         pcl::PointCloud<pcl::PointXYZ>::Ptr input);
 
-bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object);
+bool objectIsStanding();
 
 /**
  ** Find the object!
@@ -196,26 +196,8 @@ pcl::PointCloud<pcl::Normal>::Ptr estimateSurfaceNormals(
     return cloud_normals;
 }
 
-bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object) {
-    if (object->points.size() != 0) {
-        int cloud_size = object->points.size();
-
-        float sum_x = 0, sum_y = 0, sum_z = 0;
-
-        for (int i = 0; i < cloud_size; i++) {
-            pcl::PointXYZ point = object->points[i];
-
-            sum_x += point.x;
-            sum_y += point.y;
-            sum_z += point.z;
-        }
-
-        if (sum_y > sum_x) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+bool objectIsStanding() {
+    // TODO
 }
 
 #endif  // VISION_PERCEPTION_H
