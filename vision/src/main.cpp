@@ -42,7 +42,7 @@ int main(int argc, char **argv) {
 
     // Service for returning the object centroid
     ros::ServiceServer point_service =
-            n.advertiseService("vision_main/visObjectInfo", getObjectPosition);
+            n.advertiseService("vision_main/objectPoint", getObjectPosition); //VisObjectInfo
     ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
 
     // Service for returning if the object has fallen over already
@@ -63,6 +63,7 @@ int main(int argc, char **argv) {
 
         bool simulation =
                 client.exists();  // Periodically check if this is a simulation
+
         ros::spinOnce();
         r.sleep();
     }
@@ -83,6 +84,7 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
     // objects) from findCluster are saved to ./data
 
     /** estimate object normals **/
+    ROS_INFO("Estimating Normals for Reference");
     normals_global = estimateSurfaceNormals(objects_global);
 
     /** save clouds**/

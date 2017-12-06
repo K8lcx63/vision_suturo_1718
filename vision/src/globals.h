@@ -9,6 +9,9 @@ std::string
 pcl::PointCloud<pcl::PointXYZ>::Ptr kinect_global;
 pcl::PointCloud<pcl::PointXYZ>::Ptr objects_global;
 pcl::PointCloud<pcl::Normal>::Ptr normals_global;
+pcl::PointCloud<pcl::Normal>::Ptr normals_estimation_1;
+pcl::PointCloud<pcl::Normal>::Ptr normals_estimation_2;
+pcl::PointCloud<pcl::Normal>::Ptr normals_pose;
 
 geometry_msgs::PointStamped centroid_stamped;
 
