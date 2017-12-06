@@ -50,7 +50,6 @@ int main(int argc, char **argv) {
             n.advertiseService("vision_main/objectPose", getObjectPose);
     ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
 
-    filenr = 0;  // apply numbers for saving pcd files
     centroid_stamped.point.x = 0, centroid_stamped.point.y = 0,
     centroid_stamped.point.z = 0;  // dummy point
     ros::Rate r(2.0);

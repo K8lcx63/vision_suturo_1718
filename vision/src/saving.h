@@ -10,9 +10,10 @@
 #include <sstream>
 #include <iostream>
 
+
 #include "saving.h"
 
-std::stringstream getTime();
+std::string getTime();
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 void savePointCloudNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud);
 void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
@@ -20,32 +21,42 @@ void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
                     pcl::PointCloud<pcl::Normal>::Ptr normals);
 
 
+std::string getTime(){
+    time_t rawtime;
+    struct tm * timeinfo;
+    char buffer[80];
 
-std::stringstream getTime(){
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+    time (&rawtime);
+    timeinfo = localtime(&rawtime);
 
-    std::stringstream time_string = std::put_time(&tm, "%d-%m-%Y %H-%M-%S");
-    return time_string;
+    strftime(buffer,sizeof(buffer),"%d-%m-%Y-%I-%M-%S",timeinfo);
+    std::string str(buffer);
+
+
+    return str;
 }
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     ROS_INFO("Saving PointCloud<PointXYZ>");
+    std::string time_string = getTime();
+
     std::stringstream ss;
 
     // automatic save to $HOME/.ros folder
 
-    ss << "./cloudXYZ_" << getTime()  << ".pcd";
+    ss << "./cloudXYZ_" << time_string  << ".pcd";
     pcl::io::savePCDFileASCII(ss.str(), *cloud);
 
 }
 
 void savePointCloudNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud) {
     ROS_INFO("Saving PointCloud<Normal>");
+    std::string time_string = getTime();
+
     std::stringstream ss;
 
     // automatic save to $HOME/.ros folder
 
-    ss << "./cloudNormal_" << getTime()  << ".pcd";
+    ss << "./cloudNormal_" << time_string  << ".pcd";
     pcl::io::savePCDFileASCII(ss.str(), *cloud);
 
 }
@@ -54,15 +65,16 @@ void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
                     pcl::PointCloud<pcl::PointXYZ>::Ptr kinect,
                     pcl::PointCloud<pcl::Normal>::Ptr normals) {
     ROS_INFO("SAVING FILES");
+    std::string time_string = getTime();
     std::stringstream ss;
     std::stringstream ss_input;
     std::stringstream ss_normals;
 
     // automatic save to $HOME/.ros folder
 
-    ss << "./object_" << getTime()  << ".pcd";
-    ss_input << "./kinect_" << getTime()  << ".pcd";
-    ss_normals << "./kinect_normals_" << getTime()  << ".pcd";
+    ss << "./object_" << time_string  << ".pcd";
+    ss_input << "./kinect_" << time_string  << ".pcd";
+    ss_normals << "./kinect_normals_" << time_string  << ".pcd";
 
     pcl::io::savePCDFileASCII(ss.str(), *objects);
     pcl::io::savePCDFileASCII(ss_input.str(), *kinect);
