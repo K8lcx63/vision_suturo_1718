@@ -14,16 +14,17 @@
  * output: cv::Mat
  */
 
-cv::Mat PointCloud2cvMat(pcl::PointCloud<pcl::PointXYZ>::Ptr input){
+cv::Mat PointCloud2cvMat(pcl::PointCloud<pcl::PointXYZ>::Ptr input) {
 
     cv::Mat output;
-    for (int i= 0; i < input->points.size(); i++){
-        output.at<float>(0,i) = input->points.at(i).x;
-        output.at<float>(1,i) = input->points.at(i).y;
-        output.at<float>(2,i) = input->points.at(i).z;
+    for (int i = 0; i < input->points.size(); i++) {
+        output.at<float>(0, i) = input->points.at(i).x;
+        output.at<float>(1, i) = input->points.at(i).y;
+        output.at<float>(2, i) = input->points.at(i).z;
     }
 
     return output;
 
 }
+
 #endif //VISION_CONVERSION_H

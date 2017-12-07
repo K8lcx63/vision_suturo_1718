@@ -1,26 +1,25 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>vision</name>
-  <version>0.0.0</version>
-  <description>The vision_base package</description>
+    <name>vision</name>
+    <version>0.0.0</version>
+    <description>The vision_base package</description>
 
-  <maintainer email="tammo@todo.todo">tammo</maintainer>
+    <maintainer email="tammo@todo.todo">tammo</maintainer>
 
-  <license>TODO</license>
+    <license>TODO</license>
 
-  <!-- <build_depend>object_detection</build_depend>
-  <run_depend>object_detection</run_depend> -->
-  <depend>object_detection</depend>
-  <depend>vision_msgs</depend>
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>pcl_ros</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>pcl_conversions</build_depend>
-  
+    <!-- <build_depend>object_detection</build_depend>
+    <run_depend>object_detection</run_depend> -->
+    <depend>object_detection</depend>
+    <depend>vision_msgs</depend>
+    <buildtool_depend>catkin</buildtool_depend>
+    <build_depend>roscpp</build_depend>
+    <build_depend>std_msgs</build_depend>
+    <build_depend>pcl_ros</build_depend>
+    <build_depend>sensor_msgs</build_depend>
+    <build_depend>pcl_conversions</build_depend>
 
 
-  <export>
-  </export>
+    <export>
+    </export>
 </package>
