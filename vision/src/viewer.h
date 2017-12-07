@@ -14,21 +14,36 @@
 void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ> cloud);
 
 
-void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
-{
-    pcl::visualization::PCLVisualizer viewer ("Matrix cloud");
+void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+    pcl::visualization::PCLVisualizer viewer("Matrix cloud");
 
 // Define R,G,B colors for the point cloud
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud_col_handler (cloud, 255, 255, 255);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud_col_handler(cloud, 255, 255, 255);
     viewer.addPointCloud(cloud, cloud_col_handler, "cloud");
 
-    viewer.addCoordinateSystem((0.0f,0.0f,0.0f));
+    viewer.addCoordinateSystem((0.0f, 0.0f, 0.0f));
     viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
-    viewer.setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud");
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud");
 
-    while (!viewer.wasStopped ()) {
-        viewer.spinOnce ();
+    while (!viewer.wasStopped()) {
+        viewer.spinOnce();
     }
+}
+
+int visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals){
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+    viewer->setBackgroundColor (0, 0, 0);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler(cloud,255,0,0);
+    viewer->addPointCloud<pcl::PointXYZ> (cloud,  "sample cloud");
+    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
+    viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal> (cloud, normals, 10, 0.05, "normals");
+    viewer->addCoordinateSystem (1.0);
+    viewer->initCameraParameters ();
+    while(!viewer->wasStopped()){
+        viewer->spinOnce ();
+
+    }
+    return 0;
 }
 
 #endif  // VISION_VIEWER_H
