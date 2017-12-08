@@ -14,7 +14,7 @@
  * output: cv::Mat
  */
 
-cv::Mat PointCloud2cvMat(pcl::PointCloud<pcl::PointXYZ>::Ptr input) {
+cv::Mat PointCloud2cvMat(pycl::PointCloud<pcl::PointXYZ>::Ptr input) {
 
     cv::Mat output;
     for (int i = 0; i < input->points.size(); i++) {

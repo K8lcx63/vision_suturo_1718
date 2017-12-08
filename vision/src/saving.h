@@ -26,6 +26,7 @@ void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
                     pcl::PointCloud<pcl::Normal>::Ptr normals);
 
 
+
 std::string getTime() {
     time_t rawtime;
     struct tm *timeinfo;
@@ -100,5 +101,6 @@ void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
     pcl::io::savePCDFileASCII(ss_normals.str(), *normals);
 
 }
+
 
 #endif  // VISION_SAVING_H

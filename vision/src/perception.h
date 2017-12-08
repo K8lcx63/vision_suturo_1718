@@ -19,6 +19,13 @@
 #include <pcl/point_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <ros/ros.h>
+#include <pcl/io/ply_io.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/io/pcd_grabber.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/console/time.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
@@ -197,18 +204,16 @@ createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals) {
     return output;
 }
 
-bool objectIsStanding() {}
+bool objectIsStanding() {
+    Eigen::Quaternion<float> quat;
+    quat.x() = 0.0f;
+    quat.y() = 0.0f;
+    quat.z() = 0.0f;
+    quat.w() = cos(90);
+    objects_global->sensor_orientation_ = quat;
+    mesh_global->sensor_orientation_ = quat;
+    return true;
 
-void createCovarianceMatrix(PointCloudXYZ input,
-                            Eigen::Matrix3f covariance_matrix) {
-    // 16-bytes aligned placeholder for the XYZ centroid of a surface patch
-    Eigen::Vector4f xyz_centroid;
-
-    // Estimate the XYZ centroid
-    pcl::compute3DCentroid(input, xyz_centroid);
-
-    // Compute the 3x3 covariance matrix
-    pcl::computeCovarianceMatrix(input, xyz_centroid, covariance_matrix);
 }
 
 void rotatePointCloud(PointCloudXYZPtr cloud) {
@@ -298,5 +303,6 @@ PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices) {
     extract.filter(*objects);
     return objects;
 }
+
 
 #endif // VISION_PERCEPTION_H

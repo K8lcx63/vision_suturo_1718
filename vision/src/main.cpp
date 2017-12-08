@@ -89,8 +89,6 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
     /** save clouds**/
     savePointCloud(objects_global, kinect_global, normals_global);
 
-    visualizeNormals(objects_global, normals_global);
-
 
     return true;
 }

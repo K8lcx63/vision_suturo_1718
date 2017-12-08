@@ -10,8 +10,16 @@
 #include <pcl/common/transforms.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
+#include <pcl/io/ply_io.h>
+#include <pcl/point_types.h>
+#include <pcl/registration/icp.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/console/time.h>
+
 
 void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ> cloud);
+
+void visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals);
 
 
 void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
@@ -26,11 +34,11 @@ void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud");
 
     while (!viewer.wasStopped()) {
-        viewer.spinOnce();
+        viewer.spinOnce(100);
     }
 }
 
-int visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals){
+void visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals){
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
     viewer->setBackgroundColor (0, 0, 0);
     pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler(cloud,255,0,0);
@@ -40,10 +48,11 @@ int visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<
     viewer->addCoordinateSystem (1.0);
     viewer->initCameraParameters ();
     while(!viewer->wasStopped()){
-        viewer->spinOnce ();
+        viewer->spinOnce (100);
 
     }
-    return 0;
 }
+
+
 
 #endif  // VISION_VIEWER_H
