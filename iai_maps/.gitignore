@@ -1,7 +1,0 @@
-*~
-bin
-build
-Media/models/*.urdf
-prolog/*.pl
-owl/*.owl
-*.swp

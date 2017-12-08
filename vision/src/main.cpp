@@ -14,6 +14,7 @@
 #include "globals.h"
 #include "perception.h"
 #include "saving.h"
+#include "viewer.h"
 
 bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
                        object_detection::VisObjectInfo::Response &res);
@@ -41,7 +42,7 @@ int main(int argc, char **argv) {
 
     // Service for returning the object centroid
     ros::ServiceServer point_service =
-            n.advertiseService("vision_main/visObjectInfo", getObjectPosition);
+            n.advertiseService("vision_main/objectPoint", getObjectPosition); //VisObjectInfo
     ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
 
     // Service for returning if the object has fallen over already
@@ -49,7 +50,6 @@ int main(int argc, char **argv) {
             n.advertiseService("vision_main/objectPose", getObjectPose);
     ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
 
-    filenr = 0;  // apply numbers for saving pcd files
     centroid_stamped.point.x = 0, centroid_stamped.point.y = 0,
     centroid_stamped.point.z = 0;  // dummy point
     ros::Rate r(2.0);
@@ -62,6 +62,7 @@ int main(int argc, char **argv) {
 
         bool simulation =
                 client.exists();  // Periodically check if this is a simulation
+
         ros::spinOnce();
         r.sleep();
     }
@@ -82,17 +83,19 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
     // objects) from findCluster are saved to ./data
 
     /** estimate object normals **/
+    ROS_INFO("Estimating Normals for Reference");
     normals_global = estimateSurfaceNormals(objects_global);
 
     /** save clouds**/
     savePointCloud(objects_global, kinect_global, normals_global);
+
 
     return true;
 }
 
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res) {
-    if (objectIsStanding(objects_global) == true) {
+    if (objectIsStanding()) {
         res.info.isStanding = true;
         res.info.information = "Objekt steht";
         return true;
