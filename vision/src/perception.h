@@ -86,7 +86,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
         // Create the filtering object (z-axis)
         pass.setInputCloud(cloud_y);
         pass.setFilterFieldName("z");
-        pass.setFilterLimits(0.0, 1.8);
+        pass.setFilterLimits(0.0, 5.0);
         pass.setKeepOrganized(false);
         pass.filter(*cloud);
 
@@ -95,12 +95,15 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
             error_message = "Cloud was empty after filtering. ";
             centroid_stamped = findCenterGazebo();  // Use gazebo data instead
         } else {
-            // ROS_INFO("FINDING PLANE");
+            ROS_INFO("FINDING PLANE");
             pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
             pcl::SACSegmentation <pcl::PointXYZ> segmentation;
             segmentation.setInputCloud(cloud);
-            segmentation.setModelType(pcl::SACMODEL_PLANE);
+            segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
             segmentation.setMethodType(pcl::SAC_RANSAC);
+            segmentation.setMaxIterations(500); // Default is 50 and could be problematic
+            segmentation.setAxis(Eigen::Vector3f(0,0,1));
+            segmentation.setEpsAngle(  60.0f * (M_PI/180.0f) ); // plane can be within 30 degrees of X-Z plane
             segmentation.setDistanceThreshold(0.01);  // Distance to model points
             segmentation.setOptimizeCoefficients(true);
             segmentation.segment(*planeIndices, *coefficients);
@@ -122,16 +125,13 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                 // Do DifferenceOfNormals stuff here to extract possible back wall(-s).
 
                 //The smallest scale to use in the DoN filter.
-                double scale1 = 1.0;
+                double scale1 = 0.02;
 
                 //The largest scale to use in the DoN filter.
-                double scale2 = 2.0;
+                double scale2 = 0.12;
 
                 //The minimum DoN magnitude to threshold by
-                double threshold = 0.0;
-
-                //segment scene into clusters with given distance tolerance using euclidean clustering
-                double segradius = 10.0;
+                double don_threshold = 0.5;
 
                 //pcl::PCLPointCloud2 objects2;
                 pcl::PointCloud<PointXYZRGB>::Ptr objectspredon(new pcl::PointCloud <PointXYZRGB>);
@@ -199,6 +199,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                 //pcl::PCDWriter writer;
                 //writer.write<pcl::PointNormal>("don.pcd", *doncloud, false);
 
+
                 // Filter by magnitude
                 ROS_INFO("Filtering out DoN mag");
 
@@ -207,7 +208,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                         new pcl::ConditionOr<PointNormal>()
                 );
                 range_cond->addComparison(pcl::FieldComparison<PointNormal>::ConstPtr(
-                        new pcl::FieldComparison<PointNormal>("curvature", pcl::ComparisonOps::GT, threshold))
+                        new pcl::FieldComparison<PointNormal>("curvature", pcl::ComparisonOps::GT, don_threshold))
                 );
                 // Build the filter
                 pcl::ConditionalRemoval <PointNormal> condrem;
@@ -225,6 +226,8 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                 std::cout << "Filtered Pointcloud: " << doncloud->points.size() << " data points." << std::endl;
 
                 //writer.write<pcl::PointNormal>("don_filtered.pcd", *doncloud, false);
+
+
 
                 // Convert PointNormal to PointXYZ
                 pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_final (new pcl::PointCloud<pcl::PointXYZ>);

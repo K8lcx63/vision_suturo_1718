@@ -14,6 +14,7 @@
 #include "globals.h"
 #include "perception.h"
 #include "saving.h"
+#include "viewer.h"
 
 bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
                        object_detection::VisObjectInfo::Response &res);
@@ -86,6 +87,8 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 
     /** save clouds**/
     savePointCloud(objects_global, kinect_global, normals_global);
+
+    visualizePointCloud(objects_global);
 
     return true;
 }
