@@ -11,7 +11,20 @@
 #include <pcl/point_cloud.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <ros/ros.h>
+#include <sensor_msgs/point_cloud_conversion.h>
 #include <pcl/impl/point_types.hpp>
+
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/search/organized.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/filters/conditional_removal.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/features/don.h>
+
+using namespace pcl;
+using namespace std;
 
 unsigned int input_noise_threshold = 42;
 
@@ -33,15 +46,15 @@ bool objectIsStanding(pcl::PointCloud<pcl::PointXYZ>::Ptr object);
  ** Find the object!
 **/
 void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
-    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>),
-            cloud_y(new pcl::PointCloud<pcl::PointXYZ>),
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud <pcl::PointXYZ>),
+            cloud_y(new pcl::PointCloud <pcl::PointXYZ>),
             cloud_x(
-            new pcl::PointCloud<pcl::PointXYZ>);  // Initializes clouds for the
+            new pcl::PointCloud <pcl::PointXYZ>);  // Initializes clouds for the
     // PassThroughFilter
     pcl::PointCloud<pcl::PointXYZ>::Ptr objects(
-            new pcl::PointCloud<pcl::PointXYZ>);
+            new pcl::PointCloud <pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointXYZ>::Ptr result(
-            new pcl::PointCloud<pcl::PointXYZ>);
+            new pcl::PointCloud <pcl::PointXYZ>);
     pcl::PointIndices::Ptr planeIndices(new pcl::PointIndices);
 
     if (kinect->points.size() <
@@ -56,7 +69,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
         /** Create the filtering object **/
         // Create the filtering object (x-axis)
-        pcl::PassThrough<pcl::PointXYZ> pass;
+        pcl::PassThrough <pcl::PointXYZ> pass;
         pass.setInputCloud(kinect);
         pass.setFilterFieldName("x");
         pass.setFilterLimits(-0.5, 0.5);
@@ -84,7 +97,7 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
         } else {
             // ROS_INFO("FINDING PLANE");
             pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-            pcl::SACSegmentation<pcl::PointXYZ> segmentation;
+            pcl::SACSegmentation <pcl::PointXYZ> segmentation;
             segmentation.setInputCloud(cloud);
             segmentation.setModelType(pcl::SACMODEL_PLANE);
             segmentation.setMethodType(pcl::SAC_RANSAC);
@@ -97,12 +110,168 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                 error_message = "No plane found. ";
                 centroid_stamped = findCenterGazebo();  // Use gazebo data instead
             } else {
+
+
                 // ROS_INFO("EXTRACT CLUSTER");
-                pcl::ExtractIndices<pcl::PointXYZ> extract;
+                pcl::ExtractIndices <pcl::PointXYZ> extract;
                 extract.setInputCloud(cloud);
                 extract.setIndices(planeIndices);
                 extract.setNegative(true);
                 extract.filter(*objects);
+
+                // Do DifferenceOfNormals stuff here to extract possible back wall(-s).
+
+                //The smallest scale to use in the DoN filter.
+                double scale1 = 1.0;
+
+                //The largest scale to use in the DoN filter.
+                double scale2 = 2.0;
+
+                //The minimum DoN magnitude to threshold by
+                double threshold = 0.0;
+
+                //segment scene into clusters with given distance tolerance using euclidean clustering
+                double segradius = 10.0;
+
+                //pcl::PCLPointCloud2 objects2;
+                pcl::PointCloud<PointXYZRGB>::Ptr objectspredon(new pcl::PointCloud <PointXYZRGB>);
+                //sensor_msgs::convertPointCloudToPointCloud2(*objects, &objects2);
+                //pcl::fromPCLPointCloud2 (objects2, *cloud_don);
+                pcl::copyPointCloud(*objects, *objectspredon);
+
+                pcl::search::Search<PointXYZRGB>::Ptr tree;
+                if (objectspredon->isOrganized()) {
+                    tree.reset(new pcl::search::OrganizedNeighbor<PointXYZRGB>());
+                } else {
+                    tree.reset(new pcl::search::KdTree<PointXYZRGB>(false));
+                }
+
+                // Set the input pointcloud for the search tree
+                tree->setInputCloud(objectspredon);
+                // Compute normals using both small and large scales at each point
+                pcl::NormalEstimationOMP <PointXYZRGB, PointNormal> ne;
+                ne.setInputCloud(objectspredon);
+                ne.setSearchMethod(tree);
+
+                /**
+                 * NOTE: setting viewpoint is very important, so that we can ensure
+                 * normals are all pointed in the same direction!
+                 */
+                ne.setViewPoint(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
+                                std::numeric_limits<float>::max());
+
+                // calculate normals with the small scale
+                ROS_INFO("Calculating normals for small scale");
+                pcl::PointCloud<PointNormal>::Ptr normals_small_scale(new pcl::PointCloud <PointNormal>);
+
+                ne.setRadiusSearch(scale1);
+                ne.compute(*normals_small_scale);
+
+                // calculate normals with the large scale
+                ROS_INFO("Calculating normals for large scale");
+                pcl::PointCloud<PointNormal>::Ptr normals_large_scale(new pcl::PointCloud <PointNormal>);
+
+                ne.setRadiusSearch(scale2);
+                ne.compute(*normals_large_scale);
+
+                // Create output cloud for DoN results
+                PointCloud<PointNormal>::Ptr doncloud(new pcl::PointCloud <PointNormal>);
+                //copyPointCloud<PointXYZRGB, PointNormal>(cloud, doncloud);
+                //cloud.copyPointCloud(doncloud);
+                copyPointCloud<PointXYZRGB, PointNormal>(*objectspredon, *doncloud);
+
+                ROS_INFO("Calculating DoN...");
+                // Create DoN operator
+                pcl::DifferenceOfNormalsEstimation <PointXYZRGB, PointNormal, PointNormal> don;
+                don.setInputCloud(objectspredon);
+                don.setNormalScaleLarge(normals_large_scale);
+                don.setNormalScaleSmall(normals_small_scale);
+
+                if (!don.initCompute()) {
+                    ROS_ERROR("Error: Could not intialize DoN feature operator");
+                    return;
+                }
+
+                // Compute DoN
+                don.computeFeature(*doncloud);
+
+                // Save DoN features
+                //pcl::PCDWriter writer;
+                //writer.write<pcl::PointNormal>("don.pcd", *doncloud, false);
+
+                // Filter by magnitude
+                ROS_INFO("Filtering out DoN mag");
+
+                // Build the condition for filtering
+                pcl::ConditionOr<PointNormal>::Ptr range_cond(
+                        new pcl::ConditionOr<PointNormal>()
+                );
+                range_cond->addComparison(pcl::FieldComparison<PointNormal>::ConstPtr(
+                        new pcl::FieldComparison<PointNormal>("curvature", pcl::ComparisonOps::GT, threshold))
+                );
+                // Build the filter
+                pcl::ConditionalRemoval <PointNormal> condrem;
+                condrem.setCondition(range_cond);
+                condrem.setInputCloud(doncloud);
+
+                pcl::PointCloud<PointNormal>::Ptr doncloud_filtered(new pcl::PointCloud <PointNormal>);
+
+                // Apply filter
+                condrem.filter(*doncloud_filtered);
+
+                doncloud = doncloud_filtered;
+
+                // Save filtered output
+                std::cout << "Filtered Pointcloud: " << doncloud->points.size() << " data points." << std::endl;
+
+                //writer.write<pcl::PointNormal>("don_filtered.pcd", *doncloud, false);
+
+                // Convert PointNormal to PointXYZ
+                pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_final (new pcl::PointCloud<pcl::PointXYZ>);
+                copyPointCloud(*doncloud, *cloud_final);
+
+                /*
+                // Filter by magnitude
+                cout << "Clustering using EuclideanClusterExtraction with tolerance <= " << segradius << "..." << endl;
+
+                pcl::search::KdTree<PointNormal>::Ptr segtree (new pcl::search::KdTree<PointNormal>);
+                segtree->setInputCloud (doncloud);
+
+                std::vector<pcl::PointIndices> cluster_indices;
+                pcl::EuclideanClusterExtraction<PointNormal> ec;
+
+                ec.setClusterTolerance (segradius);
+                ec.setMinClusterSize (50);
+                ec.setMaxClusterSize (100000);
+                ec.setSearchMethod (segtree);
+                ec.setInputCloud (doncloud);
+                ec.extract (cluster_indices);
+
+                int j = 0;
+                for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it, j++)
+                {
+                    pcl::PointCloud<PointNormal>::Ptr cloud_cluster_don (new pcl::PointCloud<PointNormal>);
+                    for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+                    {
+                        cloud_cluster_don->points.push_back (doncloud->points[*pit]);
+                    }
+
+                    cloud_cluster_don->width = int (cloud_cluster_don->points.size ());
+                    cloud_cluster_don->height = 1;
+                    cloud_cluster_don->is_dense = true;
+
+                    //Save cluster
+                    cout << "PointCloud representing the Cluster: " << cloud_cluster_don->points.size () << " data points." << std::endl;
+                    stringstream ss;
+                    ss << "don_cluster_" << j << ".pcd";
+                    writer.write<pcl::PointNormal> (ss.str (), *cloud_cluster_don, false);
+                }
+            */
+
+                // DoN result is not being used yet.
+                // Maybe the code could be shortened? It's pretty much the tutorial code right now
+                // DoN END
+
 
                 if (objects->points.size() == 0) {
                     ROS_ERROR("EXTRACTED CLUSTER IS EMPTY");
@@ -112,11 +281,11 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
 
                 error_message = "";
-                centroid_stamped = findCenter(objects);
+                centroid_stamped = findCenter(cloud_final); // = objects
 
                 // clouds for saving
                 kinect_global = kinect;
-                objects_global = objects;
+                objects_global = cloud_final; // = objects
             }
         }
     }
