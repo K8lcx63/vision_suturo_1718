@@ -37,6 +37,25 @@ void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
         viewer.spinOnce(100);
     }
 }
+void visualizeTwoPointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud1,pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2) {
+    pcl::visualization::PCLVisualizer viewer("Cloud 1: White . Cloud 2: Red");
+
+// Define R,G,B colors for the point cloud
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud1_col_handler(cloud1, 255, 255, 255);
+    viewer.addPointCloud(cloud1, cloud1_col_handler, "cloud1");
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> cloud2_col_handler(cloud2, 255, 0, 0);
+    viewer.addPointCloud(cloud2, cloud2_col_handler, "cloud2");
+
+
+    viewer.addCoordinateSystem((0.0f, 0.0f, 0.0f));
+    viewer.setBackgroundColor(0.05, 0.05, 0.05, 0);
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud1");
+    viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud2");
+
+    while (!viewer.wasStopped()) {
+        viewer.spinOnce(100);
+    }
+}
 
 void visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals){
     boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));

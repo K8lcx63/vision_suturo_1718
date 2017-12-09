@@ -19,13 +19,11 @@
 #include <pcl/point_types.h>
 #include <pcl/segmentation/sac_segmentation.h>
 #include <ros/ros.h>
-#include <pcl/io/ply_io.h>
+#include <iostream>
 #include <pcl/io/pcd_io.h>
-#include <pcl/io/pcd_grabber.h>
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/console/time.h>
+#include <pcl/registration/transformation_estimation.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
@@ -48,9 +46,9 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input);
 pcl::PointCloud<pcl::PointNormal>::Ptr
 createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals);
 
-bool objectIsStanding();
+int objectIsStanding();
 
-void rotatePointCloud(PointCloudXYZPtr cloud);
+PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud);
 
 PointIndices estimatePlaneIndices(PointCloudXYZPtr input);
 
@@ -61,6 +59,8 @@ void createCovarianceMatrix(PointCloudXYZ input,
 
 PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
                                float z);
+double executeICP(PointCloudXYZPtr cloud_in, PointCloudXYZPtr cloud_out);
+
 
 /**
  ** Find the object!
@@ -114,6 +114,8 @@ void findCluster(const PointCloudXYZPtr kinect) {
                 // clouds for saving
                 kinect_global = kinect;
                 objects_global = objects;
+                objects_rotated_global = rotatePointCloud(objects_global);
+
             }
         }
     }
@@ -204,22 +206,22 @@ createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals) {
     return output;
 }
 
-bool objectIsStanding() {
-    Eigen::Quaternion<float> quat;
-    quat.x() = 0.0f;
-    quat.y() = 0.0f;
-    quat.z() = 0.0f;
-    quat.w() = cos(90);
-    objects_global->sensor_orientation_ = quat;
-    mesh_global->sensor_orientation_ = quat;
-    return true;
+int  objectIsStanding() {
 
+    if (pcl::io::loadPCDFile<pcl::PointXYZ> ("/home/tammo/.ros/eistee_mesh.pcd", *mesh_global) == -1) //* load the file
+    {
+        PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
+    }
+
+    if (executeICP(objects_rotated_global,mesh_global) > 0.0006){
+        return 0;
+    }
+
+    return 1;
 }
 
-void rotatePointCloud(PointCloudXYZPtr cloud) {
+PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud) {
 
-    // define a rotation matrix (see
-    // https://en.wikipedia.org/wiki/Rotation_matrix)
     float theta = M_PI; // the angle of rotation in radians
 
     /**
@@ -229,13 +231,16 @@ void rotatePointCloud(PointCloudXYZPtr cloud) {
 
     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
 
-    // define a translation of 0 meters on the x-axis
-    transform.translation() << 0.0, 0.0, 0.0;
+
+    transform.translation() << -2.0, 0.0, 0.0;
+
 
     // theta radians around z-axis
     transform.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitZ()));
     // theta radians around y-axis
-    transform.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitY()));
+    transform.rotate(Eigen::AngleAxisf(-(theta/2), Eigen::Vector3f::UnitY()));
+
+
 
     /** executing transformation **/
     PointCloudXYZPtr transformed_cloud(new PointCloudXYZ());
@@ -243,6 +248,7 @@ void rotatePointCloud(PointCloudXYZPtr cloud) {
     // apply transform_1 or transform_2
     pcl::transformPointCloud(*cloud, *transformed_cloud, transform);
     savePointCloudXYZ(transformed_cloud);
+    return transformed_cloud;
 }
 
 PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
@@ -304,5 +310,60 @@ PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices) {
     return objects;
 }
 
+double executeICP(PointCloudXYZPtr cloud_in, PointCloudXYZPtr cloud_out)
+{
+    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
+    icp.setInputSource(cloud_in);
+    icp.setInputTarget(cloud_out);
+    //icp.setMaximumIterations(10);
+    pcl::PointCloud<pcl::PointXYZ> final;
+    icp.align(final);
+    std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+              icp.getFitnessScore() << std::endl;
+    std::cout << icp.getFinalTransformation()  << std::endl;
+    return icp.getFitnessScore();
+}
 
+//TODO inspect where it fails here
+void rotateCloud2Cloud()
+{
+    Eigen::Vector4f centroid_objects;
+    Eigen::Vector4f centroid_mesh;
+
+    pcl::compute3DCentroid(*objects_global, centroid_objects);
+    pcl::compute3DCentroid(*mesh_global, centroid_mesh);
+
+    PointCloudXYZPtr objects_point (new PointCloudXYZ);
+    PointCloudXYZPtr mesh_point (new PointCloudXYZ);
+
+    pcl::PointXYZ point_centroid_obj;
+    pcl::PointXYZ point_centroid_mes;
+
+
+
+    point_centroid_obj.x = centroid_objects.x();
+    point_centroid_obj.x = centroid_objects.y();
+    point_centroid_obj.x = centroid_objects.z();
+
+    point_centroid_mes.x = centroid_mesh.x();
+    point_centroid_mes.y = centroid_mesh.y();
+    point_centroid_mes.z = centroid_mesh.z();
+
+    objects_point->push_back(point_centroid_obj);
+    objects_point->push_back(point_centroid_obj);
+    objects_point->push_back(point_centroid_obj);
+
+    mesh_point->push_back(point_centroid_mes);
+    mesh_point->push_back(point_centroid_mes);
+    mesh_point->push_back(point_centroid_mes);
+
+    ROS_INFO("ALL COOL UNTIL Tranformation ESTIMATION");
+
+    pcl::registration::TransformationEstimation< pcl::PointXYZ, pcl::PointXYZ >::Matrix4 rot_mat;
+
+    pcl::registration::TransformationEstimation<pcl::PointXYZ,pcl::PointXYZ>::Ptr te; // FIX: BOOST_SHARED_PTR ERROR, px!=0 failed
+
+    te->estimateRigidTransformation(*objects_global,*objects_global,rot_mat);
+    //pcl::transformPointCloud(*objects_global,*mesh_global,rot_mat);
+}
 #endif // VISION_PERCEPTION_H

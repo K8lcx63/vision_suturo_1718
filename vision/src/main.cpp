@@ -90,18 +90,20 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
     savePointCloud(objects_global, kinect_global, normals_global);
 
 
+
+
+
     return true;
 }
 
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res) {
-    if (objectIsStanding()) {
-        res.info.isStanding = true;
+    if (objectIsStanding() == 1) {
+
+        res.info.isStanding = 1;
         res.info.information = "Objekt steht";
-        return true;
-    } else {
-        res.info.isStanding = false;
+    } else if (objectIsStanding() == 0){
+        res.info.isStanding = 0;
         res.info.information = "Objekt liegt";
-        return false;
     }
 }
