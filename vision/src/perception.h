@@ -102,9 +102,10 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
             segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
             segmentation.setMethodType(pcl::SAC_RANSAC);
             segmentation.setMaxIterations(500); // Default is 50 and could be problematic
-            segmentation.setAxis(Eigen::Vector3f(0,0,1));
-            segmentation.setEpsAngle(  60.0f * (M_PI/180.0f) ); // plane can be within 30 degrees of X-Z plane
-            segmentation.setDistanceThreshold(0.01);  // Distance to model points
+            segmentation.setAxis(Eigen::Vector3f(0,1,0));
+            segmentation.setEpsAngle(  30.0f * (M_PI/180.0f) ); // plane can be within 30 degrees of X-Z plane
+            //segmentation.setEpsAngle(30.0f); // plane can be within 30 degrees of X-Z plane
+            segmentation.setDistanceThreshold(0.02);  // Distance to model points
             segmentation.setOptimizeCoefficients(true);
             segmentation.segment(*planeIndices, *coefficients);
 
@@ -125,13 +126,13 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
                 // Do DifferenceOfNormals stuff here to extract possible back wall(-s).
 
                 //The smallest scale to use in the DoN filter.
-                double scale1 = 0.02;
+                double scale1 = 0.01;
 
                 //The largest scale to use in the DoN filter.
-                double scale2 = 0.12;
+                double scale2 = 0.2;
 
                 //The minimum DoN magnitude to threshold by
-                double don_threshold = 0.5;
+                double don_threshold = 0.01; // 0.2
 
                 //pcl::PCLPointCloud2 objects2;
                 pcl::PointCloud<PointXYZRGB>::Ptr objectspredon(new pcl::PointCloud <PointXYZRGB>);
@@ -288,7 +289,11 @@ void findCluster(const pcl::PointCloud<pcl::PointXYZ>::Ptr kinect) {
 
                 // clouds for saving
                 kinect_global = kinect;
-                objects_global = cloud_final; // = objects
+                objects_global = cloud_final;
+                // = cloud_final: Complete solution (default)
+                // = objects: Skips Difference of Normals stuff
+                // = cloud: Everything, but PassThrough filtered
+                // = kinect: Everything
             }
         }
     }
