@@ -12,7 +12,7 @@ Use "catkin build object_detection" to build the messages-package beforehand.
 
 #### Get Object Position
 What is the center coordinate of the perceived object?
-> rosservice call /vision_main/visObjectInfo
+> rosservice call /vision_main/objectPoint
 
 #### Get Object Pose (currently in development)
 Is the perceived object standing up or lying down?
@@ -29,3 +29,12 @@ roslaunch vision vision_kinect.launch
 
 #### save files
 rosrun pcl_ros pointcloud_to_pcd input:=/camera/depth_registered/points
+
+
+### With real pr2
+#### Topic to listen on
+Topic: /kinect_head/depth_registered/points
+
+#### Rosbags
+**Recording:** rosbag record /kinect_head/depth_registered/points /tf
+**Playing:** rosbag play -l filename.bag
