@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
         pcl_conversions
         object_detection
         message_generation
+	visualization_msgs
         )
 
 catkin_package(CATKIN_DEPENDS
