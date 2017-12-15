@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vision)
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "../data")
 
 find_package(catkin REQUIRED COMPONENTS
         roscpp
