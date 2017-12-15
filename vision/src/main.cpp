@@ -4,6 +4,7 @@
 #include "object_detection/VisObjectInfo.h"
 #include "sensor_msgs/PointCloud2.h"
 #include "vision_msgs/GetObjectInfo.h"
+#include "visualization_msgs/Marker.h"
 
 // includes for pcl
 
@@ -21,6 +22,11 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res);
+
+// Visualization publisher stuff
+visualization_msgs::Marker publishVisualizationMarker(geometry_msgs::PointStamped point);
+ros::Publisher pub_visualization;
+
 
 /** main function **/
 int main(int argc, char **argv) {
@@ -50,6 +56,9 @@ int main(int argc, char **argv) {
             n.advertiseService("vision_main/objectPose", getObjectPose);
     ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
 
+    // Visualization Publisher for debugging purposes
+    ros::Publisher pub_visualization = n.advertise<visualization_msgs::Marker>( "visualization_marker", 0 );
+
     centroid_stamped.point.x = 0, centroid_stamped.point.y = 0,
     centroid_stamped.point.z = 0;  // dummy point
     ros::Rate r(2.0);
@@ -62,6 +71,8 @@ int main(int argc, char **argv) {
 
         bool simulation =
                 client.exists();  // Periodically check if this is a simulation
+
+        pub_visualization.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
 
         ros::spinOnce();
         r.sleep();
@@ -106,4 +117,30 @@ bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
         res.info.isStanding = 0;
         res.info.information = "Objekt liegt";
     }
+}
+
+visualization_msgs::Marker publishVisualizationMarker(geometry_msgs::PointStamped point){
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = point.header.frame_id;
+    marker.header.stamp = ros::Time();
+    marker.ns = "vision";
+    marker.id = 1;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = point.point.x;
+    marker.pose.position.y = point.point.y;
+    marker.pose.position.z = point.point.z;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 0.1;
+    marker.scale.y = 0.1;
+    marker.scale.z = 0.1;
+    marker.color.a = 0.7;
+    marker.color.r = 0.0;
+    marker.color.g = 0.0;
+    marker.color.b = 1.0;
+
+    return marker;
 }
