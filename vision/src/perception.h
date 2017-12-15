@@ -24,6 +24,8 @@
 #include <pcl/point_types.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/transformation_estimation.h>
+#include <pcl/surface/convex_hull.h>
+#include <pcl/segmentation/extract_polygonal_prism_data.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
@@ -52,7 +54,9 @@ PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud);
 
 PointIndices estimatePlaneIndices(PointCloudXYZPtr input);
 
-PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices);
+PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bool negative);
+
+PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane);
 
 void createCovarianceMatrix(PointCloudXYZ input,
                             Eigen::Matrix3f covariance_matrix);
@@ -82,7 +86,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
         // Objects for storing the point clouds.
 
         // apply passthroughFilter on all Axes (Axis?)
-        cloud = apply3DFilter(kinect, 0.5, 1.0, 1.8); // input, x, y, z
+        cloud = apply3DFilter(kinect, 0.5, 1.5, 1.8); // input, x, y, z -- 1.0y
         if (cloud->points.size() == 0) {
             ROS_ERROR("NO CLOUD AFTER FILTERING");
             error_message = "Cloud was empty after filtering. ";
@@ -98,7 +102,16 @@ void findCluster(const PointCloudXYZPtr kinect) {
 
             } else {
 
-                objects = extractCluster(cloud, planeIndices);
+                objects = extractCluster(cloud, planeIndices, true);
+
+                //
+
+                PointCloudXYZPtr plane_cloud = extractCluster(cloud, planeIndices, false); // Get the segmented plane
+                PointIndices prism_indices = prismSegmentation(objects, plane_cloud);
+                objects = extractCluster(objects, prism_indices, true);
+
+                //
+
 
                 ROS_INFO("EXTRACTION OK");
 
@@ -299,13 +312,30 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
     return planeIndices;
 }
 
-PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices) {
+PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane){
+    PointCloudXYZPtr plane_hull = plane;
+    ROS_INFO("Starting prism segmentation...");
+    pcl::ConvexHull<pcl::PointXYZ> hull;
+    PointIndices prism_indices(new pcl::PointIndices);
+    hull.setInputCloud (input_cloud);
+    hull.reconstruct (*plane_hull);
+
+    pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
+    prism.setInputCloud (input_cloud);
+    prism.setInputPlanarHull (plane);
+    prism.setHeightLimits (0, 2); // Get everything up to 2 meters above the plane
+    prism.segment (*prism_indices);
+
+    return prism_indices;
+}
+
+PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bool negative) {
     ROS_INFO("CLUSTER EXTRACTION");
     PointCloudXYZPtr objects(new PointCloudXYZ);
     pcl::ExtractIndices<pcl::PointXYZ> extract;
     extract.setInputCloud(input);
     extract.setIndices(indices);
-    extract.setNegative(true);
+    extract.setNegative(negative);
     extract.filter(*objects);
     return objects;
 }
