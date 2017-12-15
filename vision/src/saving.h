@@ -17,6 +17,9 @@ std::string getTime();
 
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
+void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char* filename);
+
+
 void savePointCloudNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud);
 
 void savePointCloudPointNormal(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
@@ -51,6 +54,20 @@ void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     // automatic save to $HOME/.ros folder
 
     ss << "./cloudXYZ_" << time_string << ".pcd";
+    pcl::io::savePCDFileASCII(ss.str(), *cloud);
+
+}
+
+
+void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char* filename) {
+    ROS_INFO("Saving PointCloud<PointXYZ>");
+    std::string time_string = getTime();
+
+    std::stringstream ss;
+
+    // automatic save to $HOME/.ros folder
+
+    ss << "./" << filename << "_" << time_string << ".pcd";
     pcl::io::savePCDFileASCII(ss.str(), *cloud);
 
 }
