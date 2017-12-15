@@ -26,6 +26,9 @@
 #include <pcl/registration/transformation_estimation.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/surface/mls.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
@@ -65,11 +68,15 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
                                float z);
 double executeICP(PointCloudXYZPtr cloud_in, PointCloudXYZPtr cloud_out);
 
+PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
+
+PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
 
 /**
  ** Find the object!
 **/
 void findCluster(const PointCloudXYZPtr kinect) {
+    PointCloudXYZPtr kinect1(new PointCloudXYZ), kinect2(new PointCloudXYZ);
     PointCloudXYZPtr cloud(new PointCloudXYZ); // for passthroughfilter
     PointCloudXYZPtr objects(new PointCloudXYZ);
     PointCloudXYZPtr result(new PointCloudXYZ);
@@ -86,13 +93,18 @@ void findCluster(const PointCloudXYZPtr kinect) {
         // Objects for storing the point clouds.
 
         // apply passthroughFilter on all Axes (Axis?)
-        cloud = apply3DFilter(kinect, 0.5, 1.5, 1.8); // input, x, y, z -- 1.0y
+        cloud = apply3DFilter(kinect, 0.2, 0.2, 1.2); // input, x, y, z -- 1.0y
         if (cloud->points.size() == 0) {
             ROS_ERROR("NO CLOUD AFTER FILTERING");
             error_message = "Cloud was empty after filtering. ";
             centroid_stamped = findCenterGazebo(); // Use gazebo data instead
         } else {
 
+            // Filtering with voxelgrid and mls
+
+            kinect1 = voxelGridFilter(kinect);
+            kinect2 = mlsFilter(kinect1);
+            cloud = kinect2;
             planeIndices = estimatePlaneIndices(cloud);
 
             if (planeIndices->indices.size() == 0) {
@@ -127,7 +139,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
                 // clouds for saving
                 kinect_global = kinect;
                 objects_global = objects;
-                objects_rotated_global = rotatePointCloud(objects_global);
+                //objects_rotated_global = rotatePointCloud(objects_global);
 
             }
         }
@@ -395,5 +407,51 @@ void rotateCloud2Cloud()
 
     te->estimateRigidTransformation(*objects_global,*objects_global,rot_mat);
     //pcl::transformPointCloud(*objects_global,*mesh_global,rot_mat);
+}
+
+PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input)
+{
+    PointCloudXYZPtr result(new PointCloudXYZ);
+
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+
+    // Output has the PointNormal type in order to store the normals calculated by MLS
+    pcl::PointCloud<pcl::PointNormal> mls_points;
+
+    // Init object (second point type is for the normals, even if unused)
+    pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+
+    mls.setComputeNormals (true);
+
+    // Set parameters
+    mls.setInputCloud (input);
+    mls.setPolynomialFit (true);
+    mls.setSearchMethod (tree);
+    mls.setSearchRadius (0.03);
+
+    // Reconstruct
+    mls.process (mls_points);
+
+    for (int i = 0; i < mls_points.size(); i++)
+    {
+        pcl::PointXYZ point;
+
+        point.x = mls_points.at(i).x;
+        point.y = mls_points.at(i).y;
+        point.z = mls_points.at(i).z;
+        result->push_back(point);
+    }
+    return result;
+}
+
+PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input)
+{
+    PointCloudXYZPtr result (new PointCloudXYZ);
+
+    pcl::VoxelGrid<pcl::PointXYZ> sor;
+    sor.setInputCloud (input);
+    sor.setLeafSize (0.01f, 0.01f, 0.01f);
+    sor.filter (*result);
+    return result;
 }
 #endif // VISION_PERCEPTION_H
