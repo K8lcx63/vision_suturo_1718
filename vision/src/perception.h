@@ -66,6 +66,7 @@ void createCovarianceMatrix(PointCloudXYZ input,
 
 PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
                                float z);
+
 double executeICP(PointCloudXYZPtr cloud_in, PointCloudXYZPtr cloud_out);
 
 PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
@@ -93,7 +94,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
         // Objects for storing the point clouds.
 
         // apply passthroughFilter on all Axes (Axis?)
-        cloud = apply3DFilter(kinect, 0.2, 0.2, 1.2); // input, x, y, z -- 1.0y
+        cloud = apply3DFilter(kinect, 0.4, 0.4, 1.5); // input, x, y, z -- 1.0y
         if (cloud->points.size() == 0) {
             ROS_ERROR("NO CLOUD AFTER FILTERING");
             error_message = "Cloud was empty after filtering. ";
@@ -101,10 +102,10 @@ void findCluster(const PointCloudXYZPtr kinect) {
         } else {
 
             // Filtering with voxelgrid and mls
-
             kinect1 = voxelGridFilter(kinect);
             kinect2 = mlsFilter(kinect1);
             cloud = kinect2;
+
             planeIndices = estimatePlaneIndices(cloud);
 
             if (planeIndices->indices.size() == 0) {
@@ -116,14 +117,9 @@ void findCluster(const PointCloudXYZPtr kinect) {
 
                 objects = extractCluster(cloud, planeIndices, true);
 
-                //
-
                 PointCloudXYZPtr plane_cloud = extractCluster(cloud, planeIndices, false); // Get the segmented plane
                 PointIndices prism_indices = prismSegmentation(objects, plane_cloud);
                 objects = extractCluster(objects, prism_indices, true);
-
-                //
-
 
                 ROS_INFO("EXTRACTION OK");
 
@@ -139,7 +135,6 @@ void findCluster(const PointCloudXYZPtr kinect) {
                 // clouds for saving
                 kinect_global = kinect;
                 objects_global = objects;
-                //objects_rotated_global = rotatePointCloud(objects_global);
 
             }
         }
@@ -180,8 +175,8 @@ geometry_msgs::PointStamped findCenter(const PointCloudXYZPtr object_cloud) {
         centroid_stamped.point.z = centroid.z();
 
         ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
-        ROS_INFO("\x1B[32mX: %f\n", centroid_stamped.point.y);
-        ROS_INFO("\x1B[32mY: %f\n", centroid_stamped.point.x);
+        ROS_INFO("\x1B[32mX: %f\n", centroid_stamped.point.x);
+        ROS_INFO("\x1B[32mY: %f\n", centroid_stamped.point.y);
         ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped.point.z);
         centroid_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
 
@@ -218,27 +213,32 @@ createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals) {
     // TODO: Fix assignment of points
     for (int i = 0; i < input->points.size(); i++) {
 
+        pcl::PointXYZ point_xyz;
+        pcl::Normal normals;
+        pcl::PointNormal point_normal;
+
         // output->points[i].normal = normals->points[i].normal;
-        output->points[i].normal_x = normals->points[i].normal_x;
-        output->points[i].normal_y = normals->points[i].normal_y;
-        output->points[i].normal_z = normals->points[i].normal_z;
+        normals.normal_x = normals->points[i].normal_x;
+        normals.normal_y = normals->points[i].normal_y;
+        normals.normal_z = normals->points[i].normal_z;
         // output->points[i].curvature = normals->points[i].curvature;
 
-        output->points[i].x = input->points[i].x;
-        output->points[i].y = input->points[i].y;
-        output->points[i].z = input->points[i].z;
+        point_xyz.x = input->points[i].x;
+        point_xyz.y = input->points[i].y;
+        point_xyz.z = input->points[i].z;
+        output->points.push_back(point_xyz, point_normal);
     }
     return output;
 }
 
-int  objectIsStanding() {
+int objectIsStanding() {
 
-    if (pcl::io::loadPCDFile<pcl::PointXYZ> ("/home/tammo/.ros/eistee_mesh.pcd", *mesh_global) == -1) //* load the file
+    if (pcl::io::loadPCDFile<pcl::PointXYZ>("/home/tammo/.ros/eistee_mesh.pcd", *mesh_global) == -1) //* load the file
     {
         PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
     }
 
-    if (executeICP(objects_rotated_global,mesh_global) > 0.0006){
+    if (executeICP(objects_rotated_global, mesh_global) > 0.0006) {
         return 0;
     }
 
@@ -249,28 +249,15 @@ PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud) {
 
     float theta = M_PI; // the angle of rotation in radians
 
-    /**
-  * Method #2: Using Affine3f
-  * This method is easier and less error prone
-  **/
-
     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-
 
     transform.translation() << -2.0, 0.0, 0.0;
 
-
-    // theta radians around z-axis
     transform.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitZ()));
-    // theta radians around y-axis
-    transform.rotate(Eigen::AngleAxisf(-(theta/2), Eigen::Vector3f::UnitY()));
+    transform.rotate(Eigen::AngleAxisf(-(theta / 2), Eigen::Vector3f::UnitY()));
 
-
-
-    /** executing transformation **/
     PointCloudXYZPtr transformed_cloud(new PointCloudXYZ());
 
-    // apply transform_1 or transform_2
     pcl::transformPointCloud(*cloud, *transformed_cloud, transform);
     savePointCloudXYZ(transformed_cloud);
     return transformed_cloud;
@@ -278,6 +265,8 @@ PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud) {
 
 PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
                                float z) {
+
+    //TODO test filtering here
     ROS_INFO("3D FILTER");
     PointCloudXYZPtr input_after_x(new PointCloudXYZ),
             input_after_xy(new PointCloudXYZ), input_after_xyz(new PointCloudXYZ);
@@ -324,19 +313,19 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
     return planeIndices;
 }
 
-PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane){
+PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane) {
     PointCloudXYZPtr plane_hull = plane;
     ROS_INFO("Starting prism segmentation...");
     pcl::ConvexHull<pcl::PointXYZ> hull;
     PointIndices prism_indices(new pcl::PointIndices);
-    hull.setInputCloud (input_cloud);
-    hull.reconstruct (*plane_hull);
+    hull.setInputCloud(input_cloud);
+    hull.reconstruct(*plane_hull);
 
     pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
-    prism.setInputCloud (input_cloud);
-    prism.setInputPlanarHull (plane);
-    prism.setHeightLimits (0, 2); // Get everything up to 2 meters above the plane
-    prism.segment (*prism_indices);
+    prism.setInputCloud(input_cloud);
+    prism.setInputPlanarHull(plane);
+    prism.setHeightLimits(0, 2); // Get everything up to 2 meters above the plane
+    prism.segment(*prism_indices);
 
     return prism_indices;
 }
@@ -352,8 +341,7 @@ PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bo
     return objects;
 }
 
-double executeICP(PointCloudXYZPtr cloud_in, PointCloudXYZPtr cloud_out)
-{
+double executeICP(PointCloudXYZPtr cloud_in, PointCloudXYZPtr cloud_out) {
     pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
     icp.setInputSource(cloud_in);
     icp.setInputTarget(cloud_out);
@@ -362,26 +350,23 @@ double executeICP(PointCloudXYZPtr cloud_in, PointCloudXYZPtr cloud_out)
     icp.align(final);
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
               icp.getFitnessScore() << std::endl;
-    std::cout << icp.getFinalTransformation()  << std::endl;
+    std::cout << icp.getFinalTransformation() << std::endl;
     return icp.getFitnessScore();
 }
 
 //TODO inspect where it fails here
-void rotateCloud2Cloud()
-{
+void rotateCloud2Cloud() {
     Eigen::Vector4f centroid_objects;
     Eigen::Vector4f centroid_mesh;
 
     pcl::compute3DCentroid(*objects_global, centroid_objects);
     pcl::compute3DCentroid(*mesh_global, centroid_mesh);
 
-    PointCloudXYZPtr objects_point (new PointCloudXYZ);
-    PointCloudXYZPtr mesh_point (new PointCloudXYZ);
+    PointCloudXYZPtr objects_point(new PointCloudXYZ);
+    PointCloudXYZPtr mesh_point(new PointCloudXYZ);
 
     pcl::PointXYZ point_centroid_obj;
     pcl::PointXYZ point_centroid_mes;
-
-
 
     point_centroid_obj.x = centroid_objects.x();
     point_centroid_obj.x = centroid_objects.y();
@@ -401,39 +386,28 @@ void rotateCloud2Cloud()
 
     ROS_INFO("ALL COOL UNTIL Tranformation ESTIMATION");
 
-    pcl::registration::TransformationEstimation< pcl::PointXYZ, pcl::PointXYZ >::Matrix4 rot_mat;
+    pcl::registration::TransformationEstimation<pcl::PointXYZ, pcl::PointXYZ>::Matrix4 rot_mat;
 
-    pcl::registration::TransformationEstimation<pcl::PointXYZ,pcl::PointXYZ>::Ptr te; // FIX: BOOST_SHARED_PTR ERROR, px!=0 failed
+    pcl::registration::TransformationEstimation<pcl::PointXYZ, pcl::PointXYZ>::Ptr te; // FIX: BOOST_SHARED_PTR ERROR, px!=0 failed
 
-    te->estimateRigidTransformation(*objects_global,*objects_global,rot_mat);
+    te->estimateRigidTransformation(*objects_global, *objects_global, rot_mat);
     //pcl::transformPointCloud(*objects_global,*mesh_global,rot_mat);
 }
 
-PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input)
-{
+PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input) {
     PointCloudXYZPtr result(new PointCloudXYZ);
-
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
-
-    // Output has the PointNormal type in order to store the normals calculated by MLS
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
     pcl::PointCloud<pcl::PointNormal> mls_points;
-
-    // Init object (second point type is for the normals, even if unused)
     pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
 
-    mls.setComputeNormals (true);
+    mls.setComputeNormals(true);
+    mls.setInputCloud(input);
+    mls.setPolynomialFit(true);
+    mls.setSearchMethod(tree);
+    mls.setSearchRadius(0.03);
+    mls.process(mls_points);
 
-    // Set parameters
-    mls.setInputCloud (input);
-    mls.setPolynomialFit (true);
-    mls.setSearchMethod (tree);
-    mls.setSearchRadius (0.03);
-
-    // Reconstruct
-    mls.process (mls_points);
-
-    for (int i = 0; i < mls_points.size(); i++)
-    {
+    for (int i = 0; i < mls_points.size(); i++) {
         pcl::PointXYZ point;
 
         point.x = mls_points.at(i).x;
@@ -444,14 +418,14 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input)
     return result;
 }
 
-PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input)
-{
-    PointCloudXYZPtr result (new PointCloudXYZ);
+PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input) {
+    PointCloudXYZPtr result(new PointCloudXYZ);
 
     pcl::VoxelGrid<pcl::PointXYZ> sor;
-    sor.setInputCloud (input);
-    sor.setLeafSize (0.01f, 0.01f, 0.01f);
-    sor.filter (*result);
+    sor.setInputCloud(input);
+    sor.setLeafSize(0.01f, 0.01f, 0.01f);
+    sor.filter(*result);
     return result;
 }
+
 #endif // VISION_PERCEPTION_H
