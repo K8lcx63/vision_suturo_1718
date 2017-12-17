@@ -37,7 +37,8 @@ void visualizePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
         viewer.spinOnce(100);
     }
 }
-void visualizeTwoPointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud1,pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2) {
+
+void visualizeTwoPointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud1, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud2) {
     pcl::visualization::PCLVisualizer viewer("Cloud 1: White . Cloud 2: Red");
 
 // Define R,G,B colors for the point cloud
@@ -57,21 +58,20 @@ void visualizeTwoPointClouds(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud1,pcl::Poi
     }
 }
 
-void visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals){
-    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
-    viewer->setBackgroundColor (0, 0, 0);
-    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler(cloud,255,0,0);
-    viewer->addPointCloud<pcl::PointXYZ> (cloud,  "sample cloud");
-    viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
-    viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal> (cloud, normals, 10, 0.05, "normals");
-    viewer->addCoordinateSystem (1.0);
-    viewer->initCameraParameters ();
-    while(!viewer->wasStopped()){
-        viewer->spinOnce (100);
+void visualizeNormals(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::Normal>::ConstPtr normals) {
+    boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer(new pcl::visualization::PCLVisualizer("3D Viewer"));
+    viewer->setBackgroundColor(0, 0, 0);
+    pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> handler(cloud, 255, 0, 0);
+    viewer->addPointCloud<pcl::PointXYZ>(cloud, "sample cloud");
+    viewer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 3, "sample cloud");
+    viewer->addPointCloudNormals<pcl::PointXYZ, pcl::Normal>(cloud, normals, 10, 0.05, "normals");
+    viewer->addCoordinateSystem(1.0);
+    viewer->initCameraParameters();
+    while (!viewer->wasStopped()) {
+        viewer->spinOnce(100);
 
     }
 }
-
 
 
 #endif  // VISION_VIEWER_H
