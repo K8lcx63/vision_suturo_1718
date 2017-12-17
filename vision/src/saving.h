@@ -17,7 +17,7 @@ std::string getTime();
 
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
-void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char* filename);
+void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char *filename);
 
 
 void savePointCloudNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud);
@@ -27,7 +27,6 @@ void savePointCloudPointNormal(pcl::PointCloud<pcl::PointNormal>::Ptr cloud);
 void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
                     pcl::PointCloud<pcl::PointXYZ>::Ptr kinect,
                     pcl::PointCloud<pcl::Normal>::Ptr normals);
-
 
 
 std::string getTime() {
@@ -46,76 +45,96 @@ std::string getTime() {
 }
 
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
-    ROS_INFO("Saving PointCloud<PointXYZ>");
-    std::string time_string = getTime();
+    try {
+        ROS_INFO("Saving PointCloud<PointXYZ>");
+        std::string time_string = getTime();
 
-    std::stringstream ss;
+        std::stringstream ss;
 
-    // automatic save to $HOME/.ros folder
+        // automatic save to $HOME/.ros folder
 
-    ss << "./cloudXYZ_" << time_string << ".pcd";
-    pcl::io::savePCDFileASCII(ss.str(), *cloud);
+        ss << "./cloudXYZ_" << time_string << ".pcd";
+        pcl::io::savePCDFileASCII(ss.str(), *cloud);
+    } catch (pcl::PCLException e) {
+        ROS_ERROR("Saving failed: %s", e.what());
+    }
 
 }
 
 
-void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char* filename) {
-    ROS_INFO("Saving PointCloud<PointXYZ>");
-    std::string time_string = getTime();
+void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char *filename) {
+    try {
+        ROS_INFO("Saving PointCloud<PointXYZ>");
+        std::string time_string = getTime();
 
-    std::stringstream ss;
+        std::stringstream ss;
 
-    // automatic save to $HOME/.ros folder
+        // automatic save to $HOME/.ros folder
 
-    ss << "./" << filename << "_" << time_string << ".pcd";
-    pcl::io::savePCDFileASCII(ss.str(), *cloud);
+        ss << "./" << filename << "_" << time_string << ".pcd";
+        pcl::io::savePCDFileASCII(ss.str(), *cloud);
+    } catch (pcl::PCLException e) {
+        ROS_ERROR("Saving failed: %s", e.what());
+    }
 
 }
 
 void savePointCloudNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud) {
-    ROS_INFO("Saving PointCloud<Normal>");
-    std::string time_string = getTime();
+    try {
+        ROS_INFO("Saving PointCloud<Normal>");
+        std::string time_string = getTime();
 
-    std::stringstream ss;
+        std::stringstream ss;
 
-    // automatic save to $HOME/.ros folder
+        // automatic save to $HOME/.ros folder
 
-    ss << "./cloudNormal_" << time_string << ".pcd";
-    pcl::io::savePCDFileASCII(ss.str(), *cloud);
+        ss << "./cloudNormal_" << time_string << ".pcd";
+        pcl::io::savePCDFileASCII(ss.str(), *cloud);
+    } catch (pcl::PCLException e) {
+        ROS_ERROR("Saving failed: %s", e.what());
+    }
 
 }
 
 void savePointCloudPointNormal(pcl::PointCloud<pcl::PointNormal>::Ptr cloud) {
-    ROS_INFO("Saving PointCloud<PointNormal>");
-    std::string time_string = getTime();
+    try {
+        ROS_INFO("Saving PointCloud<PointNormal>");
+        std::string time_string = getTime();
 
-    std::stringstream ss;
+        std::stringstream ss;
 
-    // automatic save to $HOME/.ros folder
+        // automatic save to $HOME/.ros folder
 
-    ss << "./cloudPointNormal_" << time_string << ".pcd";
-    pcl::io::savePCDFileASCII(ss.str(), *cloud);
+        ss << "./cloudPointNormal_" << time_string << ".pcd";
+        pcl::io::savePCDFileASCII(ss.str(), *cloud);
+    } catch (pcl::PCLException e) {
+        ROS_ERROR("Saving failed: %s", e.what());
+    }
 
 }
 
 void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
                     pcl::PointCloud<pcl::PointXYZ>::Ptr kinect,
                     pcl::PointCloud<pcl::Normal>::Ptr normals) {
-    ROS_INFO("SAVING FILES");
-    std::string time_string = getTime();
-    std::stringstream ss;
-    std::stringstream ss_input;
-    std::stringstream ss_normals;
+    try {
+        ROS_INFO("SAVING FILES");
+        std::string time_string = getTime();
+        std::stringstream ss;
+        std::stringstream ss_input;
+        std::stringstream ss_normals;
 
-    // automatic save to $HOME/.ros folder
+        // automatic save to $HOME/.ros folder
 
-    ss << "./object_" << time_string << ".pcd";
-    ss_input << "./kinect_" << time_string << ".pcd";
-    ss_normals << "./kinect_normals_" << time_string << ".pcd";
+        ss << "./object_" << time_string << ".pcd";
+        ss_input << "./kinect_" << time_string << ".pcd";
+        ss_normals << "./kinect_normals_" << time_string << ".pcd";
 
-    pcl::io::savePCDFileASCII(ss.str(), *objects);
-    pcl::io::savePCDFileASCII(ss_input.str(), *kinect);
-    pcl::io::savePCDFileASCII(ss_normals.str(), *normals);
+        pcl::io::savePCDFileASCII(ss.str(), *objects);
+        pcl::io::savePCDFileASCII(ss_input.str(), *kinect);
+        pcl::io::savePCDFileASCII(ss_normals.str(), *normals);
+    } catch (pcl::PCLException e) {
+        ROS_ERROR("Saving failed: %s", e.what());
+    }
 
 }
 
