@@ -23,6 +23,7 @@
 #include <pcl/surface/mls.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include "saving.h"
+#include <string>
 
 unsigned int input_noise_threshold = 342;
 bool simulation;
@@ -101,14 +102,24 @@ void findCluster(const PointCloudXYZPtr kinect) {
         cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5); // passthrough filter
         cloud_voxelgridf = voxelGridFilter(cloud_3df); // voxel grid filter
         cloud_mlsf = mlsFilter(cloud_voxelgridf); // moving least square filter
-        cloud_f = cloud_mlsf; // cloud_f set after last filtering function is applied
-        plane_indices = estimatePlaneIndices(cloud_f); // estimate plane indices
-        cloud_cluster = extractCluster(cloud_f, plane_indices, true); // extract object
-        plane_indices2 = estimatePlaneIndices(cloud_cluster);
-        cloud_cluster2 = extractCluster(cloud_cluster, plane_indices2, true); // double extract object
-        cloud_plane = extractCluster(cloud_f, plane_indices, false); // extract plane
-        prism_indices = prismSegmentation(cloud_cluster, cloud_plane);
-        cloud_prism = extractCluster(cloud_cluster, prism_indices, true);
+        cloud_cluster = cloud_mlsf; // cloud_f set after last filtering function is applied
+
+        // While a segmented plane would be larger than 500 points, segment it.
+        bool loop_plane_segmentations = true;
+        int amount_plane_segmentations = 0;
+        while(loop_plane_segmentations)
+        {
+            plane_indices = estimatePlaneIndices(cloud_cluster);
+            if(plane_indices->indices.size() > 500) // is the extracted plane big enough?
+            {
+                ROS_INFO("plane_indices: %d", plane_indices->indices.size());
+                ROS_INFO("cloud_cluster: %d", cloud_cluster->points.size());
+                cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
+                amount_plane_segmentations++;
+            }
+            else loop_plane_segmentations = false; // if not, stop looping.
+        }
+        ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
 
         /** Speichere Zwischenergebenisse **/
 
@@ -117,7 +128,6 @@ void findCluster(const PointCloudXYZPtr kinect) {
         savePointCloudXYZNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
         savePointCloudXYZNamed(cloud_mlsf, "3_cloud_mls_filtered");
         savePointCloudXYZNamed(cloud_cluster, "4_cloud_cluster");
-        savePointCloudXYZNamed(cloud_plane, "5_cloud_plane");
         savePointCloudXYZNamed(cloud_prism, "6_cloud_prism");
         savePointCloudXYZNamed(cloud_cluster2, "7_cluster_2");
         **/
@@ -323,12 +333,13 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
     pcl::SACSegmentation<pcl::PointXYZ> segmentation;
 
     segmentation.setInputCloud(input);
-    segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE); // PERPENDICULAR
+    //segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE); // PERPENDICULAR
+    segmentation.setModelType(pcl::SACMODEL_PLANE);
     segmentation.setMethodType(pcl::SAC_RANSAC);
-    segmentation.setMaxIterations(500); // Default is 50 and could be problematic
-    segmentation.setAxis(Eigen::Vector3f(0,1,0));
-    segmentation.setEpsAngle(30.0); // plane can be within 30 degrees of X-Z plane - 30.0f * (M_PI/180.0f)
-    segmentation.setDistanceThreshold(0.03); // Distance to model points
+    //segmentation.setMaxIterations(500); // Default is 50 and could be problematic
+    //segmentation.setAxis(Eigen::Vector3f(0,1,0));
+    //segmentation.setEpsAngle(30.0); // plane can be within 30 degrees of X-Z plane - 30.0f * (M_PI/180.0f)
+    segmentation.setDistanceThreshold(0.01); // Distance to model points
     segmentation.setOptimizeCoefficients(true);
     segmentation.segment(*planeIndices, *coefficients);
 
