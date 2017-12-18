@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     ros::NodeHandle n;
 
     // Subscriber for the kinect points. Also calls findCluster.
-    ros::Subscriber sub_kinect = n.subscribe(SIM_KINECT_POINTS_FRAME , 100, &findCluster);
+    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME , 100, &findCluster);
 
     /** services and clients **/
     // ServiceClient for calling the object position through gazebo

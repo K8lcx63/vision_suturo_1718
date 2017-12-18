@@ -79,12 +79,12 @@ void findCluster(const PointCloudXYZPtr kinect) {
 
     // the 'f' in the identifier stands for filtered
 
-    PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_f(
+    PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_cluster2(new PointCloudXYZ), cloud_f(
             new PointCloudXYZ), cloud_3df(
-            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), result(
+            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), cloud_prism(new PointCloudXYZ), result(
             new PointCloudXYZ);
 
-    PointIndices planeIndices(new pcl::PointIndices);
+    PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(new pcl::PointIndices);
 
     if (kinect->points.size() <
         input_noise_threshold) // if PR2 is not looking at anything
@@ -99,19 +99,26 @@ void findCluster(const PointCloudXYZPtr kinect) {
         cloud_voxelgridf = voxelGridFilter(cloud_3df); // voxel grid filter
         cloud_mlsf = mlsFilter(cloud_voxelgridf); // moving least square filter
         cloud_f = cloud_mlsf; // cloud_f set after last filtering function is applied
-        planeIndices = estimatePlaneIndices(cloud_f); // estimate plane indices
-        cloud_cluster = extractCluster(cloud_f, planeIndices, true); // extract object
-        cloud_plane = extractCluster(cloud_f, planeIndices, false); // extract plane
-        PointIndices prism_indices = prismSegmentation(cloud_cluster, cloud_plane);
-        cloud_cluster = extractCluster(cloud_f, prism_indices, true);
+        plane_indices = estimatePlaneIndices(cloud_f); // estimate plane indices
+        cloud_cluster = extractCluster(cloud_f, plane_indices, true); // extract object
+        plane_indices2 = estimatePlaneIndices(cloud_cluster);
+        cloud_cluster2 = extractCluster(cloud_cluster, plane_indices2, true); // double extract object
+        cloud_plane = extractCluster(cloud_f, plane_indices, false); // extract plane
+        prism_indices = prismSegmentation(cloud_cluster, cloud_plane);
+        cloud_prism = extractCluster(cloud_cluster, prism_indices, true);
 
         /** Speichere Zwischenergebenisse **/
 
+        /**
         savePointCloudXYZNamed(cloud_3df, "1_cloud_3d_filtered");
         savePointCloudXYZNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
         savePointCloudXYZNamed(cloud_mlsf, "3_cloud_mls_filtered");
-        savePointCloudXYZNamed(cloud_voxelgridf, "4_cloud_cluster");
-        savePointCloudXYZNamed(cloud_voxelgridf, "5_cloud_plane");
+        savePointCloudXYZNamed(cloud_cluster, "4_cloud_cluster");
+        savePointCloudXYZNamed(cloud_plane, "5_cloud_plane");
+        savePointCloudXYZNamed(cloud_prism, "6_cloud_prism");
+        savePointCloudXYZNamed(cloud_cluster2, "7_cluster_2");
+        **/
+
 
 
         ROS_INFO("%sExtraction OK", GREEN_MSG_COL);
