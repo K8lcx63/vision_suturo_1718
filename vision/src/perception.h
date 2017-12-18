@@ -25,6 +25,17 @@
 #include "saving.h"
 #include <string>
 
+#include <pcl/io/pcd_io.h>
+#include <pcl/correspondence.h>
+#include <pcl/features/shot_omp.h>
+#include <pcl/features/board.h>
+#include <pcl/filters/uniform_sampling.h>
+#include <pcl/recognition/cg/geometric_consistency.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/kdtree/impl/kdtree_flann.hpp>
+#include <pcl/common/transforms.h>
+
+
 unsigned int input_noise_threshold = 342;
 bool simulation;
 
@@ -70,6 +81,7 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
 PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
 
 PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input );
+int checkModelPresence(PointCloudXYZPtr scene);
 
 
 
@@ -133,6 +145,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
         savePointCloudXYZNamed(cloud_prism, "6_cloud_prism");
         savePointCloudXYZNamed(cloud_cluster2, "7_cluster_2");
         **/
+        //savePointCloudXYZNamed(result, "result");
 
 
 
@@ -148,7 +161,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
         centroid_stamped = findCenter(cloud_final);
 
         // clouds for saving
-        kinect_global = kinect;
+        kinect_global = cloud_3df;
         objects_global = cloud_final;
 
     }
@@ -238,13 +251,7 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input) {
  */
 int isStanding() {
 
-    if (pcl::io::loadPCDFile<pcl::PointXYZ>("/home/tammo/catkin_ws/src/vision_suturo_1718/vision/data/eistee_mesh.pcd",
-                                            *mesh_global) == -1) //* load the file
-    {
-        PCL_ERROR ("Couldn't read eistee_mesh.pcd \n");
-    }
-
-    if (true) { // TODO: Implement pose estimation
+    if (checkModelPresence(kinect_global) >= 1) { // TODO: Implement pose estimation
         return 1;
     }
 
@@ -466,6 +473,100 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input ){
     sor.filter (*cloud_filtered);
 
     return cloud_filtered;
+}
+
+int checkModelPresence(PointCloudXYZPtr scene){
+    PointCloudXYZPtr model_keypoints(new PointCloudXYZ), scene_keypoints(new PointCloudXYZ);
+    pcl::PointCloud<pcl::SHOT352>::Ptr model_descriptors(new pcl::PointCloud<pcl::SHOT352>), scene_descriptors(new pcl::PointCloud<pcl::SHOT352>);
+
+
+    //load mesh to model
+    PointCloudXYZPtr model(new PointCloudXYZ);
+    pcl::io::loadPCDFile ("../../../src/vision_suturo_1718/vision/meshes/eistee_mesh.pcd", *model);
+
+    //compute normals
+    PointCloudNormalPtr model_normals = estimateSurfaceNormals(model);
+    PointCloudNormalPtr scene_normals = estimateSurfaceNormals(scene);
+
+    // compute model keypoints
+    pcl::UniformSampling<pcl::PointXYZ> uniform_sampling;
+    uniform_sampling.setInputCloud (model);
+    uniform_sampling.setRadiusSearch (0.01f);
+    uniform_sampling.filter (*model_keypoints);
+    std::cout << "Model total points: " << model->size () << "; Selected Keypoints: " << model_keypoints->size () << std::endl;
+
+    // compute scene keypoints
+
+    uniform_sampling.setInputCloud (scene);
+    uniform_sampling.setRadiusSearch (0.03f);
+    uniform_sampling.filter (*scene_keypoints);
+    std::cout << "Scene total points: " << scene->size () << "; Selected Keypoints: " << scene_keypoints->size () << std::endl;
+
+
+    // compute SHOT descriptor model
+
+    pcl::SHOTEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::SHOT352> descr_est;
+    descr_est.setRadiusSearch (0.05f);
+
+    descr_est.setInputCloud (model_keypoints);
+    descr_est.setInputNormals (model_normals);
+    descr_est.setSearchSurface (model);
+    descr_est.compute (*model_descriptors);
+
+    // compute SHOT descriptor scene
+    descr_est.setInputCloud (scene_keypoints);
+    descr_est.setInputNormals (scene_normals);
+    descr_est.setSearchSurface (scene);
+    descr_est.compute (*scene_descriptors);
+
+    //
+    //  Find Model-Scene Correspondences with KdTree
+    //
+    pcl::CorrespondencesPtr model_scene_corrs (new pcl::Correspondences ());
+
+    pcl::KdTreeFLANN<pcl::SHOT352> match_search;
+    match_search.setInputCloud (model_descriptors);
+
+    //  For each scene keypoint descriptor, find nearest neighbor into the model keypoints descriptor cloud and add it to the correspondences vector.
+    for (size_t i = 0; i < scene_descriptors->size (); ++i)
+    {
+        std::vector<int> neigh_indices (1);
+        std::vector<float> neigh_sqr_dists (1);
+        if (!pcl_isfinite (scene_descriptors->at (i).descriptor[0])) //skipping NaNs
+        {
+            continue;
+        }
+        int found_neighs = match_search.nearestKSearch (scene_descriptors->at (i), 1, neigh_indices, neigh_sqr_dists);
+        if(found_neighs == 1 && neigh_sqr_dists[0] < 0.25f) //  add match only if the squared descriptor distance is less than 0.25 (SHOT descriptor distances are between 0 and 1 by design)
+        {
+            pcl::Correspondence corr (neigh_indices[0], static_cast<int> (i), neigh_sqr_dists[0]);
+            model_scene_corrs->push_back (corr);
+        }
+    }
+    std::cout << "Correspondences found: " << model_scene_corrs->size () << std::endl;
+
+    //
+    //  Actual Clustering using Geometric consistency
+    //
+    std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > rototranslations;
+    std::vector<pcl::Correspondences> clustered_corrs;
+
+    pcl::GeometricConsistencyGrouping<pcl::PointXYZ, pcl::PointXYZ> gc_clusterer;
+    gc_clusterer.setGCSize (0.01f);
+    gc_clusterer.setGCThreshold (5.0f);
+
+    gc_clusterer.setInputCloud (model_keypoints);
+    gc_clusterer.setSceneCloud (scene_keypoints);
+    gc_clusterer.setModelSceneCorrespondences (model_scene_corrs);
+
+    gc_clusterer.cluster (clustered_corrs);
+    gc_clusterer.recognize (rototranslations, clustered_corrs);
+    std::cout << "Model instances found: " << rototranslations.size () << std::endl;
+
+
+    return (int) model_scene_corrs->size();
+
+
 }
 
 
