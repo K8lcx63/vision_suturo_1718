@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vision)
 
+set (CMAKE_CXX_STANDARD 11)
+
 
 find_package(catkin REQUIRED COMPONENTS
         roscpp
@@ -39,6 +41,7 @@ target_link_libraries(
         vision_main
         ${catkin_LIBRARIES}
         ${PCL_LIBRARIES}
+
 )
 
 add_dependencies(vision_main beginner_tutorials_generate_messages_cpp gazebo_ros)
