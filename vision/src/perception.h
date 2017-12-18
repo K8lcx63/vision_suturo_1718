@@ -86,7 +86,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
     PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_cluster2(new PointCloudXYZ), cloud_f(
             new PointCloudXYZ), cloud_3df(
             new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), cloud_prism(new PointCloudXYZ), result(
-            new PointCloudXYZ);
+            new PointCloudXYZ), cloud_final(new PointCloudXYZ);
 
     PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(new pcl::PointIndices);
 
@@ -121,6 +121,8 @@ void findCluster(const PointCloudXYZPtr kinect) {
         }
         ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
 
+        cloud_final = outlierRemoval(cloud_cluster);
+
         /** Speichere Zwischenergebenisse **/
 
         /**
@@ -143,11 +145,11 @@ void findCluster(const PointCloudXYZPtr kinect) {
         }
 
         error_message = "";
-        centroid_stamped = findCenter(cloud_cluster);
+        centroid_stamped = findCenter(cloud_final);
 
         // clouds for saving
         kinect_global = kinect;
-        objects_global = cloud_cluster;
+        objects_global = cloud_final;
 
     }
 }
