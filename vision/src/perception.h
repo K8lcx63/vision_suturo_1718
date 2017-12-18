@@ -96,22 +96,25 @@ void findCluster(const PointCloudXYZPtr kinect) {
         ROS_INFO("Starting Cluster extraction");
 
         cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5); // passthrough filter
-
-
         cloud_voxelgridf = voxelGridFilter(cloud_3df); // voxel grid filter
         cloud_mlsf = mlsFilter(cloud_voxelgridf); // moving least square filter
-
-        planeIndices = estimatePlaneIndices(cloud_mlsf); // estimate plane indices
-
         cloud_f = cloud_mlsf; // cloud_f set after last filtering function is applied
-
+        planeIndices = estimatePlaneIndices(cloud_f); // estimate plane indices
         cloud_cluster = extractCluster(cloud_f, planeIndices, true); // extract object
-
         cloud_plane = extractCluster(cloud_f, planeIndices, false); // extract plane
         PointIndices prism_indices = prismSegmentation(cloud_cluster, cloud_plane);
         cloud_cluster = extractCluster(cloud_f, prism_indices, true);
 
-        ROS_INFO("EXTRACTION OK");
+        /** Speichere Zwischenergebenisse **/
+
+        savePointCloudXYZNamed(cloud_3df, "1_cloud_3d_filtered");
+        savePointCloudXYZNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
+        savePointCloudXYZNamed(cloud_mlsf, "3_cloud_mls_filtered");
+        savePointCloudXYZNamed(cloud_voxelgridf, "4_cloud_cluster");
+        savePointCloudXYZNamed(cloud_voxelgridf, "5_cloud_plane");
+
+
+        ROS_INFO("%sExtraction OK", GREEN_MSG_COL);
 
         if (cloud_cluster->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
@@ -128,8 +131,6 @@ void findCluster(const PointCloudXYZPtr kinect) {
 
     }
 }
-
-
 
 
 /**

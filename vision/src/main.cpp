@@ -39,7 +39,7 @@ int main(int argc, char **argv) {
     ros::NodeHandle n;
 
     // Subscriber for the kinect points. Also calls findCluster.
-    ros::Subscriber sub_kinect = n.subscribe(SIM_KINECT_POINTS_FRAME, 100, &findCluster);
+    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME , 100, &findCluster);
 
     /** services and clients **/
     // ServiceClient for calling the object position through gazebo
@@ -93,10 +93,6 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 
     // when service is called, input cloud (kinect) and output cloud (extracted
     // objects) from findCluster are saved to ./data
-
-    /** estimate object normals **/
-    ROS_INFO("Estimating Normals for Reference");
-    normals_global = estimateSurfaceNormals(objects_global);
 
     /** save clouds**/
     savePointCloud(objects_global, kinect_global, normals_global);
