@@ -21,6 +21,7 @@
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/surface/mls.h>
+#include <pcl/filters/statistical_outlier_removal.h>
 #include "saving.h"
 
 unsigned int input_noise_threshold = 342;
@@ -66,6 +67,8 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
 PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
 
 PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
+
+PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input );
 
 
 
@@ -420,6 +423,17 @@ PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input) {
     sor.setLeafSize(0.01f, 0.01f, 0.01f);
     sor.filter(*result);
     return result;
+}
+
+PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input ){
+    PointCloudXYZPtr cloud_filtered(new PointCloudXYZ);
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+    sor.setInputCloud (input);
+    sor.setMeanK (50);
+    sor.setStddevMulThresh (1.0);
+    sor.filter (*cloud_filtered);
+
+    return cloud_filtered;
 }
 
 
