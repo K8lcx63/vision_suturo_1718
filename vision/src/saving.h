@@ -53,7 +53,7 @@ void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 
         // automatic save to $HOME/.ros folder
 
-        ss << "./cloudXYZ_" << time_string << ".pcd";
+        ss << "../../../src/vision_suturo_1718/vision/data/cloudXYZ_" << time_string << ".pcd";
         pcl::io::savePCDFileASCII(ss.str(), *cloud);
     } catch (pcl::PCLException e) {
         ROS_ERROR("Saving failed: %s", e.what());
@@ -71,7 +71,7 @@ void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char *fil
 
         // automatic save to $HOME/.ros folder
 
-        ss << "./" << filename << "_" << time_string << ".pcd";
+        ss << "../../../src/vision_suturo_1718/vision/data/" << filename << "_" << time_string << ".pcd";
         pcl::io::savePCDFileASCII(ss.str(), *cloud);
     } catch (pcl::PCLException e) {
         ROS_ERROR("Saving failed: %s", e.what());
@@ -88,7 +88,7 @@ void savePointCloudNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud) {
 
         // automatic save to $HOME/.ros folder
 
-        ss << "./cloudNormal_" << time_string << ".pcd";
+        ss << "../../../src/vision_suturo_1718/vision/data/cloudNormal_" << time_string << ".pcd";
         pcl::io::savePCDFileASCII(ss.str(), *cloud);
     } catch (pcl::PCLException e) {
         ROS_ERROR("Saving failed: %s", e.what());
@@ -105,7 +105,7 @@ void savePointCloudPointNormal(pcl::PointCloud<pcl::PointNormal>::Ptr cloud) {
 
         // automatic save to $HOME/.ros folder
 
-        ss << "./cloudPointNormal_" << time_string << ".pcd";
+        ss << "../../../src/vision_suturo_1718/vision/data/cloudPointNormal_" << time_string << ".pcd";
         pcl::io::savePCDFileASCII(ss.str(), *cloud);
     } catch (pcl::PCLException e) {
         ROS_ERROR("Saving failed: %s", e.what());
