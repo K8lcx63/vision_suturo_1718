@@ -2,6 +2,6 @@
 <launch>
    <include file="/opt/ros/indigo/share/freenect_launch/launch/freenect.launch"/>
 
-   <node name="vision_main" pkg="vision" type="vision_main" output="screen"/>
+   <node name="vision_main" pkg="vision" type="vision_main" cwd="node" output="screen"/>
 
 </launch>
