@@ -77,71 +77,60 @@ PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
  */
 void findCluster(const PointCloudXYZPtr kinect) {
 
-    // findCenterGazebo(); // check if simulation is ongoing
+    // the 'f' in the identifier stands for filtered
 
-    PointCloudXYZPtr kinect1(new PointCloudXYZ), kinect2(new PointCloudXYZ);
-    PointCloudXYZPtr cloud(new PointCloudXYZ); // for passthroughfilter
-    PointCloudXYZPtr objects(new PointCloudXYZ);
-    PointCloudXYZPtr result(new PointCloudXYZ);
+    PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_f(
+            new PointCloudXYZ), cloud_3df(
+            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), result(
+            new PointCloudXYZ);
+
     PointIndices planeIndices(new pcl::PointIndices);
 
     if (kinect->points.size() <
         input_noise_threshold) // if PR2 is not looking at anything
     {
-        ROS_ERROR("INPUT CLOUD EMPTY (PR2: \"OH, MY GOD! I AM BLIND!\"");
+        ROS_ERROR("Input from kinect is empty");
         error_message = "Cloud empty. ";
         centroid_stamped = findCenterGazebo(); // Use gazebo data instead
     } else {
-        ROS_INFO("CLUSTER EXTRACTION STARTED");
-        // Objects for storing the point clouds.
+        ROS_INFO("Starting Cluster extraction");
 
-        // apply passthroughFilter on all Axes (Axis?)
-        cloud = apply3DFilter(kinect, 0.4, 0.4, 1.5); // input, x, y, z -- 1.0y
-        if (cloud->points.size() == 0) {
-            ROS_ERROR("NO CLOUD AFTER FILTERING");
-            error_message = "Cloud was empty after filtering. ";
+        cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5); // passthrough filter
+
+
+        cloud_voxelgridf = voxelGridFilter(cloud_3df); // voxel grid filter
+        cloud_mlsf = mlsFilter(cloud_voxelgridf); // moving least square filter
+
+        planeIndices = estimatePlaneIndices(cloud_mlsf); // estimate plane indices
+
+        cloud_f = cloud_mlsf; // cloud_f set after last filtering function is applied
+
+        cloud_cluster = extractCluster(cloud_f, planeIndices, true); // extract object
+
+        cloud_plane = extractCluster(cloud_f, planeIndices, false); // extract plane
+        PointIndices prism_indices = prismSegmentation(cloud_cluster, cloud_plane);
+        cloud_cluster = extractCluster(cloud_f, prism_indices, true);
+
+        ROS_INFO("EXTRACTION OK");
+
+        if (cloud_cluster->points.size() == 0) {
+            ROS_ERROR("Extracted Cluster is empty");
+            error_message = "Final extracted cluster was empty. ";
             centroid_stamped = findCenterGazebo(); // Use gazebo data instead
-        } else {
-
-            // Filtering with voxelgrid and mls
-            kinect1 = voxelGridFilter(kinect);
-            kinect2 = mlsFilter(kinect1);
-            cloud = kinect2;
-
-            planeIndices = estimatePlaneIndices(cloud);
-
-            if (planeIndices->indices.size() == 0) {
-                ROS_ERROR("NO PLANE FOUND");
-                error_message = "No plane found. ";
-                centroid_stamped = findCenterGazebo(); // Use gazebo data instead
-
-            } else {
-
-                objects = extractCluster(cloud, planeIndices, true);
-
-                PointCloudXYZPtr plane_cloud = extractCluster(cloud, planeIndices, false); // Get the segmented plane
-                PointIndices prism_indices = prismSegmentation(objects, plane_cloud);
-                objects = extractCluster(objects, prism_indices, true);
-
-                ROS_INFO("EXTRACTION OK");
-
-                if (objects->points.size() == 0) {
-                    ROS_ERROR("EXTRACTED CLUSTER IS EMPTY");
-                    error_message = "Final extracted cluster was empty. ";
-                    centroid_stamped = findCenterGazebo(); // Use gazebo data instead
-                }
-
-                error_message = "";
-                centroid_stamped = findCenter(objects);
-
-                // clouds for saving
-                kinect_global = kinect;
-                objects_global = objects;
-
-            }
         }
+
+        error_message = "";
+        centroid_stamped = findCenter(cloud_cluster);
+
+        // clouds for saving
+        kinect_global = kinect;
+        objects_global = cloud_cluster;
+
     }
 }
+
+
+
 
 /**
  * Returns a fake point (not estimated) with its origin in the model in simulation.
@@ -229,7 +218,7 @@ int isStanding() {
     if (pcl::io::loadPCDFile<pcl::PointXYZ>("/home/tammo/catkin_ws/src/vision_suturo_1718/vision/data/eistee_mesh.pcd",
                                             *mesh_global) == -1) //* load the file
     {
-        PCL_ERROR ("Couldn't read file test_pcd.pcd \n");
+        PCL_ERROR ("Couldn't read eistee_mesh.pcd \n");
     }
 
     if (true) { // TODO: Implement pose estimation
@@ -275,7 +264,7 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
                                float z) {
 
     //TODO test filtering here
-    ROS_INFO("3D FILTER");
+    ROS_INFO("Starting passthrough filter");
     PointCloudXYZPtr input_after_x(new PointCloudXYZ),
             input_after_xy(new PointCloudXYZ), input_after_xyz(new PointCloudXYZ);
     /** Create the filtering object **/
@@ -302,6 +291,12 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
     pass.setKeepOrganized(false);
     pass.filter(*input_after_xyz);
 
+    if (input_after_xyz->points.size() == 0) {
+        ROS_ERROR("Cloud empty after passthrough filtering");
+        error_message = "Cloud was empty after filtering. ";
+        centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+    }
+
     return input_after_xyz;
 }
 
@@ -311,7 +306,7 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
  * @return
  */
 PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
-    ROS_INFO("PLANE INDICES");
+    ROS_INFO("Starting plane indices estimation");
     PointIndices planeIndices(new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::SACSegmentation<pcl::PointXYZ> segmentation;
@@ -322,6 +317,13 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
     segmentation.setDistanceThreshold(0.01); // Distance to model points
     segmentation.setOptimizeCoefficients(true);
     segmentation.segment(*planeIndices, *coefficients);
+
+
+    if (planeIndices->indices.size() == 0) {
+        ROS_ERROR("No plane (indices) found");
+        error_message = "No plane found. ";
+        centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+    }
 
     return planeIndices;
 }
@@ -380,7 +382,7 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input) {
 
     mls.setComputeNormals(true);
     mls.setInputCloud(input);
-    mls.setPolynomialFit(true);
+    mls.setPolynomialOrder(1); // TODO lookup this function for correct input
     mls.setSearchMethod(tree);
     mls.setSearchRadius(0.03);
     mls.process(mls_points);
