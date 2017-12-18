@@ -323,11 +323,30 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
     pcl::SACSegmentation<pcl::PointXYZ> segmentation;
 
     segmentation.setInputCloud(input);
-    segmentation.setModelType(pcl::SACMODEL_PLANE);
+    segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE); // PERPENDICULAR
     segmentation.setMethodType(pcl::SAC_RANSAC);
-    segmentation.setDistanceThreshold(0.01); // Distance to model points
+    segmentation.setMaxIterations(500); // Default is 50 and could be problematic
+    segmentation.setAxis(Eigen::Vector3f(0,1,0));
+    segmentation.setEpsAngle(30.0); // plane can be within 30 degrees of X-Z plane - 30.0f * (M_PI/180.0f)
+    segmentation.setDistanceThreshold(0.03); // Distance to model points
     segmentation.setOptimizeCoefficients(true);
     segmentation.segment(*planeIndices, *coefficients);
+
+    /**
+     *      ROS_INFO("FINDING PLANE");
+            pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+            pcl::SACSegmentation <pcl::PointXYZ> segmentation;
+            segmentation.setInputCloud(cloud);
+            segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+            segmentation.setMethodType(pcl::SAC_RANSAC);
+            segmentation.setMaxIterations(500); // Default is 50 and could be problematic
+            segmentation.setAxis(Eigen::Vector3f(0,1,0));
+            segmentation.setEpsAngle(  30.0f * (M_PI/180.0f) ); // plane can be within 30 degrees of X-Z plane
+            //segmentation.setEpsAngle(30.0f); // plane can be within 30 degrees of X-Z plane
+            segmentation.setDistanceThreshold(0.02);  // Distance to model points
+            segmentation.setOptimizeCoefficients(true);
+            segmentation.segment(*planeIndices, *coefficients);
+     */
 
 
     if (planeIndices->indices.size() == 0) {
