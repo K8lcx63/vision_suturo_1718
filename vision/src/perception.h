@@ -598,66 +598,71 @@ int checkModelPresence(PointCloudXYZPtr scene){
 
 int initialAlignmentAndICP(){
 
-    PointCloudXYZPtr scene(new PointCloudXYZ);
-    PointCloudNormalPtr scene_normals(new PointCloudNormal);
-    PointCloudNormalPtr object_normals(new PointCloudNormal);
+    try {
+        PointCloudXYZPtr scene(new PointCloudXYZ);
+        PointCloudNormalPtr scene_normals(new PointCloudNormal);
+        PointCloudNormalPtr object_normals(new PointCloudNormal);
 
-    PointCloudNormalPtr object_aligned(new PointCloudNormal);
+        PointCloudNormalPtr object_aligned(new PointCloudNormal);
 
-    pcl::PointCloud<pcl::FPFHSignature33>::Ptr object_features(new pcl::PointCloud<pcl::FPFHSignature33>);
-    pcl::PointCloud<pcl::FPFHSignature33>::Ptr scene_features(new pcl::PointCloud<pcl::FPFHSignature33>);
-
-
-    scene = kinect_global;
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr object_features(new pcl::PointCloud<pcl::FPFHSignature33>);
+        pcl::PointCloud<pcl::FPFHSignature33>::Ptr scene_features(new pcl::PointCloud<pcl::FPFHSignature33>);
 
 
-    //load mesh to model
-    pcl::PointCloud<pcl::PointXYZ>::Ptr buffer(new PointCloudXYZ);
-
-    pcl::io::loadPCDFile ("../../../src/vision_suturo_1718/vision/meshes/eistee_mesh.pcd", *buffer);
-    pcl::PointCloud<pcl::PointXYZ>::ConstPtr object(buffer);
-
-    // Downsample
-    pcl::console::print_highlight ("Downsampling...\n");
-    pcl::VoxelGrid<pcl::PointXYZ> grid;
-    const float leaf = 0.005f;
-    grid.setLeafSize (leaf, leaf, leaf);
-    grid.setInputCloud (scene);
-    grid.filter (*scene);
-
-    // Estimate normals for scene
-    pcl::console::print_highlight ("Estimating scene normals...\n");
-    scene_normals = estimateSurfaceNormals(scene);
-    object_normals = estimateSurfaceNormals(buffer);
+        scene = kinect_global;
 
 
-    // Estimate features
-    pcl::console::print_highlight ("Estimating features...\n");
-    pcl::FPFHEstimation<pcl::PointXYZ,pcl::Normal,pcl::FPFHSignature33> fest;
-    fest.setRadiusSearch (0.025);
-    fest.setInputCloud (object);
-    fest.setInputNormals (object_normals);
-    fest.compute (*object_features);
-    fest.setInputCloud (scene);
-    fest.setInputNormals (scene_normals);
-    fest.compute (*scene_features);
+        //load mesh to model
+        pcl::PointCloud<pcl::PointXYZ>::Ptr buffer(new PointCloudXYZ);
 
-    // Perform alignment
-    pcl::console::print_highlight ("Starting alignment...\n");
-    pcl::SampleConsensusInitialAlignment<pcl::PointXYZ,pcl::PointXYZ, pcl::FPFHSignature33> align;
-    align.setInputCloud(object);
-    align.setSourceFeatures (object_features);
-    align.setInputTarget(scene);
-    align.setTargetFeatures (scene_features);
-    align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
-    align.setCorrespondenceRandomness (5); // Number of nearest features to use
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/eistee_mesh.pcd", *buffer);
+        pcl::PointCloud<pcl::PointXYZ>::ConstPtr object(buffer);
 
-    align.align(*buffer);
-    std::cout << align.hasConverged() << std::endl;
-    if (align.hasConverged()){
-        return 1;
+        // Downsample
+        pcl::console::print_highlight("Downsampling...\n");
+        pcl::VoxelGrid<pcl::PointXYZ> grid;
+        const float leaf = 0.005f;
+        grid.setLeafSize(leaf, leaf, leaf);
+        grid.setInputCloud(scene);
+        grid.filter(*scene);
 
-    } else {
+        // Estimate normals for scene
+        pcl::console::print_highlight("Estimating scene normals...\n");
+        scene_normals = estimateSurfaceNormals(scene);
+        object_normals = estimateSurfaceNormals(buffer);
+
+
+        // Estimate features
+        pcl::console::print_highlight("Estimating features...\n");
+        pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fest;
+        fest.setRadiusSearch(0.025);
+        fest.setInputCloud(object);
+        fest.setInputNormals(object_normals);
+        fest.compute(*object_features);
+        fest.setInputCloud(scene);
+        fest.setInputNormals(scene_normals);
+        fest.compute(*scene_features);
+
+        // Perform alignment
+        pcl::console::print_highlight("Starting alignment...\n");
+        pcl::SampleConsensusInitialAlignment<pcl::PointXYZ, pcl::PointXYZ, pcl::FPFHSignature33> align;
+        align.setInputCloud(object);
+        align.setSourceFeatures(object_features);
+        align.setInputTarget(scene);
+        align.setTargetFeatures(scene_features);
+        align.setNumberOfSamples(3); // Number of points to sample for generating/prerejecting a pose
+        align.setCorrespondenceRandomness(5); // Number of nearest features to use
+
+        align.align(*buffer);
+        std::cout << align.hasConverged() << std::endl;
+        if (align.hasConverged()) {
+            return 1;
+
+        } else {
+            return 0;
+        }
+    } catch (pcl::PCLException e){
+        ROS_ERROR("Object not found", e.what());
         return 0;
     }
 
