@@ -125,9 +125,9 @@ void savePointCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr objects,
 
         // automatic save to $HOME/.ros folder
 
-        ss << "./object_" << time_string << ".pcd";
-        ss_input << "./kinect_" << time_string << ".pcd";
-        ss_normals << "./kinect_normals_" << time_string << ".pcd";
+        ss << "../../../src/vision_suturo_1718/vision/data/object_" << time_string << ".pcd";
+        ss_input << "../../../src/vision_suturo_1718/vision/data/kinect_" << time_string << ".pcd";
+        ss_normals << "../../../src/vision_suturo_1718/vision/data/kinect_normals_" << time_string << ".pcd";
 
         pcl::io::savePCDFileASCII(ss.str(), *objects);
         pcl::io::savePCDFileASCII(ss_input.str(), *kinect);
