@@ -29,7 +29,7 @@
 #include <pcl/correspondence.h>
 #include <pcl/features/shot_omp.h>
 #include <pcl/features/board.h>
-#include <pcl/filters/uniform_sampling.h>
+// #include <pcl/filters/uniform_sampling.h>
 #include <pcl/recognition/cg/geometric_consistency.h>
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/kdtree/impl/kdtree_flann.hpp>
@@ -476,6 +476,7 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input ){
 }
 
 int checkModelPresence(PointCloudXYZPtr scene){
+    /**
     PointCloudXYZPtr model_keypoints(new PointCloudXYZ), scene_keypoints(new PointCloudXYZ);
     pcl::PointCloud<pcl::SHOT352>::Ptr model_descriptors(new pcl::PointCloud<pcl::SHOT352>), scene_descriptors(new pcl::PointCloud<pcl::SHOT352>);
 
@@ -562,9 +563,9 @@ int checkModelPresence(PointCloudXYZPtr scene){
     gc_clusterer.cluster (clustered_corrs);
     gc_clusterer.recognize (rototranslations, clustered_corrs);
     std::cout << "Model instances found: " << rototranslations.size () << std::endl;
+**/
 
-
-    return (int) model_scene_corrs->size();
+    return 1;
 
 
 }
