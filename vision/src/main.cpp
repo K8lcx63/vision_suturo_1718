@@ -95,7 +95,8 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
     // objects) from findCluster are saved to ./data
 
     /** save clouds**/
-    savePointCloud(objects_global, kinect_global, normals_global);
+    savePointCloudXYZNamed(objects_global, "objects_");
+    savePointCloudXYZNamed(kinect_global, "kinect_");
 
 
     return true;
@@ -103,10 +104,10 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res) {
-    if (isStanding() == 1) {
+    if (initialAlignmentAndICP() == 1) {
         res.info.isStanding = 1;
         res.info.information = "Objekt steht";
-    } else if (isStanding() == 0) {
+    } else {
         res.info.isStanding = 0;
         res.info.information = "Objekt liegt";
     }
