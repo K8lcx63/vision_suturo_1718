@@ -105,11 +105,13 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res) {
     if (initialAlignmentAndICP() == 1) {
-        res.info.isStanding = 1;
+        res.info.isStanding = 2;
         res.info.information = "Objekt steht";
+        return true;
     } else {
-        res.info.isStanding = 0;
+        res.info.isStanding = 1;
         res.info.information = "Objekt liegt";
+        return false;
     }
 }
 
