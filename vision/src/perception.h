@@ -60,6 +60,7 @@ bool simulation;
 /** Shorthand **/
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
+typedef pcl::PointCloud<pcl::PointNormal>::Ptr PointCloudPointNormalPtr;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloudXYZ;
 typedef pcl::PointCloud<pcl::Normal> PointCloudNormal;
 typedef pcl::PointIndices::Ptr PointIndices;
@@ -75,12 +76,12 @@ geometry_msgs::PointStamped findCenter(const PointCloudXYZPtr object_cloud);
 
 PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input);
 
-PointCloudNormalPtr
+PointCloudPointNormalPtr
 createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals);
 
 int isStanding();
 
-PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud);
+PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud, float trans_x, float trans_y, float trans_z, float angle_x = M_PI, float angle_y = M_PI, float angle_z = M_PI) {
 
 PointIndices estimatePlaneIndices(PointCloudXYZPtr input);
 
@@ -284,16 +285,18 @@ int isStanding() {
  * @param cloud
  * @return
  */
-PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud) {
+PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud, float trans_x, float trans_y, float trans_z, float angle_x = M_PI, float angle_y = M_PI, float angle_z = M_PI) {
 
     float theta = M_PI; // the angle of rotation in radians
 
     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
 
-    transform.translation() << -2.0, 0.0, 0.0;
+    transform.translation() << trans_x, trans_y, trans_z;
 
-    transform.rotate(Eigen::AngleAxisf(theta, Eigen::Vector3f::UnitZ()));
-    transform.rotate(Eigen::AngleAxisf(-(theta / 2), Eigen::Vector3f::UnitY()));
+    transform.rotate(Eigen::AngleAxisf(angle_x, Eigen::Vector3f::UnitX()));
+    transform.rotate(Eigen::AngleAxisf(angle_y, Eigen::Vector3f::UnitY()));
+    transform.rotate(Eigen::AngleAxisf(angle_z, Eigen::Vector3f::UnitZ()));
+
 
     PointCloudXYZPtr transformed_cloud(new PointCloudXYZ());
 
