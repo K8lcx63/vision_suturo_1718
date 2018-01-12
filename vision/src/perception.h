@@ -22,6 +22,13 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/surface/mls.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <tf/transform_datatypes.h>
+#include <eigen_conversions/eigen_msg.h>
+#include <tf_conversions/tf_eigen.h>
+
+#include <tf/transform_listener.h>
+#include <pcl_ros/transforms.h>
+
 #include "saving.h"
 #include <string>
 
@@ -98,12 +105,56 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
 
 PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
 
+PointCloudXYZPtr killBelowObjects(PointCloudXYZPtr input);
+
 PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input );
 int checkModelPresence(PointCloudXYZPtr scene);
 
 int initialAlignmentAndICP();
 
+class CloudTransformer
+{
+public:
+    explicit CloudTransformer(ros::NodeHandle nh)
+            : nh_(nh)
+    {
+        // Define Publishers and Subscribers here
+        pcl_sub_ = nh_.subscribe(REAL_KINECT_POINTS_FRAME, 10, &CloudTransformer::transform, this);
+        //pcl_pub_ = nh_.advertise<PointCloudXYZ>("/vision_main/point_cloud_odom_combined", 1); // <sensor_msgs::PointCloud2>
 
+        buffer_.reset(new PointCloudXYZ); // (new sensor_msgs::PointCloud2)
+        buffer_->header.frame_id = "odom_combined";
+    }
+    void transform(const PointCloudXYZPtr kinect) // sensor_msgs::PointCloud2ConstPtr&
+    {
+        ROS_INFO("TRYING TO TRANSFORM...");
+        try{
+            listener_.waitForTransform("odom_combined", "head_mount_kinect_ir_optical_frame", ros::Time(0), ros::Duration(3.0));
+            listener_.lookupTransform("odom_combined", "head_mount_kinect_ir_optical_frame", ros::Time(0), stamped_transform_);
+            tf::transformTFToEigen(stamped_transform_, transform_eigen_);
+            pcl::transformPointCloud(*kinect, *buffer_, transform_eigen_);
+        }
+        catch (tf::TransformException &ex) {
+            ROS_ERROR("%s",ex.what());
+            ros::Duration(1.0).sleep();
+        }
+        //pcl_ros::transformPointCloud("odom_combined", *kinect, *buffer_, listener_);
+        //pcl_pub_.publish(buffer_);
+        savePointCloudXYZNamed(kinect, "before_transforming");
+        savePointCloudXYZNamed(buffer_, "transformed");
+        ROS_INFO("TRANSFORMED AND PUBLISHED!");
+    }
+
+private:
+    ros::NodeHandle nh_;
+    ros::Subscriber pcl_sub_;
+    //ros::Publisher pcl_pub_;
+    tf::TransformListener listener_;
+    tf::StampedTransform stamped_transform_;
+    tf::Transform test_transform_;
+    Eigen::Affine3d transform_eigen_;
+    PointCloudXYZPtr buffer_; // sensor_msgs::PointCloud2::Ptr
+}; // End of class CloudTransformer
 
 /** -------------------------- BEGIN OF IMPLEMENTATION ---------------------- **/
 
@@ -113,6 +164,10 @@ int initialAlignmentAndICP();
  */
 void findCluster(const PointCloudXYZPtr kinect) {
 
+    //ros::NodeHandle n_perception;
+
+
+
     // the 'f' in the identifier stands for filtered
 
     PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_cluster2(new PointCloudXYZ), cloud_f(
@@ -121,6 +176,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
             new PointCloudXYZ), cloud_final(new PointCloudXYZ);
 
     PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(new pcl::PointIndices);
+
 
     if (kinect->points.size() <
         input_noise_threshold) // if PR2 is not looking at anything
@@ -135,6 +191,8 @@ void findCluster(const PointCloudXYZPtr kinect) {
         cloud_voxelgridf = voxelGridFilter(cloud_3df); // voxel grid filter
         cloud_mlsf = mlsFilter(cloud_voxelgridf); // moving least square filter
         cloud_cluster = cloud_mlsf; // cloud_f set after last filtering function is applied
+
+        //killBelowObjects(cloud_cluster);
 
         // While a segmented plane would be larger than 500 points, segment it.
         bool loop_plane_segmentations = true;
@@ -186,7 +244,6 @@ void findCluster(const PointCloudXYZPtr kinect) {
 
     }
 }
-
 
 /**
  * Returns a fake point (not estimated) with its origin in the model in simulation.
@@ -398,6 +455,49 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
 
     return planeIndices;
 }
+/*
+void initTransformListener(){
+    tf_listener = new tf::TransformListener();
+}
+*/
+PointCloudXYZPtr killBelowObjects(PointCloudXYZPtr input) {
+
+    PointCloudXYZPtr cloud_odom_combined (new PointCloudXYZ);
+
+    //std::string target_frame = "/odom_combined";
+    //std::string source_frame = "/kinect_head/depth_registered/points";
+    //tf::TransformListener::waitForTransform("/odom_combined", REAL_KINECT_POINTS_FRAME, ros::Time::now(), ros::Duration(10));
+    //tf_listener.waitForTransform("/odom_combined", input->header.frame_id, ros::Time(0), ros::Duration(10.0));
+    //pcl_ros::transformPointCloud("/odom_combined", *input, *cloud_odom_combined, tfl.tf_listener); // Transform
+    ROS_INFO("TRANSFORMED!");
+
+
+    // Find the bottom plane
+    PointIndices planeIndices(new pcl::PointIndices);
+    ROS_INFO("FINDING PLANE");
+    pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+    pcl::SACSegmentation <pcl::PointXYZ> segmentation;
+    segmentation.setInputCloud(cloud_odom_combined);
+    segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
+    segmentation.setMethodType(pcl::SAC_RANSAC);
+    segmentation.setMaxIterations(500); // Default is 50 and could be problematic
+    segmentation.setAxis(Eigen::Vector3f(0,0,1));
+    segmentation.setEpsAngle(  5.0f * (M_PI/180.0f) ); // plane can be within 30 degrees of X-Z plane
+    //segmentation.setEpsAngle(30.0f); // plane can be within 30 degrees of X-Z plane
+    segmentation.setDistanceThreshold(0.02);  // Distance to model points
+    segmentation.setOptimizeCoefficients(true);
+    segmentation.segment(*planeIndices, *coefficients);
+
+    PointCloudXYZPtr plane (new PointCloudXYZ);
+    plane = extractCluster(cloud_odom_combined, planeIndices, true); // extract the plane
+
+    Eigen::Vector4f plane_centroid;
+    pcl::compute3DCentroid(*plane, plane_centroid); // compute plane centroid
+    ROS_INFO("Plane height: %f", plane_centroid.z());
+
+    return input;
+
+}
 
 /**
  * prism segmentation
@@ -494,7 +594,7 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input ){
     PointCloudXYZPtr cloud_filtered(new PointCloudXYZ);
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
     sor.setInputCloud (input);
-    sor.setMeanK (50);
+    sor.setMeanK (25);
     sor.setStddevMulThresh (1.0);
     sor.filter (*cloud_filtered);
 

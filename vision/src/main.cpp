@@ -17,7 +17,6 @@
 #include "saving.h"
 #include "viewer.h"
 
-
 bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
                        object_detection::VisObjectInfo::Response &res);
 
@@ -37,6 +36,8 @@ int main(int argc, char **argv) {
 
     /** nodehandle, subscribers and publishers**/
     ros::NodeHandle n;
+
+    CloudTransformer transform_cloud(n);
 
     // Subscriber for the kinect points. Also calls findCluster.
     ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME , 100, &findCluster);
@@ -60,9 +61,40 @@ int main(int argc, char **argv) {
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
 
+    // Initialize a TransformListener for killBelowObjects() to use.
+    //initTransformListener();
+
+    /*
+    ROS_INFO("TransformListener initialized.");
+
+    tf::TransformListener tf_test_listener;
+
+    geometry_msgs::PointStamped testpoint;
+    geometry_msgs::PointStamped testpoint_result;
+    testpoint.point.x = 1;
+    testpoint.point.y = 1.5;
+    testpoint.point.z = 2;
+    testpoint.header.frame_id = REAL_KINECT_POINTS_FRAME;
+    try {
+        tf_test_listener.transformPoint("/odom_combined", testpoint, testpoint_result);
+    }
+    catch (tf::TransformException &ex)
+    {
+        ROS_WARN(":(");
+    }
+    ROS_INFO("X = %d", testpoint_result.point.x);
+    */
+
+
+
     centroid_stamped.point.x = 0, centroid_stamped.point.y = 0,
     centroid_stamped.point.z = 0;  // dummy point
     ros::Rate r(2.0);
+
+
+
+
+
 
     while (n.ok()) {
         // ros::Publisher pub_objects =
@@ -72,6 +104,8 @@ int main(int argc, char **argv) {
 
         bool simulation =
                 client.exists();  // Periodically check if this is a simulation
+
+        ROS_INFO("XD");
 
         pub_visualization.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
 

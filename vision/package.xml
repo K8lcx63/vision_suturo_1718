@@ -13,6 +13,7 @@
     <depend>object_detection</depend>
     <depend>vision_msgs</depend>
     <depend>visualization_msgs</depend>
+    <depend>tf</depend>
     <buildtool_depend>catkin</buildtool_depend>
     <build_depend>roscpp</build_depend>
     <build_depend>std_msgs</build_depend>

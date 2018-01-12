@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
         object_detection
         message_generation
 	visualization_msgs
+	tf_conversions
         )
 
 catkin_package(CATKIN_DEPENDS
