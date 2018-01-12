@@ -4,7 +4,6 @@
 const char* SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/points";
 const char* REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 
-const char* GREEN_MSG_COL = "\x1B[32m";
 
 
 gazebo_msgs::GetModelState getmodelstate;

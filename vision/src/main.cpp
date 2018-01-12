@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
     CloudTransformer transform_cloud(n);
 
     // Subscriber for the kinect points. Also calls findCluster.
-    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME , 100, &findCluster);
+    ros::Subscriber sub_kinect = n.subscribe(SIM_KINECT_POINTS_FRAME , 100, &findCluster);
 
     /** services and clients **/
     // ServiceClient for calling the object position through gazebo
@@ -51,12 +51,12 @@ int main(int argc, char **argv) {
     // Service for returning the object centroid
     ros::ServiceServer point_service =
             n.advertiseService("vision_main/objectPoint", getObjectPosition); //VisObjectInfo
-    ROS_INFO("%sPOINT SERVICE READY\n", GREEN_MSG_COL);
+    ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
 
     // Service for returning if the object has fallen over already
     ros::ServiceServer pose_service =
             n.advertiseService("vision_main/objectPose", getObjectPose);
-    ROS_INFO("%sPOSE SERVICE READY\n", GREEN_MSG_COL);
+    ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
 
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
@@ -102,6 +102,7 @@ int main(int argc, char **argv) {
         // pub_objects.publish(objects_global);
         // client.call(getmodelstate); // continously call model state
 
+
         bool simulation =
                 client.exists();  // Periodically check if this is a simulation
 
@@ -138,15 +139,8 @@ bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
 
 bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
                    vision_msgs::GetObjectInfo::Response &res) {
-    if (initialAlignmentAndICP() == 1) {
-        res.info.isStanding = 2;
-        res.info.information = "Objekt steht";
-        return true;
-    } else {
-        res.info.isStanding = 1;
-        res.info.information = "Objekt liegt";
-        return false;
-    }
+    return true;
+
 }
 
 visualization_msgs::Marker publishVisualizationMarker(geometry_msgs::PointStamped point) {
