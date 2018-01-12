@@ -17,7 +17,7 @@ std::string getTime();
 
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
-void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char *filename);
+void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string filename);
 
 
 void savePointCloudNormal(pcl::PointCloud<pcl::Normal>::Ptr cloud);
@@ -62,7 +62,7 @@ void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
 }
 
 
-void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, char *filename) {
+void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string filename) {
     try {
         ROS_INFO("Saving PointCloud<PointXYZ>");
         std::string time_string = getTime();

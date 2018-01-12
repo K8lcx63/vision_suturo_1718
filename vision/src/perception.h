@@ -34,7 +34,7 @@
 #include <pcl/kdtree/kdtree_flann.h>
 #include <pcl/kdtree/impl/kdtree_flann.hpp>
 #include <pcl/common/transforms.h>
-
+#include <pcl_ros/point_cloud.h>
 /** for icp and alignment **/
 #include <Eigen/Core>
 #include <pcl/point_types.h>
@@ -53,6 +53,14 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/registration/ia_ransac.h>
 
+#include <ros/ros.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <sensor_msgs/PointCloud2.h>
+#include <tf/transform_listener.h>
 
 unsigned int input_noise_threshold = 342;
 bool simulation;
@@ -79,18 +87,11 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input);
 PointCloudPointNormalPtr
 createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals);
 
-int isStanding();
-
-PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud, float trans_x, float trans_y, float trans_z, float angle_x = M_PI, float angle_y = M_PI, float angle_z = M_PI) {
-
 PointIndices estimatePlaneIndices(PointCloudXYZPtr input);
 
 PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bool negative);
 
 PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane);
-
-void createCovarianceMatrix(PointCloudXYZ input,
-                            Eigen::Matrix3f covariance_matrix);
 
 PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
                                float z);
@@ -100,10 +101,6 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
 PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
 
 PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input );
-int checkModelPresence(PointCloudXYZPtr scene);
-
-int initialAlignmentAndICP();
-
 
 
 /** -------------------------- BEGIN OF IMPLEMENTATION ---------------------- **/
@@ -145,8 +142,8 @@ void findCluster(const PointCloudXYZPtr kinect) {
             plane_indices = estimatePlaneIndices(cloud_cluster);
             if(plane_indices->indices.size() > 500) // is the extracted plane big enough?
             {
-                ROS_INFO("plane_indices: %d", plane_indices->indices.size());
-                ROS_INFO("cloud_cluster: %d", cloud_cluster->points.size());
+                ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
+                ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
                 cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
                 amount_plane_segmentations++;
             }
@@ -170,7 +167,7 @@ void findCluster(const PointCloudXYZPtr kinect) {
 
 
 
-        ROS_INFO("%sExtraction OK", GREEN_MSG_COL);
+        ROS_INFO("%sExtraction OK", "\x1B[32m");
 
         if (cloud_cluster->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
@@ -267,45 +264,6 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input) {
 }
 
 /**
- * compute if a certain object is standing (mostly _global pointclouds are used)
- * @return
- */
-int isStanding() {
-
-    if (initialAlignmentAndICP() >= 1) { // TODO: Implement pose estimation
-        return 1;
-    } else {
-
-        return 0;
-    }
-}
-
-/**
- * Rotates a pointcloud. parameters have to be manually set
- * @param cloud
- * @return
- */
-PointCloudXYZPtr rotatePointCloud(PointCloudXYZPtr cloud, float trans_x, float trans_y, float trans_z, float angle_x = M_PI, float angle_y = M_PI, float angle_z = M_PI) {
-
-    float theta = M_PI; // the angle of rotation in radians
-
-    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-
-    transform.translation() << trans_x, trans_y, trans_z;
-
-    transform.rotate(Eigen::AngleAxisf(angle_x, Eigen::Vector3f::UnitX()));
-    transform.rotate(Eigen::AngleAxisf(angle_y, Eigen::Vector3f::UnitY()));
-    transform.rotate(Eigen::AngleAxisf(angle_z, Eigen::Vector3f::UnitZ()));
-
-
-    PointCloudXYZPtr transformed_cloud(new PointCloudXYZ());
-
-    pcl::transformPointCloud(*cloud, *transformed_cloud, transform);
-    savePointCloudXYZ(transformed_cloud);
-    return transformed_cloud;
-}
-
-/**
  * apply a passthrough Filter to all dimensions, reducing points and
  * narrowing Field of Vision
  * @param input
@@ -375,22 +333,6 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
     segmentation.setDistanceThreshold(0.01); // Distance to model points
     segmentation.setOptimizeCoefficients(true);
     segmentation.segment(*planeIndices, *coefficients);
-
-    /**
-     *      ROS_INFO("FINDING PLANE");
-            pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-            pcl::SACSegmentation <pcl::PointXYZ> segmentation;
-            segmentation.setInputCloud(cloud);
-            segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
-            segmentation.setMethodType(pcl::SAC_RANSAC);
-            segmentation.setMaxIterations(500); // Default is 50 and could be problematic
-            segmentation.setAxis(Eigen::Vector3f(0,1,0));
-            segmentation.setEpsAngle(  30.0f * (M_PI/180.0f) ); // plane can be within 30 degrees of X-Z plane
-            //segmentation.setEpsAngle(30.0f); // plane can be within 30 degrees of X-Z plane
-            segmentation.setDistanceThreshold(0.02);  // Distance to model points
-            segmentation.setOptimizeCoefficients(true);
-            segmentation.segment(*planeIndices, *coefficients);
-     */
 
 
     if (planeIndices->indices.size() == 0) {
@@ -503,184 +445,5 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input ){
 
     return cloud_filtered;
 }
-
-int checkModelPresence(PointCloudXYZPtr scene){
-    /**
-    PointCloudXYZPtr model_keypoints(new PointCloudXYZ), scene_keypoints(new PointCloudXYZ);
-    pcl::PointCloud<pcl::SHOT352>::Ptr model_descriptors(new pcl::PointCloud<pcl::SHOT352>), scene_descriptors(new pcl::PointCloud<pcl::SHOT352>);
-
-
-    //load mesh to model
-    PointCloudXYZPtr model(new PointCloudXYZ);
-    pcl::io::loadPCDFile ("../../../src/vision_suturo_1718/vision/meshes/eistee_mesh.pcd", *model);
-
-    //compute normals
-    PointCloudNormalPtr model_normals = estimateSurfaceNormals(model);
-    PointCloudNormalPtr scene_normals = estimateSurfaceNormals(scene);
-
-    // compute model keypoints
-    pcl::UniformSampling<pcl::PointXYZ> uniform_sampling;
-    uniform_sampling.setInputCloud (model);
-    uniform_sampling.setRadiusSearch (0.01f);
-    uniform_sampling.filter (*model_keypoints);
-    std::cout << "Model total points: " << model->size () << "; Selected Keypoints: " << model_keypoints->size () << std::endl;
-
-    // compute scene keypoints
-
-    uniform_sampling.setInputCloud (scene);
-    uniform_sampling.setRadiusSearch (0.03f);
-    uniform_sampling.filter (*scene_keypoints);
-    std::cout << "Scene total points: " << scene->size () << "; Selected Keypoints: " << scene_keypoints->size () << std::endl;
-
-
-    // compute SHOT descriptor model
-
-    pcl::SHOTEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::SHOT352> descr_est;
-    descr_est.setRadiusSearch (0.05f);
-
-    descr_est.setInputCloud (model_keypoints);
-    descr_est.setInputNormals (model_normals);
-    descr_est.setSearchSurface (model);
-    descr_est.compute (*model_descriptors);
-
-    // compute SHOT descriptor scene
-    descr_est.setInputCloud (scene_keypoints);
-    descr_est.setInputNormals (scene_normals);
-    descr_est.setSearchSurface (scene);
-    descr_est.compute (*scene_descriptors);
-
-    //
-    //  Find Model-Scene Correspondences with KdTree
-    //
-    pcl::CorrespondencesPtr model_scene_corrs (new pcl::Correspondences ());
-
-    pcl::KdTreeFLANN<pcl::SHOT352> match_search;
-    match_search.setInputCloud (model_descriptors);
-
-    //  For each scene keypoint descriptor, find nearest neighbor into the model keypoints descriptor cloud and add it to the correspondences vector.
-    for (size_t i = 0; i < scene_descriptors->size (); ++i)
-    {
-        std::vector<int> neigh_indices (1);
-        std::vector<float> neigh_sqr_dists (1);
-        if (!pcl_isfinite (scene_descriptors->at (i).descriptor[0])) //skipping NaNs
-        {
-            continue;
-        }
-        int found_neighs = match_search.nearestKSearch (scene_descriptors->at (i), 1, neigh_indices, neigh_sqr_dists);
-        if(found_neighs == 1 && neigh_sqr_dists[0] < 0.25f) //  add match only if the squared descriptor distance is less than 0.25 (SHOT descriptor distances are between 0 and 1 by design)
-        {
-            pcl::Correspondence corr (neigh_indices[0], static_cast<int> (i), neigh_sqr_dists[0]);
-            model_scene_corrs->push_back (corr);
-        }
-    }
-    std::cout << "Correspondences found: " << model_scene_corrs->size () << std::endl;
-
-    //
-    //  Actual Clustering using Geometric consistency
-    //
-    std::vector<Eigen::Matrix4f, Eigen::aligned_allocator<Eigen::Matrix4f> > rototranslations;
-    std::vector<pcl::Correspondences> clustered_corrs;
-
-    pcl::GeometricConsistencyGrouping<pcl::PointXYZ, pcl::PointXYZ> gc_clusterer;
-    gc_clusterer.setGCSize (0.01f);
-    gc_clusterer.setGCThreshold (5.0f);
-
-    gc_clusterer.setInputCloud (model_keypoints);
-    gc_clusterer.setSceneCloud (scene_keypoints);
-    gc_clusterer.setModelSceneCorrespondences (model_scene_corrs);
-
-    gc_clusterer.cluster (clustered_corrs);
-    gc_clusterer.recognize (rototranslations, clustered_corrs);
-    std::cout << "Model instances found: " << rototranslations.size () << std::endl;
-**/
-
-    return 1;
-
-
-}
-
-int initialAlignmentAndICP(){
-
-    try {
-        PointCloudXYZPtr scene(new PointCloudXYZ);
-        PointCloudNormalPtr scene_normals(new PointCloudNormal);
-        PointCloudNormalPtr object_normals(new PointCloudNormal);
-
-        PointCloudNormalPtr object_aligned(new PointCloudNormal);
-
-        pcl::PointCloud<pcl::FPFHSignature33>::Ptr object_features(new pcl::PointCloud<pcl::FPFHSignature33>);
-        pcl::PointCloud<pcl::FPFHSignature33>::Ptr scene_features(new pcl::PointCloud<pcl::FPFHSignature33>);
-
-
-        scene = kinect_global;
-
-
-        //load mesh to model
-        pcl::PointCloud<pcl::PointXYZ>::Ptr buffer(new PointCloudXYZ);
-
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/eistee_mesh.pcd", *buffer);
-        pcl::PointCloud<pcl::PointXYZ>::ConstPtr object(buffer);
-
-        // Downsample
-        pcl::console::print_highlight("Downsampling...\n");
-        pcl::VoxelGrid<pcl::PointXYZ> grid;
-        const float leaf = 0.005f;
-        grid.setLeafSize(leaf, leaf, leaf);
-        grid.setInputCloud(scene);
-        grid.filter(*scene);
-
-        // Estimate normals for scene
-        pcl::console::print_highlight("Estimating scene normals...\n");
-        scene_normals = estimateSurfaceNormals(scene);
-        object_normals = estimateSurfaceNormals(buffer);
-
-
-        // Estimate features
-        pcl::console::print_highlight("Estimating features...\n");
-        pcl::FPFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fest;
-        fest.setRadiusSearch(0.025);
-        fest.setInputCloud(object);
-        fest.setInputNormals(object_normals);
-        fest.compute(*object_features);
-        fest.setInputCloud(scene);
-        fest.setInputNormals(scene_normals);
-        fest.compute(*scene_features);
-
-        // Perform alignment
-        pcl::console::print_highlight("Starting alignment...\n");
-        pcl::SampleConsensusInitialAlignment<pcl::PointXYZ, pcl::PointXYZ, pcl::FPFHSignature33> align;
-        align.setInputCloud(object);
-        align.setSourceFeatures(object_features);
-        align.setInputTarget(scene);
-        align.setTargetFeatures(scene_features);
-        align.setNumberOfSamples(3); // Number of points to sample for generating/prerejecting a pose
-        align.setCorrespondenceRandomness(5); // Number of nearest features to use
-
-        align.align(*buffer);
-        std::cout << align.hasConverged() << std::endl;
-        if (align.hasConverged()) {
-            return 1;
-
-        } else {
-            return 0;
-        }
-    } catch (pcl::PCLException e){
-        ROS_ERROR("Object not found", e.what());
-        return 0;
-    }
-
-    /**
-    pcl::IterativeClosestPoint<pcl::PointXYZ, pcl::PointXYZ> icp;
-    icp.setInputCloud(cloud_in);
-    icp.setInputTarget(cloud_out);
-    pcl::PointCloud<pcl::PointXYZ> Final;
-    icp.align(Final);
-    std::cout << "has converged:" << icp.hasConverged() << " score: " <<
-              icp.getFitnessScore() << std::endl;
-    std::cout << icp.getFinalTransformation() << std::endl;
-     **/
-
-}
-
 
 #endif // VISION_PERCEPTION_H
