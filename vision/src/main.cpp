@@ -29,6 +29,13 @@ visualization_msgs::Marker publishVisualizationMarker(geometry_msgs::PointStampe
 ros::Publisher pub_visualization;
 
 
+// Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
+void sub_kinect_callback(PointCloudXYZPtr kinect){
+    ROS_INFO("CALLBACK FUNCTION!");
+    ros::NodeHandle n2;
+    findCluster(kinect, n2);
+}
+
 /** main function **/
 int main(int argc, char **argv) {
     // Subscriber für das points-Topic des Kinect-Sensors.
@@ -37,10 +44,8 @@ int main(int argc, char **argv) {
     /** nodehandle, subscribers and publishers**/
     ros::NodeHandle n;
 
-    CloudTransformer transform_cloud(n);
-
     // Subscriber for the kinect points. Also calls findCluster.
-    ros::Subscriber sub_kinect = n.subscribe(SIM_KINECT_POINTS_FRAME , 100, &findCluster);
+    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME , 100, &sub_kinect_callback);
 
     /** services and clients **/
     // ServiceClient for calling the object position through gazebo
@@ -61,39 +66,9 @@ int main(int argc, char **argv) {
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
 
-    // Initialize a TransformListener for killBelowObjects() to use.
-    //initTransformListener();
-
-    /*
-    ROS_INFO("TransformListener initialized.");
-
-    tf::TransformListener tf_test_listener;
-
-    geometry_msgs::PointStamped testpoint;
-    geometry_msgs::PointStamped testpoint_result;
-    testpoint.point.x = 1;
-    testpoint.point.y = 1.5;
-    testpoint.point.z = 2;
-    testpoint.header.frame_id = REAL_KINECT_POINTS_FRAME;
-    try {
-        tf_test_listener.transformPoint("/odom_combined", testpoint, testpoint_result);
-    }
-    catch (tf::TransformException &ex)
-    {
-        ROS_WARN(":(");
-    }
-    ROS_INFO("X = %d", testpoint_result.point.x);
-    */
-
-
-
     centroid_stamped.point.x = 0, centroid_stamped.point.y = 0,
     centroid_stamped.point.z = 0;  // dummy point
     ros::Rate r(2.0);
-
-
-
-
 
 
     while (n.ok()) {
