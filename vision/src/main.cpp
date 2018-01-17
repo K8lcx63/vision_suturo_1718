@@ -4,24 +4,20 @@
 #include "object_detection/VisObjectInfo.h"
 #include "sensor_msgs/PointCloud2.h"
 #include "vision_msgs/GetObjectInfo.h"
+#include "vision_msgs/GetObjectClouds.h"
 #include "visualization_msgs/Marker.h"
-
 // includes for pcl
 
 #include <pcl/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
-
 #include "globals.h"
 #include "perception.h"
-#include "saving.h"
-#include "viewer.h"
 
-bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
-                       object_detection::VisObjectInfo::Response &res);
+bool getObjectPosition(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res);
 
-bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
-                   vision_msgs::GetObjectInfo::Response &res);
+bool getObjectPose(vision_msgs::GetObjectClouds::Request &req,
+                   vision_msgs::GetObjectClouds::Response &res);
 
 // Visualization publisher stuff
 visualization_msgs::Marker publishVisualizationMarker(geometry_msgs::PointStamped point);
@@ -30,10 +26,9 @@ ros::Publisher pub_visualization;
 
 
 // Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
-void sub_kinect_callback(PointCloudXYZPtr kinect){
+void sub_kinect_callback(PointCloudXYZPtr kinect) {
     ROS_INFO("CALLBACK FUNCTION!");
-    ros::NodeHandle n2;
-    findCluster(kinect, n2);
+    kinect_global = kinect; // save perceived Pointclouds
 }
 
 /** main function **/
@@ -45,7 +40,7 @@ int main(int argc, char **argv) {
     ros::NodeHandle n;
 
     // Subscriber for the kinect points. Also calls findCluster.
-    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME , 100, &sub_kinect_callback);
+    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 100, &sub_kinect_callback);
 
     /** services and clients **/
     // ServiceClient for calling the object position through gazebo
@@ -92,28 +87,40 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-bool getObjectPosition(object_detection::VisObjectInfo::Request &req,
-                       object_detection::VisObjectInfo::Response &res) {
+bool getObjectPosition(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
     ROS_INFO("POINT SERVICE CALLED");
-    centroid_stamped.header.stamp = ros::Time::now();  // Timestamp
-    res.object.position =
-            centroid_stamped;  // Result of findCenter or findCenterGazebo
-    res.object.error =
-            error_message;  // Let planning know if any problems occured
 
-    // when service is called, input cloud (kinect) and output cloud (extracted
-    // objects) from findCluster are saved to ./data
+    std::vector<geometry_msgs::PointStamped> centroids = findCenter(objects_global);
 
-    /** save clouds**/
-    savePointCloudXYZNamed(objects_global, "objects_");
-    savePointCloudXYZNamed(kinect_global, "kinect_");
+    for (auto cent : centroids) {
+        cent.header.stamp = ros::Time::now();  // Timestamp
+    }
 
 
+    res.clouds.object_clouds_centroids = centroids;
+
+    for (auto schtring : res.clouds.object_clouds_information) {
+        schtring = error_message;  // Let planning know if any problems occured
+    }
     return true;
 }
 
-bool getObjectPose(vision_msgs::GetObjectInfo::Request &req,
-                   vision_msgs::GetObjectInfo::Response &res) {
+bool getObjectPose(vision_msgs::GetObjectClouds::Request &req,
+                   vision_msgs::GetObjectClouds::Response &res) {
+    /**
+    res.clouds.object_clouds_poses
+     */
+    return true;
+
+}
+
+bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
+
+    res.clouds.object_clouds = findCluster(kinect_global, n_global);
+    if (res.clouds.object_clouds_centroids.size() == 0) {
+        ROS_INFO("Remember to call point service!");
+    }
+    res.clouds.object_clouds_information[0] = "super toller dummy";
     return true;
 
 }
