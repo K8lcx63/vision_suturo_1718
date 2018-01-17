@@ -83,11 +83,11 @@ typedef pcl::PointIndices::Ptr PointIndices;
 
 /** Function Headers **/
 
-void findCluster(const PointCloudXYZPtr kinect);
+std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect);
 
 geometry_msgs::PointStamped findCenterGazebo();
 
-geometry_msgs::PointStamped findCenter(const PointCloudXYZPtr object_cloud);
+std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msgs::PointCloud2> object_cloud);
 
 PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input);
 
@@ -206,11 +206,14 @@ private:
 
 /** -------------------------- BEGIN OF IMPLEMENTATION ---------------------- **/
 
+
 /**
  * Find the object!
  * @param kinect
  */
-void findCluster(PointCloudXYZPtr kinect, ros::NodeHandle n) {
+std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::NodeHandle n) {
+
+    std::vector<sensor_msgs::PointCloud2> result;
 
     CloudTransformer transform_cloud(n);
 
@@ -218,25 +221,24 @@ void findCluster(PointCloudXYZPtr kinect, ros::NodeHandle n) {
 
     PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_cluster2(new PointCloudXYZ), cloud_f(
             new PointCloudXYZ), cloud_3df(
-            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), cloud_prism(new PointCloudXYZ), result(
-            new PointCloudXYZ), cloud_final(new PointCloudXYZ);
+            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), cloud_prism(new PointCloudXYZ), cloud_final(new PointCloudXYZ);
 
     PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(new pcl::PointIndices);
 
 
     if (kinect->points.size() <
-        input_noise_threshold) // if PR2 is not looking at anything
+        input_noise_threshold)                              // if PR2 is not looking at anything
     {
         ROS_ERROR("Input from kinect is empty");
         error_message = "Cloud empty. ";
-        centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+        centroid_stamped = findCenterGazebo();              // Use gazebo data instead
     } else {
         ROS_INFO("Starting Cluster extraction");
 
-        cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5); // passthrough filter
-        cloud_voxelgridf = voxelGridFilter(cloud_3df); // voxel grid filter
-        cloud_mlsf = mlsFilter(cloud_voxelgridf); // moving least square filter
-        cloud_cluster = cloud_mlsf; // cloud_f set after last filtering function is applied
+        cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5);   // passthrough filter
+        cloud_voxelgridf = voxelGridFilter(cloud_3df);      // voxel grid filter
+        cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
+        cloud_cluster = cloud_mlsf;                         // cloud_f set after last filtering function is applied
 
         transform_cloud.removeBelowPlane(cloud_cluster);
 
@@ -246,14 +248,14 @@ void findCluster(PointCloudXYZPtr kinect, ros::NodeHandle n) {
         while(loop_plane_segmentations)
         {
             plane_indices = estimatePlaneIndices(cloud_cluster);
-            if(plane_indices->indices.size() > 500) // is the extracted plane big enough?
+            if(plane_indices->indices.size() > 500)         // is the extracted plane big enough?
             {
                 ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
                 ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
                 cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
                 amount_plane_segmentations++;
             }
-            else loop_plane_segmentations = false; // if not, stop looping.
+            else loop_plane_segmentations = false;          // if not big enough, stop looping.
         }
         ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
 
@@ -268,9 +270,8 @@ void findCluster(PointCloudXYZPtr kinect, ros::NodeHandle n) {
         savePointCloudXYZNamed(cloud_cluster, "4_cloud_cluster");
         savePointCloudXYZNamed(cloud_prism, "6_cloud_prism");
         savePointCloudXYZNamed(cloud_cluster2, "7_cluster_2");
-        **/
         savePointCloudXYZNamed(cloud_final, "result");
-
+        **/
 
 
         ROS_INFO("%sExtraction OK", "\x1B[32m");
@@ -282,11 +283,16 @@ void findCluster(PointCloudXYZPtr kinect, ros::NodeHandle n) {
         }
 
         error_message = "";
-        centroid_stamped = findCenter(cloud_final);
 
-        // clouds for saving
-        kinect_global = cloud_3df;
-        objects_global = cloud_final;
+
+        // convert clustered objects
+        sensor_msgs::PointCloud2 pcloud2_msg;
+        pcl::toROSMsg(*cloud_final, pcloud2_msg);
+
+        result[0] = pcloud2_msg;                            // add clustered objects to result
+
+        objects_global = result;                            // make objects globally available
+        return result;
 
     }
 }
@@ -321,27 +327,40 @@ findCenterGazebo() {
  * @param object_cloud
  * @return
  */
-geometry_msgs::PointStamped findCenter(const PointCloudXYZPtr object_cloud) {
-    if (object_cloud->points.size() != 0) {
-        int cloud_size = object_cloud->points.size();
+std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msgs::PointCloud2> object_clouds_in) {
+    std::vector<geometry_msgs::PointStamped> result;
 
-        Eigen::Vector4f centroid;
+    // convert pointclouds
+    std::vector<PointCloudXYZPtr> object_clouds;
+    PointCloudXYZPtr temp (new PointCloudXYZ);
+    for (int i = 0; i < object_clouds_in.size(); i++) {
+        pcl::fromROSMsg(object_clouds_in[i], *temp);
+        object_clouds[i] = temp;
+    }
 
-        pcl::compute3DCentroid(*object_cloud, centroid);
+    // calculate centroids
+    for (auto object_cloud : object_clouds) {
+        if (object_cloud->points.size() != 0) {
+            int cloud_size = object_cloud->points.size();
 
-        centroid_stamped.point.x = centroid.x();
-        centroid_stamped.point.y = centroid.y();
-        centroid_stamped.point.z = centroid.z();
+            Eigen::Vector4f centroid;
 
-        ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
-        ROS_INFO("\x1B[32mX: %f\n", centroid_stamped.point.x);
-        ROS_INFO("\x1B[32mY: %f\n", centroid_stamped.point.y);
-        ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped.point.z);
-        centroid_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
+            pcl::compute3DCentroid(*object_cloud, centroid);
 
-        return centroid_stamped;
-    } else {
-        ROS_ERROR("CLOUD EMPTY. NO POINT EXTRACTED");
+            centroid_stamped.point.x = centroid.x();
+            centroid_stamped.point.y = centroid.y();
+            centroid_stamped.point.z = centroid.z();
+
+            ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
+            ROS_INFO("\x1B[32mX: %f\n", centroid_stamped.point.x);
+            ROS_INFO("\x1B[32mY: %f\n", centroid_stamped.point.y);
+            ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped.point.z);
+            centroid_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
+
+            result.push_back(centroid_stamped);
+        } else {
+            ROS_ERROR("CLOUD EMPTY. NO POINT EXTRACTED");
+        }
     }
 }
 
