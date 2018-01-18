@@ -35,7 +35,10 @@ add_definitions(${PCL_DEFINITIONS})
 
 add_executable(
         vision_main
-        src/main.cpp
+		src/main.cpp
+		src/perception/perception.cpp
+		src/saving/saving.cpp
+		src/viewer/viewer.cpp
 )
 
 target_link_libraries(

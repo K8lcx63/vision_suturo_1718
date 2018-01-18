@@ -1,115 +1,14 @@
-#ifndef VISION_PERCEPTION_H
-#define VISION_PERCEPTION_H
 
-#include <Eigen/Geometry>
-#include <gazebo_msgs/GetModelState.h>
-#include <geometry_msgs/PointStamped.h>
-#include <pcl/ModelCoefficients.h>
-#include <pcl/PointIndices.h>
-#include <pcl/conversions.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/impl/point_types.hpp>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <iostream>
-#include <pcl/registration/icp.h>
-#include <pcl/registration/transformation_estimation.h>
-#include <pcl/surface/convex_hull.h>
-#include <pcl/segmentation/extract_polygonal_prism_data.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/surface/mls.h>
-#include <pcl/filters/statistical_outlier_removal.h>
-#include <tf/transform_datatypes.h>
-#include <eigen_conversions/eigen_msg.h>
-#include <tf_conversions/tf_eigen.h>
-
-#include <tf/transform_listener.h>
-#include <pcl_ros/transforms.h>
-
-#include "saving.h"
-#include <string>
-
-#include <pcl/io/pcd_io.h>
-#include <pcl/correspondence.h>
-#include <pcl/features/shot_omp.h>
-#include <pcl/features/board.h>
-// #include <pcl/filters/uniform_sampling.h>
-#include <pcl/recognition/cg/geometric_consistency.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/kdtree/impl/kdtree_flann.hpp>
-#include <pcl/common/transforms.h>
-#include <pcl_ros/point_cloud.h>
-/** for icp and alignment **/
-#include <Eigen/Core>
-#include <pcl/point_types.h>
-#include <pcl/point_cloud.h>
-#include <pcl/common/time.h>
-#include <pcl/console/print.h>
-#include <pcl/features/normal_3d_omp.h>
-#include <pcl/point_types.h>
-#include <pcl/features/fpfh.h>
-#include <pcl/filters/filter.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/registration/icp.h>
-#include <pcl/registration/sample_consensus_prerejective.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/registration/ia_ransac.h>
-
-#include <ros/ros.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl_ros/point_cloud.h>
-#include <pcl_ros/transforms.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <tf/transform_listener.h>
-
-unsigned int input_noise_threshold = 342;
-bool simulation;
-
-/** Shorthand **/
-typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
-typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
-typedef pcl::PointCloud<pcl::PointNormal>::Ptr PointCloudPointNormalPtr;
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloudXYZ;
-typedef pcl::PointCloud<pcl::Normal> PointCloudNormal;
-typedef pcl::PointIndices::Ptr PointIndices;
+#include "perception.h"
+#include "../saving/saving.h"
 
 
-/** Function Headers **/
-
-std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect);
-
-geometry_msgs::PointStamped findCenterGazebo();
-
-std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msgs::PointCloud2> object_cloud);
-
-PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input);
-
-PointCloudPointNormalPtr
-createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals);
-
-PointIndices estimatePlaneIndices(PointCloudXYZPtr input);
-
-PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bool negative);
-
-PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane);
-
-PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
-                               float z);
-
-PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
-
-PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
-
-PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input );
 
 
+geometry_msgs::PointStamped centroid_stamped_perc;
+
+std::string error_message_perc;
+/** -------------------------- BEGIN OF IMPLEMENTATION ---------------------- **/
 class CloudTransformer
 {
 public:
@@ -204,8 +103,6 @@ private:
     PointCloudXYZPtr buffer_; // sensor_msgs::PointCloud2::Ptr
 }; // End of class CloudTransformer
 
-/** -------------------------- BEGIN OF IMPLEMENTATION ---------------------- **/
-
 
 /**
  * Find the object!
@@ -227,11 +124,11 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::
 
 
     if (kinect->points.size() <
-        input_noise_threshold)                              // if PR2 is not looking at anything
+        500)                              // if PR2 is not looking at anything
     {
         ROS_ERROR("Input from kinect is empty");
-        error_message = "Cloud empty. ";
-        centroid_stamped = findCenterGazebo();              // Use gazebo data instead
+        error_message_perc = "Cloud empty. ";
+        centroid_stamped_perc = findCenterGazebo();              // Use gazebo data instead
     } else {
         ROS_INFO("Starting Cluster extraction");
 
@@ -278,11 +175,11 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::
 
         if (cloud_cluster->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
-            error_message = "Final extracted cluster was empty. ";
-            centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+            error_message_perc = "Final extracted cluster was empty. ";
+            centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
         }
 
-        error_message = "";
+        error_message_perc = "";
 
 
         // convert clustered objects
@@ -291,7 +188,6 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::
 
         result[0] = pcloud2_msg;                            // add clustered objects to result
 
-        objects_global = result;                            // make objects globally available
         return result;
 
     }
@@ -304,22 +200,8 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::
  */
 geometry_msgs::PointStamped
 findCenterGazebo() {
-    if (simulation) // Check if this is a simulation. This function is useless if
-        // it isn't :(
-    {
-        ROS_WARN("Something went wrong! Using gazebo data...");
-        error_message.append("Gazebo data has been used instead. ");
-        client.call(getmodelstate); // Call client and fill the data
-        centroid_stamped.point.x = getmodelstate.response.pose.position.x;
-        centroid_stamped.point.y = getmodelstate.response.pose.position.y;
-        centroid_stamped.point.z = getmodelstate.response.pose.position.z;
-        centroid_stamped.header.frame_id = "world"; // gazebo uses the world frame!
-    } else {
-        ROS_ERROR("Something went wrong! Gazebo data can't be used: This is not a "
-                          "simulation.");
-    }
 
-    return centroid_stamped;
+    return centroid_stamped_perc;
 }
 
 /**
@@ -347,17 +229,17 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msg
 
             pcl::compute3DCentroid(*object_cloud, centroid);
 
-            centroid_stamped.point.x = centroid.x();
-            centroid_stamped.point.y = centroid.y();
-            centroid_stamped.point.z = centroid.z();
+            centroid_stamped_perc.point.x = centroid.x();
+            centroid_stamped_perc.point.y = centroid.y();
+            centroid_stamped_perc.point.z = centroid.z();
 
             ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
-            ROS_INFO("\x1B[32mX: %f\n", centroid_stamped.point.x);
-            ROS_INFO("\x1B[32mY: %f\n", centroid_stamped.point.y);
-            ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped.point.z);
-            centroid_stamped.header.frame_id = "/head_mount_kinect_ir_optical_frame";
+            ROS_INFO("\x1B[32mX: %f\n", centroid_stamped_perc.point.x);
+            ROS_INFO("\x1B[32mY: %f\n", centroid_stamped_perc.point.y);
+            ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped_perc.point.z);
+            centroid_stamped_perc.header.frame_id = "/head_mount_kinect_ir_optical_frame";
 
-            result.push_back(centroid_stamped);
+            result.push_back(centroid_stamped_perc);
         } else {
             ROS_ERROR("CLOUD EMPTY. NO POINT EXTRACTED");
         }
@@ -429,8 +311,8 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
 
     if (input_after_xyz->points.size() == 0) {
         ROS_ERROR("Cloud empty after passthrough filtering");
-        error_message = "Cloud was empty after filtering. ";
-        centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+        error_message_perc = "Cloud was empty after filtering. ";
+        centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
     }
 
     return input_after_xyz;
@@ -461,8 +343,8 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
 
     if (planeIndices->indices.size() == 0) {
         ROS_ERROR("No plane (indices) found");
-        error_message = "No plane found. ";
-        centroid_stamped = findCenterGazebo(); // Use gazebo data instead
+        error_message_perc = "No plane found. ";
+        centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
     }
 
     return planeIndices;
@@ -570,4 +452,3 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input ){
     return cloud_filtered;
 }
 
-#endif // VISION_PERCEPTION_H

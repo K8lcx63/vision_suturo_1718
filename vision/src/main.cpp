@@ -11,8 +11,25 @@
 #include <pcl/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl_ros/point_cloud.h>
-#include "globals.h"
-#include "perception.h"
+#include "perception/perception.h"
+
+
+const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/points";
+const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
+
+gazebo_msgs::GetModelState getmodelstate;
+
+
+ros::NodeHandle n_global;
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr kinect_global(new pcl::PointCloud<pcl::PointXYZ>);
+
+std::vector<sensor_msgs::PointCloud2> objects_global;
+
+std::string error_message; // Wird durch den Object Position Service mit ausgegeben
+
+geometry_msgs::PointStamped centroid_stamped;
+
 
 bool getObjectPosition(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res);
 
@@ -68,15 +85,10 @@ int main(int argc, char **argv) {
 
     while (n.ok()) {
         // ros::Publisher pub_objects =
-        // n.advertise<sensor_msgs::PointCloud2>("/vision_main/objects",1000);
+        // n.advertise<sensor_msgs::PointCloud2>("/vision/objects",1000);
         // pub_objects.publish(objects_global);
         // client.call(getmodelstate); // continously call model state
 
-
-        bool simulation =
-                client.exists();  // Periodically check if this is a simulation
-
-        ROS_INFO("XD");
 
         pub_visualization.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
 
