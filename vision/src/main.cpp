@@ -107,16 +107,10 @@ bool getObjectPosition(vision_msgs::GetObjectClouds::Request &req, vision_msgs::
 
     std::vector<geometry_msgs::PointStamped> centroids = findCenter(objects_global);
 
-    for (auto cent : centroids) {
-        cent.header.stamp = ros::Time::now();  // Timestamp
-    }
-
 
     res.clouds.object_clouds_centroids = centroids;
 
-    for (auto schtring : res.clouds.object_clouds_information) {
-        schtring = error_message;  // Let planning know if any problems occured
-    }
+
     return true;
 }
 

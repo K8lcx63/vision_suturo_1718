@@ -240,7 +240,8 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msg
     }
 
     // calculate centroids
-    for (auto object_cloud : object_clouds) {
+
+    PointCloudXYZPtr object_cloud = object_clouds[0];
         if (object_cloud->points.size() != 0) {
             int cloud_size = object_cloud->points.size();
 
@@ -262,7 +263,7 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msg
         } else {
             ROS_ERROR("CLOUD EMPTY. NO POINT EXTRACTED");
         }
-    }
+
 }
 
 /**
