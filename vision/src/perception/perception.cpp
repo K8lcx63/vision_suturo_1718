@@ -3,18 +3,15 @@
 #include "../saving/saving.h"
 
 
-
-
 geometry_msgs::PointStamped centroid_stamped_perc;
 
 std::string error_message_perc;
+
 /** -------------------------- BEGIN OF IMPLEMENTATION ---------------------- **/
-class CloudTransformer
-{
+class CloudTransformer {
 public:
     explicit CloudTransformer(ros::NodeHandle nh)
-            : nh_(nh)
-    {
+            : nh_(nh) {
         // Define Publishers and Subscribers here
         //pcl_sub_ = nh_.subscribe(REAL_KINECT_POINTS_FRAME, 10, &CloudTransformer::transform, this);
         //pcl_pub_ = nh_.advertise<PointCloudXYZ>("/vision_main/point_cloud_odom_combined", 1); // <sensor_msgs::PointCloud2>
@@ -22,10 +19,12 @@ public:
         buffer_.reset(new PointCloudXYZ); // (new sensor_msgs::PointCloud2)
         buffer_->header.frame_id = "odom_combined";
     }
-    PointCloudXYZPtr transform(const PointCloudXYZPtr cloud, std::string target_frame, std::string source_frame) // sensor_msgs::PointCloud2ConstPtr&
+
+    PointCloudXYZPtr transform(const PointCloudXYZPtr cloud, std::string target_frame,
+                               std::string source_frame) // sensor_msgs::PointCloud2ConstPtr&
     {
         ROS_INFO("TRYING TO TRANSFORM...");
-        try{
+        try {
             // Usually: target_frame = "odom_combined", source_frame = "head_mount_kinect_ir_optical_frame"
             listener_.waitForTransform(target_frame, source_frame, ros::Time(0), ros::Duration(3.0));
             listener_.lookupTransform(target_frame, source_frame, ros::Time(0), stamped_transform_);
@@ -33,7 +32,7 @@ public:
             pcl::transformPointCloud(*cloud, *buffer_, transform_eigen_);
         }
         catch (tf::TransformException &ex) {
-            ROS_ERROR("%s",ex.what());
+            ROS_ERROR("%s", ex.what());
             ros::Duration(1.0).sleep();
         }
         //savePointCloudXYZNamed(cloud, "before_transforming");
@@ -42,8 +41,7 @@ public:
         return buffer_;
     }
 
-    PointCloudXYZPtr removeBelowPlane(PointCloudXYZPtr input)
-    {
+    PointCloudXYZPtr removeBelowPlane(PointCloudXYZPtr input) {
         PointCloudXYZPtr cloud_odom_combined(new PointCloudXYZ);
 
         cloud_odom_combined = CloudTransformer::transform(input, "odom_combined", "head_mount_kinect_ir_optical_frame");
@@ -53,7 +51,7 @@ public:
         PointIndices planeIndices(new pcl::PointIndices);
         ROS_INFO("FINDING PLANE");
         pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-        pcl::SACSegmentation <pcl::PointXYZ> segmentation;
+        pcl::SACSegmentation<pcl::PointXYZ> segmentation;
         segmentation.setInputCloud(cloud_odom_combined);
         segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
         segmentation.setMethodType(pcl::SAC_RANSAC);
@@ -103,6 +101,26 @@ private:
     PointCloudXYZPtr buffer_; // sensor_msgs::PointCloud2::Ptr
 }; // End of class CloudTransformer
 
+CloudContainer::CloudContainer() {
+
+    void setInputCloud(PointCloudXYZPtr input);
+
+    void setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds);
+
+
+
+};
+
+void CloudContainer::setInputCloud(PointCloudXYZPtr input){
+    kinect = input;
+}
+void CloudContainer::setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds){
+    objects = object_clouds;
+}
+
+
+// -- END OF CLASSES -- //
+
 
 /**
  * Find the object!
@@ -116,11 +134,14 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::
 
     // the 'f' in the identifier stands for filtered
 
-    PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_cluster2(new PointCloudXYZ), cloud_f(
+    PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_cluster2(
+            new PointCloudXYZ), cloud_f(
             new PointCloudXYZ), cloud_3df(
-            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), cloud_prism(new PointCloudXYZ), cloud_final(new PointCloudXYZ);
+            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), cloud_prism(
+            new PointCloudXYZ), cloud_final(new PointCloudXYZ);
 
-    PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(new pcl::PointIndices);
+    PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(
+            new pcl::PointIndices);
 
 
     if (kinect->points.size() <
@@ -142,17 +163,15 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::
         // While a segmented plane would be larger than 500 points, segment it.
         bool loop_plane_segmentations = true;
         int amount_plane_segmentations = 0;
-        while(loop_plane_segmentations)
-        {
+        while (loop_plane_segmentations) {
             plane_indices = estimatePlaneIndices(cloud_cluster);
-            if(plane_indices->indices.size() > 500)         // is the extracted plane big enough?
+            if (plane_indices->indices.size() > 500)         // is the extracted plane big enough?
             {
                 ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
                 ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
                 cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
                 amount_plane_segmentations++;
-            }
-            else loop_plane_segmentations = false;          // if not big enough, stop looping.
+            } else loop_plane_segmentations = false;          // if not big enough, stop looping.
         }
         ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
 
@@ -214,7 +233,7 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msg
 
     // convert pointclouds
     std::vector<PointCloudXYZPtr> object_clouds;
-    PointCloudXYZPtr temp (new PointCloudXYZ);
+    PointCloudXYZPtr temp(new PointCloudXYZ);
     for (int i = 0; i < object_clouds_in.size(); i++) {
         pcl::fromROSMsg(object_clouds_in[i], *temp);
         object_clouds[i] = temp;
@@ -425,7 +444,6 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input) {
 }
 
 
-
 /**
  * Filtering the input cloud with a voxel grid
  * @param input
@@ -441,13 +459,13 @@ PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input) {
     return result;
 }
 
-PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input ){
+PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input) {
     PointCloudXYZPtr cloud_filtered(new PointCloudXYZ);
     pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
-    sor.setInputCloud (input);
-    sor.setMeanK (25);
-    sor.setStddevMulThresh (1.0);
-    sor.filter (*cloud_filtered);
+    sor.setInputCloud(input);
+    sor.setMeanK(25);
+    sor.setStddevMulThresh(1.0);
+    sor.filter(*cloud_filtered);
 
     return cloud_filtered;
 }

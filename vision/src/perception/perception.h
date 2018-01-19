@@ -81,8 +81,32 @@ typedef pcl::PointIndices::Ptr PointIndices;
 
 
 
+class CloudContainer {
 
-/** Function Headers **/
+
+    PointCloudXYZPtr kinect;
+    std::vector<sensor_msgs::PointCloud2> objects;
+
+public:
+
+    CloudContainer();
+
+    void setInputCloud(PointCloudXYZPtr input);
+
+    void setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds);
+
+    const PointCloudXYZPtr &getKinect() const {
+        return kinect;
+    }
+
+    const std::vector<sensor_msgs::PointCloud2> &getObjects() const {
+        return objects;
+    }
+
+    virtual ~CloudContainer() {
+
+    }
+};/** Function Headers **/
 
 std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect, ros::NodeHandle n);
 

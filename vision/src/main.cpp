@@ -13,6 +13,7 @@
 #include <pcl_ros/point_cloud.h>
 #include "perception/perception.h"
 
+CloudContainer cloudContainer;
 
 const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/points";
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
@@ -45,7 +46,7 @@ ros::Publisher pub_visualization;
 // Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
 void sub_kinect_callback(PointCloudXYZPtr kinect) {
     ROS_INFO("CALLBACK FUNCTION!");
-    kinect_global = kinect; // save perceived Pointclouds
+    cloudContainer.setInputCloud(kinect);
 }
 
 /** main function **/
@@ -80,6 +81,8 @@ int main(int argc, char **argv) {
 
     centroid_stamped.point.x = 0, centroid_stamped.point.y = 0,
     centroid_stamped.point.z = 0;  // dummy point
+
+
     ros::Rate r(2.0);
 
 
@@ -128,7 +131,8 @@ bool getObjectPose(vision_msgs::GetObjectClouds::Request &req,
 
 bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
 
-    res.clouds.object_clouds = findCluster(kinect_global, n_global);
+    cloudContainer.setObjectClouds(findCluster(cloudContainer.getKinect(), n_global));
+    res.clouds.object_clouds = cloudContainer.getObjects();
     if (res.clouds.object_clouds_centroids.size() == 0) {
         ROS_INFO("Remember to call point service!");
     }
