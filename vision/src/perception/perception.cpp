@@ -1,126 +1,76 @@
+/**
+ * old:
+ * #include <iostream>
+#include <string>
 
-#include "perception.h"
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+
+#include <gazebo_msgs/GetModelState.h>
+#include <geometry_msgs/PointStamped.h>
+
+#include <Eigen/Geometry>
+#include <Eigen/Core>
+#include <eigen_conversions/eigen_msg.h>
+
+#include <pcl/registration/transformation_estimation.h>
+#include <pcl/surface/convex_hull.h>
+#include <pcl/segmentation/extract_polygonal_prism_data.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/surface/mls.h>
+#include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/ModelCoefficients.h>
+#include <pcl/PointIndices.h>
+#include <pcl/conversions.h>
+#include <pcl/features/normal_3d.h>
+#include <pcl/filters/extract_indices.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/correspondence.h>
+#include <pcl/features/shot_omp.h>
+#include <pcl/features/board.h>
+#include <pcl/recognition/cg/geometric_consistency.h>
+#include <pcl/kdtree/kdtree_flann.h>
+#include <pcl/kdtree/impl/kdtree_flann.hpp>
+#include <pcl/common/transforms.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl/common/time.h>
+#include <pcl/console/print.h>
+#include <pcl/features/normal_3d_omp.h>
+#include <pcl/features/fpfh.h>
+#include <pcl/filters/filter.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/io/pcd_io.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/sample_consensus_prerejective.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <pcl/registration/ia_ransac.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl_ros/point_cloud.h>
+#include <pcl_ros/transforms.h>
+
+#include <tf/transform_datatypes.h>
+#include <tf/transform_listener.h>
+#include <tf_conversions/tf_eigen.h>
+
+
+#include "short_types.h"
+#include "transformer/CloudTransformer.h"
 #include "../saving/saving.h"
 
+ */
+
+
+
+
+
+#include "perception.h"
 
 geometry_msgs::PointStamped centroid_stamped_perc;
 
 std::string error_message_perc;
-
-/** -------------------------- BEGIN OF IMPLEMENTATION ---------------------- **/
-class CloudTransformer {
-public:
-    explicit CloudTransformer(ros::NodeHandle nh)
-            : nh_(nh) {
-        // Define Publishers and Subscribers here
-        //pcl_sub_ = nh_.subscribe(REAL_KINECT_POINTS_FRAME, 10, &CloudTransformer::transform, this);
-        //pcl_pub_ = nh_.advertise<PointCloudXYZ>("/vision_main/point_cloud_odom_combined", 1); // <sensor_msgs::PointCloud2>
-
-        buffer_.reset(new PointCloudXYZ); // (new sensor_msgs::PointCloud2)
-        buffer_->header.frame_id = "odom_combined";
-    }
-
-    PointCloudXYZPtr transform(const PointCloudXYZPtr cloud, std::string target_frame,
-                               std::string source_frame) // sensor_msgs::PointCloud2ConstPtr&
-    {
-        ROS_INFO("TRYING TO TRANSFORM...");
-        try {
-            // Usually: target_frame = "odom_combined", source_frame = "head_mount_kinect_ir_optical_frame"
-            listener_.waitForTransform(target_frame, source_frame, ros::Time(0), ros::Duration(3.0));
-            listener_.lookupTransform(target_frame, source_frame, ros::Time(0), stamped_transform_);
-            tf::transformTFToEigen(stamped_transform_, transform_eigen_);
-            pcl::transformPointCloud(*cloud, *buffer_, transform_eigen_);
-        }
-        catch (tf::TransformException &ex) {
-            ROS_ERROR("%s", ex.what());
-            ros::Duration(1.0).sleep();
-        }
-        //savePointCloudXYZNamed(cloud, "before_transforming");
-        //savePointCloudXYZNamed(buffer_, "transformed");
-        ROS_INFO("TRANSFORMED!");
-        return buffer_;
-    }
-
-    PointCloudXYZPtr removeBelowPlane(PointCloudXYZPtr input) {
-        PointCloudXYZPtr cloud_odom_combined(new PointCloudXYZ);
-
-        cloud_odom_combined = CloudTransformer::transform(input, "odom_combined", "head_mount_kinect_ir_optical_frame");
-        ROS_INFO("TRANSFORMED!");
-
-        // Find the bottom plane
-        PointIndices planeIndices(new pcl::PointIndices);
-        ROS_INFO("FINDING PLANE");
-        pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-        pcl::SACSegmentation<pcl::PointXYZ> segmentation;
-        segmentation.setInputCloud(cloud_odom_combined);
-        segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
-        segmentation.setMethodType(pcl::SAC_RANSAC);
-        segmentation.setMaxIterations(500); // Default is 50 and could be problematic
-        segmentation.setAxis(Eigen::Vector3f(0, 0, 1));
-        segmentation.setEpsAngle(5.0f * (M_PI / 180.0f)); // plane can be within 30 degrees of X-Z plane
-        segmentation.setDistanceThreshold(0.02);  // Distance to model points
-        segmentation.setOptimizeCoefficients(true);
-        segmentation.segment(*planeIndices, *coefficients);
-
-        PointCloudXYZPtr plane(new PointCloudXYZ);
-        plane = extractCluster(cloud_odom_combined, planeIndices, false); // extract the plane
-
-        // savePointCloudXYZNamed(plane, "ground_plane");
-
-        float min_height = plane->points[0].z;
-        for (int i = 1; i < plane->points.size(); i++) { // Search for the lowest point on the plane
-            if (plane->points[i].z < min_height) {
-                min_height = plane->points[i].z;
-            }
-        }
-
-        PointCloudXYZPtr result(new PointCloudXYZ);
-        ROS_INFO("Plane height: %f", min_height);
-        ROS_INFO("STARTING PASSTHROUGH FILTER");
-        pcl::PassThrough<pcl::PointXYZ> pass_above; // Filter out all points below the min_height
-        pass_above.setInputCloud(cloud_odom_combined);
-        pass_above.setFilterFieldName("z");
-        pass_above.setFilterLimits(min_height, 5.00);
-        pass_above.setKeepOrganized(false);
-        pass_above.filter(*result);
-
-        savePointCloudXYZNamed(result, "aaaaa");
-
-        return result; // THIS POINTCLOUD IS STILL IN ODOM_COMBINED!
-
-    }
-
-private:
-    ros::NodeHandle nh_;
-    ros::Subscriber pcl_sub_;
-    //ros::Publisher pcl_pub_;
-    tf::TransformListener listener_;
-    tf::StampedTransform stamped_transform_;
-    tf::Transform test_transform_;
-    Eigen::Affine3d transform_eigen_;
-    PointCloudXYZPtr buffer_; // sensor_msgs::PointCloud2::Ptr
-}; // End of class CloudTransformer
-
-CloudContainer::CloudContainer() {
-
-    void setInputCloud(PointCloudXYZPtr input);
-
-    void setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds);
-
-
-
-};
-
-void CloudContainer::setInputCloud(PointCloudXYZPtr input){
-    kinect = input;
-}
-void CloudContainer::setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds){
-    objects = object_clouds;
-}
-
-
-// -- END OF CLASSES -- //
-
 
 /**
  * Find the object!

@@ -1,0 +1,37 @@
+//
+// Created by tammo on 21.01.18.
+//
+
+#ifndef VISION_CLOUDTRANSFORMER_H
+#define VISION_CLOUDTRANSFORMER_H
+
+#include <string>
+#include "../short_types.h"
+#include "../perception.h"
+#include <ros/ros.h>
+#include <pcl/common/transforms.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <tf/transform_listener.h>
+#include <tf_conversions/tf_eigen.h>
+#include <pcl/filters/passthrough.h>
+class CloudTransformer {
+private:
+    ros::NodeHandle nh_;
+    ros::Subscriber pcl_sub_;
+    //ros::Publisher pcl_pub_;
+    tf::TransformListener listener_;
+    tf::StampedTransform stamped_transform_;
+    tf::Transform test_transform_;
+    Eigen::Affine3d transform_eigen_;
+    PointCloudXYZPtr buffer_; // sensor_msgs::PointCloud2::Ptr
+
+public:
+    explicit CloudTransformer(ros::NodeHandle nh);
+    PointCloudXYZPtr transform(const PointCloudXYZPtr cloud, std::string target_frame,
+                               std::string source_frame) ;
+    PointCloudXYZPtr removeBelowPlane(PointCloudXYZPtr input) ;
+
+};
+
+
+#endif //VISION_CLOUDTRANSFORMER_H
