@@ -38,7 +38,7 @@ void start_node(int argc, char **argv) {
     ros::NodeHandle n;
 //n_global = n;
 // Subscriber for the kinect points. Also calls findCluster.
-    ros::Subscriber sub_kinect = n.subscribe(SIM_KINECT_POINTS_FRAME, 100, &sub_kinect_callback);
+    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 100, &sub_kinect_callback);
 
 /** services and clients **/
 // ServiceClient for calling the object position through gazebo
@@ -53,7 +53,7 @@ void start_node(int argc, char **argv) {
     ros::ServiceServer pose_service = n.advertiseService("suturo_vision/objectPose", getObjectPose);
     ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
 
-    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objectClusters", getObjectPose);
+    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objectClusters", getObjects);
     ROS_INFO("%CLUSTERS SERVICE READY\n", "\x1B[32m");
 // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
