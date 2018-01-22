@@ -76,8 +76,9 @@ std::string error_message_perc;
  * Find the object!
  * @param kinect
  */
-std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect, ros::NodeHandle n) {
+std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect) {
 
+    ros::NodeHandle n;
     std::vector<sensor_msgs::PointCloud2> result;
 
     CloudTransformer transform_cloud(n);
