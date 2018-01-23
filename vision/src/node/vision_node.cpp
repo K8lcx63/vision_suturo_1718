@@ -24,7 +24,7 @@ const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 gazebo_msgs::GetModelState getmodelstate;
 
 
-ros::NodeHandle n_global;
+//ros::NodeHandle n_global;
 
 pcl::PointCloud<pcl::PointXYZ>::Ptr kinect_global(new pcl::PointCloud<pcl::PointXYZ>);
 
@@ -54,7 +54,7 @@ ros::init(argc, argv, "vision_main");
 ros::NodeHandle n;
 
 // Subscriber for the kinect points. Also calls findCluster.
-ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 100, &sub_kinect_callback);
+ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kinect_callback);
 
 /** services and clients **/
 // ServiceClient for calling the object position through gazebo
@@ -73,7 +73,8 @@ ros::ServiceServer pose_service =
 ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
 
 // Visualization Publisher for debugging purposes
-ros::Publisher pub_visualization = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
+ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
+ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("visualization_cloud", 0);
 
 centroid_stamped.point.x = 0, centroid_stamped.point.y = 0,
         centroid_stamped.point.z = 0;  // dummy point
@@ -89,7 +90,8 @@ while (n.ok()) {
 // client.call(getmodelstate); // continously call model state
 
 
-pub_visualization.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
+pub_visualization_marker.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
+pub_visualization_object.publish(cloudContainer.getObjects());
 
 ros::spinOnce();
 r.sleep();

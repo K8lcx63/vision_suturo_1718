@@ -15,21 +15,22 @@ class CloudContainer {
 
 
     PointCloudXYZPtr kinect;
-    std::vector<sensor_msgs::PointCloud2> objects;
+    // std::vector<sensor_msgs::PointCloud2>
+    sensor_msgs::PointCloud2 objects;
 
 public:
 
     CloudContainer();
 
     void setInputCloud(PointCloudXYZPtr input);
-
-    void setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds);
+    // std::vector<sensor_msgs::PointCloud2>
+    void setObjectClouds(sensor_msgs::PointCloud2 object_clouds);
 
     const PointCloudXYZPtr &getKinect() const {
         return kinect;
     }
-
-    const std::vector<sensor_msgs::PointCloud2> &getObjects() const {
+    // std::vector<sensor_msgs::PointCloud2>
+    const sensor_msgs::PointCloud2 &getObjects() const {
         return objects;
     }
 

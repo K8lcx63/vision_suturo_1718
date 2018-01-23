@@ -421,3 +421,33 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input) {
     return cloud_filtered;
 }
 
+pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr input) {
+    // Object for storing the normals.
+    pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+    // Object for storing the CVFH descriptors.
+    pcl::PointCloud<pcl::VFHSignature308>::Ptr descriptors(new pcl::PointCloud<pcl::VFHSignature308>);
+
+    // Estimate the normals of the object.
+    normals = estimateSurfaceNormals(input);
+
+    // New KdTree to search with.
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>);
+
+    // CVFH estimation object.
+    pcl::CVFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> cvfh;
+    cvfh.setInputCloud(input);
+    cvfh.setInputNormals(normals);
+    cvfh.setSearchMethod(kdtree);
+    // Set the maximum allowable deviation of the normals,
+    // for the region segmentation step.
+    cvfh.setEPSAngleThreshold(5.0 / 180.0 * M_PI); // 5 degrees.
+    // Set the curvature threshold (maximum disparity between curvatures),
+    // for the region segmentation step.
+    cvfh.setCurvatureThreshold(1.0);
+    // Set to true to normalize the bins of the resulting histogram,
+    // using the total number of points. Note: enabling it will make CVFH
+    // invariant to scale just like VFH, but the authors encourage the opposite.
+    cvfh.setNormalizeBins(false);
+
+    cvfh.compute(*descriptors);
+}

@@ -20,6 +20,7 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include "short_types.h"
 #include "transformer/CloudTransformer.h"
+#include <pcl/features/cvfh.h>
 
 
 std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect, ros::NodeHandle n);
@@ -47,5 +48,7 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
 PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
 
 PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input);
+
+pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr input);
 
 #endif //VISION_PERCEPTION_H

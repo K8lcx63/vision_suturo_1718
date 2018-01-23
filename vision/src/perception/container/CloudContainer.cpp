@@ -8,8 +8,8 @@ CloudContainer::CloudContainer() {
 
     void setInputCloud(PointCloudXYZPtr input);
 
-
-    void setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds);
+    // std::vector<sensor_msgs::PointCloud2>
+    void setObjectClouds(sensor_msgs::PointCloud2 object_clouds);
 
 
 
@@ -18,6 +18,7 @@ CloudContainer::CloudContainer() {
 void CloudContainer::setInputCloud(PointCloudXYZPtr input){
     kinect = input;
 }
-void CloudContainer::setObjectClouds(std::vector<sensor_msgs::PointCloud2> object_clouds){
+    // std::vector<sensor_msgs::PointCloud2>
+void CloudContainer::setObjectClouds(sensor_msgs::PointCloud2 object_clouds){
     objects = object_clouds;
 }
