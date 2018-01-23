@@ -11,11 +11,10 @@ const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 
 gazebo_msgs::GetModelState getmodelstate;
 
-PointCloudXYZPtr scene(new pcl::PointCloud<pcl::PointXYZ>);
+PointCloudRGBPtr scene(new PointCloudRGB);
 
 // ros::NodeHandle n_global;
 
-std::vector<sensor_msgs::PointCloud2> objects_global;
 
 std::string error_message; // Wird durch den Object Position Service mit ausgegeben
 
@@ -26,7 +25,7 @@ ros::Publisher pub_visualization;
 
 
 // Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
-void sub_kinect_callback(PointCloudXYZPtr kinect) {
+void sub_kinect_callback(PointCloudRGBPtr kinect) {
     ROS_INFO("CALLBACK FUNCTION!");
     scene = kinect;
 }
@@ -54,7 +53,7 @@ ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kine
     ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
 
     ros::ServiceServer object_service = n.advertiseService("suturo_vision/objectClusters", getObjects);
-    ROS_INFO("%CLUSTERS SERVICE READY\n", "\x1B[32m");
+    ROS_INFO("%sCLUSTERS SERVICE READY\n", "\x1B[32m");
 // Visualization Publisher for debugging purposes
 ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
 ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("visualization_cloud", 0);

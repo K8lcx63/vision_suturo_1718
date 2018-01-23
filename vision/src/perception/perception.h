@@ -23,31 +23,31 @@
 #include <pcl/features/cvfh.h>
 
 
-std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect);
+std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudRGBPtr kinect);
 
 geometry_msgs::PointStamped findCenterGazebo();
 
 std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msgs::PointCloud2> object_cloud);
 
-PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input);
+PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input);
 
 PointCloudPointNormalPtr
-createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals);
+createPointNormals(PointCloudRGBPtr input, PointCloudNormalPtr normals);
 
-PointIndices estimatePlaneIndices(PointCloudXYZPtr input);
+PointIndices estimatePlaneIndices(PointCloudRGBPtr input);
 
-PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bool negative);
+PointCloudRGBPtr extractCluster(PointCloudRGBPtr input, PointIndices indices, bool negative);
 
-PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane);
+PointIndices prismSegmentation(PointCloudRGBPtr input_cloud, PointCloudRGBPtr plane);
 
-PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
+PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input, float x, float y,
                                float z);
 
-PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
+PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input);
 
-PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
+PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input);
 
-PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input);
+PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input);
 
 pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr input);
 

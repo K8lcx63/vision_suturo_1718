@@ -76,7 +76,7 @@ std::string error_message_perc;
  * Find the object!
  * @param kinect
  */
-std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect) {
+std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudRGBPtr kinect) {
 
     ros::NodeHandle n;
     std::vector<sensor_msgs::PointCloud2> result;
@@ -85,11 +85,11 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect) {
 
     // the 'f' in the identifier stands for filtered
 
-    PointCloudXYZPtr cloud_plane(new PointCloudXYZ), cloud_cluster(new PointCloudXYZ), cloud_cluster2(
-            new PointCloudXYZ), cloud_f(
-            new PointCloudXYZ), cloud_3df(
-            new PointCloudXYZ), cloud_voxelgridf(new PointCloudXYZ), cloud_mlsf(new PointCloudXYZ), cloud_prism(
-            new PointCloudXYZ), cloud_final(new PointCloudXYZ);
+    PointCloudRGBPtr cloud_plane(new PointCloudRGB), cloud_cluster(new PointCloudRGB), cloud_cluster2(
+            new PointCloudRGB), cloud_f(
+            new PointCloudRGB), cloud_3df(
+            new PointCloudRGB), cloud_voxelgridf(new PointCloudRGB), cloud_mlsf(new PointCloudRGB), cloud_prism(
+            new PointCloudRGB), cloud_final(new PointCloudRGB);
 
     PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(
             new pcl::PointIndices);
@@ -131,13 +131,13 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect) {
         /** Speichere Zwischenergebenisse **/
 
         /**
-        savePointCloudXYZNamed(cloud_3df, "1_cloud_3d_filtered");
-        savePointCloudXYZNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
-        savePointCloudXYZNamed(cloud_mlsf, "3_cloud_mls_filtered");
-        savePointCloudXYZNamed(cloud_cluster, "4_cloud_cluster");
-        savePointCloudXYZNamed(cloud_prism, "6_cloud_prism");
-        savePointCloudXYZNamed(cloud_cluster2, "7_cluster_2");
-        savePointCloudXYZNamed(cloud_final, "result");
+        savePointCloudRGBNamed(cloud_3df, "1_cloud_3d_filtered");
+        savePointCloudRGBNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
+        savePointCloudRGBNamed(cloud_mlsf, "3_cloud_mls_filtered");
+        savePointCloudRGBNamed(cloud_cluster, "4_cloud_cluster");
+        savePointCloudRGBNamed(cloud_prism, "6_cloud_prism");
+        savePointCloudRGBNamed(cloud_cluster2, "7_cluster_2");
+        savePointCloudRGBNamed(cloud_final, "result");
         **/
 
 
@@ -183,8 +183,8 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msg
     std::vector<geometry_msgs::PointStamped> result;
 
     // convert pointclouds
-    std::vector<PointCloudXYZPtr> object_clouds;
-    PointCloudXYZPtr temp(new PointCloudXYZ);
+    std::vector<PointCloudRGBPtr> object_clouds;
+    PointCloudRGBPtr temp(new PointCloudRGB);
     for (int i = 0; i < object_clouds_in.size(); i++) {
         pcl::fromROSMsg(object_clouds_in[i], *temp);
         object_clouds[i] = temp;
@@ -192,7 +192,7 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msg
 
     // calculate centroids
 
-    PointCloudXYZPtr object_cloud = object_clouds[0];
+    PointCloudRGBPtr object_cloud = object_clouds[0];
         if (object_cloud->points.size() != 0) {
             int cloud_size = object_cloud->points.size();
 
@@ -222,11 +222,21 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msg
  * @param input
  * @return
  */
-PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input) {
+PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
     ROS_INFO("ESTIMATING SURFACE NORMALS");
 
+    // PointXYZRGB to PointXYZ
+
+    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
+
+    for (size_t i = 0; i < input->size(); i++){
+        input_xyz->points[i].x = input->points[i].x;
+        input_xyz->points[i].y = input->points[i].y;
+        input_xyz->points[i].z = input->points[i].z;
+    }
+
     pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
-    ne.setInputCloud(input);
+    ne.setInputCloud(input_xyz);
 
     pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(
             new pcl::search::KdTree<pcl::PointXYZ>());
@@ -249,27 +259,33 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input) {
  * @param z
  * @return
  */
-PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
+PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input, float x, float y,
                                float z) {
 
-    //TODO test filtering here
+    PointCloudRGBPtr result (new PointCloudRGB);
+
+
     ROS_INFO("Starting passthrough filter");
-    PointCloudXYZPtr input_after_x(new PointCloudXYZ),
-            input_after_xy(new PointCloudXYZ), input_after_xyz(new PointCloudXYZ);
+    PointCloudRGBPtr input_after_x(new PointCloudRGB),
+            input_after_xy(new PointCloudRGB), input_after_xyz(new PointCloudRGB);
     /** Create the filtering object **/
     // Create the filtering object (x-axis)
-    pcl::PassThrough<pcl::PointXYZ> pass;
+    pcl::PassThrough<pcl::PointXYZRGB> pass;
     pass.setInputCloud(input);
     pass.setFilterFieldName("x");
     pass.setFilterLimits(-x, x);
-    pass.setKeepOrganized(false);
+
+    pass.setUserFilterValue(0.0f);
+    pass.setKeepOrganized(true);
     pass.filter(*input_after_x);
 
     // Create the filtering object (y-axis)
     pass.setInputCloud(input_after_x);
     pass.setFilterFieldName("y");
     pass.setFilterLimits(-y, y);
-    pass.setKeepOrganized(false);
+
+    pass.setUserFilterValue(0.0f);
+    pass.setKeepOrganized(true);
     pass.filter(*input_after_xy);
 
     // Create the filtering object (z-axis)
@@ -277,7 +293,9 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
     pass.setFilterFieldName("z");
     pass.setFilterLimits(
             0.0, z); // no negative range (the pr2 can't look behind its head)
-    pass.setKeepOrganized(false);
+
+    pass.setUserFilterValue(0.0f);
+    pass.setKeepOrganized(true);
     pass.filter(*input_after_xyz);
 
     if (input_after_xyz->points.size() == 0) {
@@ -286,7 +304,9 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
         centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
     }
 
-    return input_after_xyz;
+
+
+    return result;
 }
 
 /**
@@ -294,11 +314,14 @@ PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
  * @param input
  * @return
  */
-PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
+PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
+
+
+
     ROS_INFO("Starting plane indices estimation");
     PointIndices planeIndices(new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-    pcl::SACSegmentation<pcl::PointXYZ> segmentation;
+    pcl::SACSegmentation<pcl::PointXYZRGB> segmentation;
 
     segmentation.setInputCloud(input);
     //segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE); // PERPENDICULAR
@@ -327,17 +350,36 @@ PointIndices estimatePlaneIndices(PointCloudXYZPtr input) {
  * @param plane
  * @return
  */
-PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane) {
-    PointCloudXYZPtr plane_hull = plane;
+PointIndices prismSegmentation(PointCloudRGBPtr input_cloud, PointCloudRGBPtr plane) {
+
+    // PointXYZRGB to PointXYZ
+
+    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
+
+    for (size_t i = 0; i < input_cloud->size(); i++){
+        input_xyz->points[i].x = input_cloud->points[i].x;
+        input_xyz->points[i].y = input_cloud->points[i].y;
+        input_xyz->points[i].z = input_cloud->points[i].z;
+    }
+
+    PointCloudXYZPtr plane_xyz (new PointCloudXYZ);
+
+    for (size_t i = 0; i < plane->size(); i++){
+        plane_xyz->points[i].x = plane->points[i].x;
+        plane_xyz->points[i].y = plane->points[i].y;
+        plane_xyz->points[i].z = plane->points[i].z;
+    }
+
+    PointCloudXYZPtr plane_hull = plane_xyz;
     ROS_INFO("Starting prism segmentation...");
     pcl::ConvexHull<pcl::PointXYZ> hull;
     PointIndices prism_indices(new pcl::PointIndices);
-    hull.setInputCloud(input_cloud);
+    hull.setInputCloud(input_xyz);
     hull.reconstruct(*plane_hull);
 
     pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
-    prism.setInputCloud(input_cloud);
-    prism.setInputPlanarHull(plane);
+    prism.setInputCloud(input_xyz);
+    prism.setInputPlanarHull(plane_xyz);
     prism.setHeightLimits(0, 2); // Get everything up to 2 meters above the plane
     prism.segment(*prism_indices);
 
@@ -351,15 +393,49 @@ PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr pl
  * @param negative
  * @return
  */
-PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bool negative) {
+PointCloudRGBPtr extractCluster(PointCloudRGBPtr input, PointIndices indices, bool negative) {
     ROS_INFO("CLUSTER EXTRACTION");
+    PointCloudRGBPtr result (new PointCloudRGB);
+
+    // PointXYZRGB to PointXYZ
+
+    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
+
+    for (size_t i = 0; i < input->size(); i++){
+        input_xyz->points[i].x = input->points[i].x;
+        input_xyz->points[i].y = input->points[i].y;
+        input_xyz->points[i].z = input->points[i].z;
+    }
     PointCloudXYZPtr objects(new PointCloudXYZ);
     pcl::ExtractIndices<pcl::PointXYZ> extract;
-    extract.setInputCloud(input);
+    extract.setInputCloud(input_xyz);
     extract.setIndices(indices);
     extract.setNegative(negative);
+    extract.setUserFilterValue(0.0f);
+    extract.setKeepOrganized(true);
     extract.filter(*objects);
-    return objects;
+
+    for (size_t i = 0; i < objects->size(); i++){
+        if (objects->points[i].x != 0.0f &&
+            objects->points[i].y != 0.0f &&
+            objects->points[i].z != 0.0f){
+
+            result->points[i].x = objects->points[i].x;
+            result->points[i].y = objects->points[i].y;
+            result->points[i].z = objects->points[i].z;
+            result->points[i].r = input->points[i].r;
+            result->points[i].g = input->points[i].g;
+            result->points[i].b = input->points[i].b;
+
+            // not sure if needed
+            result->points[i].rgb = input->points[i].rgb;
+            result->points[i].rgba = input->points[i].rgba;
+
+        }
+    }
+
+
+    return result;
 }
 
 /**
@@ -367,14 +443,23 @@ PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bo
  * @param input
  * @return
  */
-PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input) {
+PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
+    PointCloudRGBPtr result (new PointCloudRGB);
 
+    // PointXYZRGB to PointXYZ
+
+    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
+
+    for (size_t i = 0; i < input->size(); i++){
+        input_xyz->points[i].x = input->points[i].x;
+        input_xyz->points[i].y = input->points[i].y;
+        input_xyz->points[i].z = input->points[i].z;
+    }
     int poly_ord = 1;
 
-    PointCloudXYZPtr result(new PointCloudXYZ);
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
     pcl::PointCloud<pcl::PointNormal> mls_points;
-    pcl::MovingLeastSquares<pcl::PointXYZ, pcl::PointNormal> mls;
+    pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointNormal> mls;
 
     mls.setComputeNormals(true);
     mls.setInputCloud(input);
@@ -384,11 +469,16 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input) {
     mls.process(mls_points);
 
     for (int i = 0; i < mls_points.size(); i++) {
-        pcl::PointXYZ point;
+        pcl::PointXYZRGB point;
 
-        point.x = mls_points.at(i).x;
-        point.y = mls_points.at(i).y;
-        point.z = mls_points.at(i).z;
+        point.x = mls_points.points[i].x;
+        point.y = mls_points.points[i].y;
+        point.z = mls_points.points[i].z;
+        point.r = input->points[i].r;
+        point.g = input->points[i].g;
+        point.b = input->points[i].b;
+        point.rgb = input->points[i].rgb;
+        point.rgba = input->points[i].rgba;
         result->push_back(point);
     }
 
@@ -401,19 +491,19 @@ PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input) {
  * @param input
  * @return
  */
-PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input) {
-    PointCloudXYZPtr result(new PointCloudXYZ);
+PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input) {
+    PointCloudRGBPtr result(new PointCloudRGB);
 
-    pcl::VoxelGrid<pcl::PointXYZ> sor;
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud(input);
     sor.setLeafSize(0.01f, 0.01f, 0.01f);
     sor.filter(*result);
     return result;
 }
 
-PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input) {
-    PointCloudXYZPtr cloud_filtered(new PointCloudXYZ);
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZ> sor;
+PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
+    PointCloudRGBPtr cloud_filtered(new PointCloudRGB);
+    pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud(input);
     sor.setMeanK(25);
     sor.setStddevMulThresh(1.0);
@@ -422,7 +512,7 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input) {
     return cloud_filtered;
 }
 
-pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr input) {
+pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudRGBPtr input) {
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     // Object for storing the CVFH descriptors.
@@ -432,10 +522,10 @@ pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr inpu
     normals = estimateSurfaceNormals(input);
 
     // New KdTree to search with.
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZRGB>);
 
     // CVFH estimation object.
-    pcl::CVFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> cvfh;
+    pcl::CVFHEstimation<pcl::PointXYZRGB, pcl::Normal, pcl::VFHSignature308> cvfh;
     cvfh.setInputCloud(input);
     cvfh.setInputNormals(normals);
     cvfh.setSearchMethod(kdtree);
