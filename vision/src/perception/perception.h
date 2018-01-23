@@ -23,7 +23,7 @@
 #include <pcl/features/cvfh.h>
 
 
-std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect, ros::NodeHandle n);
+std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect);
 
 geometry_msgs::PointStamped findCenterGazebo();
 

@@ -1,3 +1,4 @@
+#include <ros/init.h>
 #include "node/vision_node.h"
 
 /** main function **/
