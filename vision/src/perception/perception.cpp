@@ -1,71 +1,3 @@
-/**
- * old:
- * #include <iostream>
-#include <string>
-
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
-
-#include <gazebo_msgs/GetModelState.h>
-#include <geometry_msgs/PointStamped.h>
-
-#include <Eigen/Geometry>
-#include <Eigen/Core>
-#include <eigen_conversions/eigen_msg.h>
-
-#include <pcl/registration/transformation_estimation.h>
-#include <pcl/surface/convex_hull.h>
-#include <pcl/segmentation/extract_polygonal_prism_data.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/surface/mls.h>
-#include <pcl/filters/statistical_outlier_removal.h>
-#include <pcl/ModelCoefficients.h>
-#include <pcl/PointIndices.h>
-#include <pcl/conversions.h>
-#include <pcl/features/normal_3d.h>
-#include <pcl/filters/extract_indices.h>
-#include <pcl/filters/passthrough.h>
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-#include <pcl/correspondence.h>
-#include <pcl/features/shot_omp.h>
-#include <pcl/features/board.h>
-#include <pcl/recognition/cg/geometric_consistency.h>
-#include <pcl/kdtree/kdtree_flann.h>
-#include <pcl/kdtree/impl/kdtree_flann.hpp>
-#include <pcl/common/transforms.h>
-#include <pcl_ros/point_cloud.h>
-#include <pcl/common/time.h>
-#include <pcl/console/print.h>
-#include <pcl/features/normal_3d_omp.h>
-#include <pcl/features/fpfh.h>
-#include <pcl/filters/filter.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/io/pcd_io.h>
-#include <pcl/registration/icp.h>
-#include <pcl/registration/sample_consensus_prerejective.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/registration/ia_ransac.h>
-#include <pcl_conversions/pcl_conversions.h>
-#include <pcl_ros/point_cloud.h>
-#include <pcl_ros/transforms.h>
-
-#include <tf/transform_datatypes.h>
-#include <tf/transform_listener.h>
-#include <tf_conversions/tf_eigen.h>
-
-
-#include "short_types.h"
-#include "transformer/CloudTransformer.h"
-#include "../saving/saving.h"
-
- */
-
-
-
-
-
 #include "perception.h"
 
 geometry_msgs::PointStamped centroid_stamped_perc;
@@ -541,4 +473,80 @@ pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudRGBPtr inpu
     cvfh.setNormalizeBins(false);
 
     cvfh.compute(*descriptors);
+}
+
+PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects, std::vector<pcl::PointCloud<pcl::VFHSignature308>::Ptr> features, PointCloudRGBPtr target) {
+
+    PointCloudRGBPtr result (new PointCloudRGB);
+    // preprocess cloud
+    // apply3DFilter(target, 1.0,1.0,1.0);
+
+    PointCloudRGBPtr temp (new PointCloudRGB);
+    temp = target;
+    target = voxelGridFilter(temp);
+
+    float fitness_scores[features.size()];
+    Eigen::Matrix4f transformation_matrices[features.size()];
+    int best_index;
+
+
+
+    // calculate inital alignment for every input cloud and save scores
+    for (size_t i = 0; i < features.size (); ++i)
+    {
+pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
+
+        sac_ia.setInputCloud (objects[i]);
+        sac_ia.setSourceFeatures (features[i]);
+        sac_ia.setInputTarget(target);
+        // sac_ia.setTargetFeatures(target_features);
+        PointCloudRGB registration_output;
+        sac_ia.align (registration_output);
+
+        // get fitness score with max squared distance for correspondence
+        fitness_scores[i] = (float) sac_ia.getFitnessScore (0.01f*0.01f);
+        transformation_matrices[i] = sac_ia.getFinalTransformation ();
+    }
+
+
+    // Find the best template alignment
+
+    // Find the template with the best (lowest) fitness score
+    float lowest_score = std::numeric_limits<float>::infinity ();
+    int best_template = 0;
+    for (size_t i = 0; i < sizeof(fitness_scores); ++i)
+    {
+        if (fitness_scores[i] < lowest_score)
+        {
+            lowest_score = fitness_scores[i];
+            best_index =  i;
+        }
+    }
+
+    // Print the alignment fitness score (values less than 0.00002 are good)
+    printf ("Best fitness score: %f\n", fitness_scores[best_index]);
+
+    // Print the rotation matrix and translation vector
+    Eigen::Matrix3f rotation = transformation_matrices[best_index].block<3,3>(0, 0);
+    Eigen::Vector3f translation =  transformation_matrices[best_index].block<3,1>(0, 3);
+
+    // transform with best Transformation
+
+    pcl::transformPointCloud(*objects[best_index], *result, transformation_matrices[best_index]);
+
+    return result;
+}
+
+
+PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target) {
+    pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
+    icp.setInputCloud(input);
+    icp.setInputTarget(target);
+    PointCloudRGBPtr final (new PointCloudRGB);
+    icp.align(*final);
+    std::cout << "has converged:" << icp.hasConverged() << " score: " <<
+              icp.getFitnessScore() << std::endl;
+    std::cout << icp.getFinalTransformation() << std::endl;
+
+    return final;
 }

@@ -21,7 +21,8 @@
 #include "short_types.h"
 #include "transformer/CloudTransformer.h"
 #include <pcl/features/cvfh.h>
-
+#include <pcl/registration/icp.h>
+#include <pcl/registration/ia_ransac.h>
 
 std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudRGBPtr kinect);
 
@@ -50,5 +51,9 @@ PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input);
 PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input);
 
 pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr input);
+
+PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects, std::vector<pcl::PointCloud<pcl::VFHSignature308>::Ptr> features, PointCloudRGBPtr target);
+
+PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
 
 #endif //VISION_PERCEPTION_H
