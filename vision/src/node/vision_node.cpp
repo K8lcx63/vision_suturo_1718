@@ -11,11 +11,10 @@ const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 
 gazebo_msgs::GetModelState getmodelstate;
 
-PointCloudXYZPtr scene(new pcl::PointCloud<pcl::PointXYZ>);
+PointCloudRGBPtr scene(new PointCloudRGB);
 
 // ros::NodeHandle n_global;
 
-std::vector<sensor_msgs::PointCloud2> objects_global;
 
 std::string error_message; // Wird durch den Object Position Service mit ausgegeben
 
@@ -26,56 +25,46 @@ ros::Publisher pub_visualization;
 
 
 // Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
-void sub_kinect_callback(PointCloudXYZPtr kinect) {
+/**
+ * Callback-function saving the pointcloud received by the Kinect-Camera
+ * @param kinect pointcloud received from kinect
+ */
+void sub_kinect_callback(PointCloudRGBPtr kinect) {
     ROS_INFO("CALLBACK FUNCTION!");
     scene = kinect;
 }
 
+/**
+ * starts the node for processing the pointclouds and communicating with other nodes
+ * @param argc unused for now
+ * @param argv unused for now
+ */
 void start_node(int argc, char **argv) {
     ros::init(argc, argv, "suturo_vision");
 
-/** nodehandle, subscribers and publishers**/
+    /** nodehandle, subscribers and publishers**/
     ros::NodeHandle n;
-//n_global = n;
-// Subscriber for the kinect points. Also calls findCluster.
-ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kinect_callback);
 
-/** services and clients **/
-// ServiceClient for calling the object position through gazebo
+    // Subscriber for the kinect points. Also calls findCluster.
+    ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kinect_callback);
+
+    /** services and clients **/
+    // ServiceClient for calling the object position through gazebo
     ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
     getmodelstate.request.model_name = "eistee";  // Name des Objekts in Gazebo.
 
-/**
-// Service for returning the object centroid
-    ros::ServiceServer point_service = n.advertiseService("suturo_vision/objectPoint", getObjectPosition);
-    ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
+    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objectClusters", getObjects);
+    ROS_INFO("%sCLUSTERS SERVICE READY\n", "\x1B[32m");
 
-// Service for returning if the object has fallen over already
-    ros::ServiceServer pose_service = n.advertiseService("suturo_vision/objectPose", getObjectPose);
-    ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
-**/
-
-    // Main Service
-    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objects", getObjects);
-
-    ROS_INFO("%CLUSTERS SERVICE READY\n", "\x1B[32m");
-// Visualization Publisher for debugging purposes
-ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
-ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("visualization_cloud", 0);
-
-    centroid_stamped.point.x = 0, centroid_stamped.point.y = 0, centroid_stamped.point.z = 0;  // dummy point
+    // Visualization Publisher for debugging purposes
+    ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
+    ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("visualization_cloud", 0);
 
     ros::Rate r(2.0);
 
     while (n.ok()) {
-// ros::Publisher pub_objects =
-// n.advertise<sensor_msgs::PointCloud2>("/vision/objects",1000);
-// pub_objects.publish(objects_global);
-// client.call(getmodelstate); // continously call model state
-
-
-pub_visualization_marker.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
-pub_visualization_object.publish(cloudContainer.getObjects());
+        pub_visualization_marker.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
+        pub_visualization_object.publish(cloudContainer.getObjects());
 
         ros::spinOnce();
         r.sleep();
@@ -83,13 +72,12 @@ pub_visualization_object.publish(cloudContainer.getObjects());
 
 }
 
-bool getObjectPose(vision_msgs::GetObjectClouds::Request &req,
-                   vision_msgs::GetObjectClouds::Response &res) {
-    // TODO
-    return true;
-
-}
-
+/**
+ * Service to extract objects from scene to work with and to get all required information from them
+ * @param req empty request
+ * @param res returns all members from ObjectClouds.msg
+ * @return true if service call succeeded, false otherwise
+ */
 bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
 
     // Execute findCluster()
@@ -108,10 +96,4 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     return true;
 
-}
-
-bool getObjectPosition(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
-
-    // TODO
-    return true;
 }

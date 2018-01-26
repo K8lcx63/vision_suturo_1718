@@ -23,13 +23,13 @@ private:
     tf::StampedTransform stamped_transform_;
     tf::Transform test_transform_;
     Eigen::Affine3d transform_eigen_;
-    PointCloudXYZPtr buffer_; // sensor_msgs::PointCloud2::Ptr
+    PointCloudRGBPtr buffer_; // sensor_msgs::PointCloud2::Ptr
 
 public:
     explicit CloudTransformer(ros::NodeHandle nh);
-    PointCloudXYZPtr transform(const PointCloudXYZPtr cloud, std::string target_frame,
+    PointCloudRGBPtr transform(const PointCloudRGBPtr cloud, std::string target_frame,
                                std::string source_frame) ;
-    PointCloudXYZPtr removeBelowPlane(PointCloudXYZPtr input) ;
+    PointCloudRGBPtr removeBelowPlane(PointCloudRGBPtr input) ;
 
 };
 

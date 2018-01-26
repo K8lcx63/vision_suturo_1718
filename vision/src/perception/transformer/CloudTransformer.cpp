@@ -10,17 +10,17 @@
 
 CloudTransformer::CloudTransformer(ros::NodeHandle nh) : nh_(nh) {
 
-        buffer_.reset(new PointCloudXYZ); // (new sensor_msgs::PointCloud2)
+        buffer_.reset(new PointCloudRGB); // (new sensor_msgs::PointCloud2)
         buffer_->header.frame_id = "odom_combined";
 
 
-    PointCloudXYZPtr removeBelowPlane(PointCloudXYZPtr input);
-    PointCloudXYZPtr transform(const PointCloudXYZPtr cloud, std::string target_frame,
+    PointCloudRGBPtr removeBelowPlane(PointCloudRGBPtr input);
+    PointCloudRGBPtr transform(const PointCloudRGBPtr cloud, std::string target_frame,
                                       std::string source_frame);
 }
 
-PointCloudXYZPtr CloudTransformer::removeBelowPlane(PointCloudXYZPtr input) {
-    PointCloudXYZPtr cloud_odom_combined(new PointCloudXYZ);
+PointCloudRGBPtr CloudTransformer::removeBelowPlane(PointCloudRGBPtr input) {
+    PointCloudRGBPtr cloud_odom_combined(new PointCloudRGB);
 
     cloud_odom_combined = CloudTransformer::transform(input, "odom_combined", "head_mount_kinect_ir_optical_frame");
     ROS_INFO("TRANSFORMED!");
@@ -29,7 +29,7 @@ PointCloudXYZPtr CloudTransformer::removeBelowPlane(PointCloudXYZPtr input) {
     PointIndices planeIndices(new pcl::PointIndices);
     ROS_INFO("FINDING PLANE");
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
-    pcl::SACSegmentation<pcl::PointXYZ> segmentation;
+    pcl::SACSegmentation<pcl::PointXYZRGB> segmentation;
     segmentation.setInputCloud(cloud_odom_combined);
     segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE);
     segmentation.setMethodType(pcl::SAC_RANSAC);
@@ -40,7 +40,7 @@ PointCloudXYZPtr CloudTransformer::removeBelowPlane(PointCloudXYZPtr input) {
     segmentation.setOptimizeCoefficients(true);
     segmentation.segment(*planeIndices, *coefficients);
 
-    PointCloudXYZPtr plane(new PointCloudXYZ);
+    PointCloudRGBPtr plane(new PointCloudRGB);
     plane = extractCluster(cloud_odom_combined, planeIndices, false); // extract the plane
 
     // savePointCloudXYZNamed(plane, "ground_plane");
@@ -52,24 +52,24 @@ PointCloudXYZPtr CloudTransformer::removeBelowPlane(PointCloudXYZPtr input) {
         }
     }
 
-    PointCloudXYZPtr result(new PointCloudXYZ);
+    PointCloudRGBPtr result(new PointCloudRGB);
     ROS_INFO("Plane height: %f", min_height);
     ROS_INFO("STARTING PASSTHROUGH FILTER");
-    pcl::PassThrough<pcl::PointXYZ> pass_above; // Filter out all points below the min_height
+    pcl::PassThrough<pcl::PointXYZRGB> pass_above; // Filter out all points below the min_height
     pass_above.setInputCloud(cloud_odom_combined);
     pass_above.setFilterFieldName("z");
     pass_above.setFilterLimits(min_height, 5.00);
     pass_above.setKeepOrganized(false);
     pass_above.filter(*result);
 
-    savePointCloudXYZNamed(result, "aaaaa");
+    //savePointCloudXYZNamed(result, "aaaaa");
 
     return result; // THIS POINTCLOUD IS STILL IN ODOM_COMBINED!
 
 
 };
 
-PointCloudXYZPtr CloudTransformer::transform(const PointCloudXYZPtr cloud, std::string target_frame,
+PointCloudRGBPtr CloudTransformer::transform(const PointCloudRGBPtr cloud, std::string target_frame,
                            std::string source_frame) // sensor_msgs::PointCloud2ConstPtr&
 {
     ROS_INFO("TRYING TO TRANSFORM...");

@@ -24,36 +24,25 @@
 #include <pcl/features/cvfh.h>
 #include <iterator>
 #include <vector>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/ia_ransac.h>
 
-
-PointCloudXYZPtrVector findCluster(const PointCloudXYZPtr kinect);
-
-geometry_msgs::PointStamped findCenterGazebo();
-
-std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msgs::PointCloud2> object_cloud);
-
-PointCloudNormalPtr estimateSurfaceNormals(PointCloudXYZPtr input);
-
-PointCloudPointNormalPtr
-createPointNormals(PointCloudXYZPtr input, PointCloudNormalPtr normals);
-
-PointIndices estimatePlaneIndices(PointCloudXYZPtr input);
-
-PointCloudXYZPtr extractCluster(PointCloudXYZPtr input, PointIndices indices, bool negative);
-
-PointIndices prismSegmentation(PointCloudXYZPtr input_cloud, PointCloudXYZPtr plane);
-
-PointCloudXYZPtr apply3DFilter(PointCloudXYZPtr input, float x, float y,
-                               float z);
-
-PointCloudXYZPtr mlsFilter(PointCloudXYZPtr input);
-
-PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
-
-PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input);
-
-float* cvfhRecognition(PointCloudXYZPtr input);
-
-PointIndicesVector euclideanClusterExtraction(PointCloudXYZPtr input);
+std::vector<SMSGSPointCloud2>   findCluster(const PointCloudRGBPtr kinect);
+PointStamped                    findCenterGazebo();
+std::vector<PointStamped>       findCenter(const std::vector<sensor_msgs::PointCloud2> object_cloud);
+PointCloudNormalPtr             estimateSurfaceNormals(PointCloudRGBPtr input);
+PointCloudPointNormalPtr        createPointNormals(PointCloudRGBPtr input, PointCloudNormalPtr normals);
+PointIndices                    estimatePlaneIndices(PointCloudRGBPtr input);
+PointCloudRGBPtr                extractCluster(PointCloudRGBPtr input, PointIndices indices, bool negative);
+PointIndices                    prismSegmentation(PointCloudRGBPtr input_cloud, PointCloudRGBPtr plane);
+PointCloudRGBPtr                apply3DFilter(PointCloudRGBPtr input, float x, float y, float z);
+PointCloudRGBPtr                mlsFilter(PointCloudRGBPtr input);
+PointCloudRGBPtr                voxelGridFilter(PointCloudRGBPtr input);
+PointCloudRGBPtr                outlierRemoval(PointCloudRGBPtr input);
+PointCloudVFHS308Ptr            cvfhRecognition(PointCloudXYZPtr input);
+PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
+                                                    std::vector<PointCloudVFHS308Ptr> features,
+                                                    PointCloudRGBPtr target);
+PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
 
 #endif //VISION_PERCEPTION_H
