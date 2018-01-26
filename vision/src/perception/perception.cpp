@@ -11,28 +11,31 @@ std::string error_message_perc;
 std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudRGBPtr kinect) {
 
     ros::NodeHandle n;
-    std::vector<sensor_msgs::PointCloud2> result;
+    std::vector<SMSGSPointCloud2> result;
 
     CloudTransformer transform_cloud(n);
 
     // the 'f' in the identifier stands for filtered
 
-    PointCloudRGBPtr cloud_plane(new PointCloudRGB), cloud_cluster(new PointCloudRGB), cloud_cluster2(
-            new PointCloudRGB), cloud_f(
-            new PointCloudRGB), cloud_3df(
-            new PointCloudRGB), cloud_voxelgridf(new PointCloudRGB), cloud_mlsf(new PointCloudRGB), cloud_prism(
-            new PointCloudRGB), cloud_final(new PointCloudRGB);
+    PointCloudRGBPtr cloud_plane(new PointCloudRGB),
+            cloud_cluster(new PointCloudRGB),
+            cloud_cluster2(new PointCloudRGB),
+            cloud_f(new PointCloudRGB),
+            cloud_3df(new PointCloudRGB),
+            cloud_voxelgridf(new PointCloudRGB),
+            cloud_mlsf(new PointCloudRGB),
+            cloud_prism(new PointCloudRGB),
+            cloud_final(new PointCloudRGB);
 
     PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(
             new pcl::PointIndices);
 
 
-    if (kinect->points.size() <
-        500)                              // if PR2 is not looking at anything
+    if (kinect->points.size() < 500)                        // if PR2 is not looking at anything
     {
         ROS_ERROR("Input from kinect is empty");
         error_message_perc = "Cloud empty. ";
-        centroid_stamped_perc = findCenterGazebo();              // Use gazebo data instead
+        centroid_stamped_perc = findCenterGazebo();         // Use gazebo data instead
     } else {
         ROS_INFO("Starting Cluster extraction");
 
@@ -60,19 +63,6 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudRGBPtr kinect) {
 
         cloud_final = outlierRemoval(cloud_cluster);
 
-        /** Speichere Zwischenergebenisse **/
-
-        /**
-        savePointCloudRGBNamed(cloud_3df, "1_cloud_3d_filtered");
-        savePointCloudRGBNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
-        savePointCloudRGBNamed(cloud_mlsf, "3_cloud_mls_filtered");
-        savePointCloudRGBNamed(cloud_cluster, "4_cloud_cluster");
-        savePointCloudRGBNamed(cloud_prism, "6_cloud_prism");
-        savePointCloudRGBNamed(cloud_cluster2, "7_cluster_2");
-        savePointCloudRGBNamed(cloud_final, "result");
-        **/
-
-
         ROS_INFO("%sExtraction OK", "\x1B[32m");
 
         if (cloud_cluster->points.size() == 0) {
@@ -82,7 +72,6 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudRGBPtr kinect) {
         }
 
         error_message_perc = "";
-
 
         // convert clustered objects
         sensor_msgs::PointCloud2 pcloud2_msg;
@@ -102,7 +91,7 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudRGBPtr kinect) {
  */
 geometry_msgs::PointStamped
 findCenterGazebo() {
-
+    centroid_stamped_perc.point.x = 0, centroid_stamped_perc.point.y = 0, centroid_stamped_perc.point.z = 0;
     return centroid_stamped_perc;
 }
 
@@ -111,7 +100,7 @@ findCenterGazebo() {
  * @param object_cloud
  * @return
  */
-std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<sensor_msgs::PointCloud2> object_clouds_in) {
+std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<SMSGSPointCloud2> object_clouds_in) {
     std::vector<geometry_msgs::PointStamped> result;
 
     // convert pointclouds
@@ -191,7 +180,9 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
  * @param z
  * @return
  */
-PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input, float x, float y,
+PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
+                               float x,
+                               float y,
                                float z) {
 
     PointCloudRGBPtr result (new PointCloudRGB);
@@ -282,7 +273,8 @@ PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
  * @param plane
  * @return
  */
-PointIndices prismSegmentation(PointCloudRGBPtr input_cloud, PointCloudRGBPtr plane) {
+PointIndices prismSegmentation(PointCloudRGBPtr input_cloud,
+                               PointCloudRGBPtr plane) {
 
     // PointXYZRGB to PointXYZ
 
@@ -325,7 +317,9 @@ PointIndices prismSegmentation(PointCloudRGBPtr input_cloud, PointCloudRGBPtr pl
  * @param negative
  * @return
  */
-PointCloudRGBPtr extractCluster(PointCloudRGBPtr input, PointIndices indices, bool negative) {
+PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
+                                PointIndices indices,
+                                bool negative) {
     ROS_INFO("CLUSTER EXTRACTION");
     PointCloudRGBPtr result (new PointCloudRGB);
 
@@ -433,6 +427,11 @@ PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input) {
     return result;
 }
 
+/**
+ * removes statistical outliers from pointcloud
+ * @param input
+ * @return
+ */
 PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
     PointCloudRGBPtr cloud_filtered(new PointCloudRGB);
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
@@ -444,7 +443,12 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
     return cloud_filtered;
 }
 
-pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudRGBPtr input) {
+/**
+ * estimate the Features of a pointcloud using VFHSignature308
+ * @param input
+ * @return
+ */
+PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     // Object for storing the CVFH descriptors.
@@ -475,7 +479,16 @@ pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudRGBPtr inpu
     cvfh.compute(*descriptors);
 }
 
-PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects, std::vector<pcl::PointCloud<pcl::VFHSignature308>::Ptr> features, PointCloudRGBPtr target) {
+/**
+ * calculating the alignment of an object to a certain target using sample consensus
+ * @param objects
+ * @param features
+ * @param target
+ * @return
+ */
+PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
+                                     std::vector<PointCloudVFHS308Ptr> features,
+                                     PointCloudRGBPtr target) {
 
     PointCloudRGBPtr result (new PointCloudRGB);
     // preprocess cloud
@@ -537,7 +550,14 @@ pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VF
     return result;
 }
 
-PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target) {
+/**
+ * calculating the alignment of an object to a certain target using iterative closest point algorithm
+ * @param input
+ * @param target
+ * @return
+ */
+PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
+                                       PointCloudRGBPtr target) {
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
     icp.setInputCloud(input);
     icp.setInputTarget(target);
