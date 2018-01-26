@@ -10,8 +10,9 @@
 #include "object_detection/ObjectDetection.h"
 #include "object_detection/VisObjectInfo.h"
 #include "sensor_msgs/PointCloud2.h"
+#include "vision_msgs/Histogram.h"
 #include "vision_msgs/GetObjectInfo.h"
-#include "vision_msgs/GetObjectClouds.h"
+#include "vision_msgs/ObjectClouds.h"
 #include <pcl_ros/point_cloud.h>
 #include <visualization_msgs/Marker.h>
 #include "../perception/container/CloudContainer.h"

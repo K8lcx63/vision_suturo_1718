@@ -45,6 +45,7 @@ ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kine
     ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
     getmodelstate.request.model_name = "eistee";  // Name des Objekts in Gazebo.
 
+/**
 // Service for returning the object centroid
     ros::ServiceServer point_service = n.advertiseService("suturo_vision/objectPoint", getObjectPosition);
     ROS_INFO("%sPOINT SERVICE READY\n", "\x1B[32m");
@@ -52,8 +53,11 @@ ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kine
 // Service for returning if the object has fallen over already
     ros::ServiceServer pose_service = n.advertiseService("suturo_vision/objectPose", getObjectPose);
     ROS_INFO("%sPOSE SERVICE READY\n", "\x1B[32m");
+**/
 
-    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objectClusters", getObjects);
+    // Main Service
+    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objects", getObjects);
+
     ROS_INFO("%CLUSTERS SERVICE READY\n", "\x1B[32m");
 // Visualization Publisher for debugging purposes
 ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
@@ -88,7 +92,20 @@ bool getObjectPose(vision_msgs::GetObjectClouds::Request &req,
 
 bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
 
-    res.clouds.object_clouds = findCluster(scene);
+    // Execute findCluster()
+    PointCloudXYZPtrVector all_clusters = findCluster(scene);
+
+    // Calculate features and put them into the message response
+    float* current_features;
+    for(int i = 0; i < all_clusters.size(); i++) {
+        current_features = cvfhRecognition(all_clusters[i]);
+        for (int n = 0; n < 308; n++) {
+            res.clouds.features[i].features[n] = current_features[n];
+        }
+    }
+
+
+
     return true;
 
 }

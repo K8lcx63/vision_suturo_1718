@@ -15,5 +15,7 @@ typedef pcl::PointCloud<pcl::PointNormal>::Ptr PointCloudPointNormalPtr;
 typedef pcl::PointCloud<pcl::PointXYZ> PointCloudXYZ;
 typedef pcl::PointCloud<pcl::Normal> PointCloudNormal;
 typedef pcl::PointIndices::Ptr PointIndices;
+typedef std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> PointCloudXYZPtrVector;
+typedef std::vector<pcl::PointIndices> PointIndicesVector;
 
 #endif //VISION_SHORT_TYPES_H

@@ -76,10 +76,11 @@ std::string error_message_perc;
  * Find the object!
  * @param kinect
  */
-std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect) {
+PointCloudXYZPtrVector findCluster(PointCloudXYZPtr kinect) {
 
     ros::NodeHandle n;
-    std::vector<sensor_msgs::PointCloud2> result;
+    // std::vector<sensor_msgs::PointCloud2>
+    PointCloudXYZPtrVector result;
 
     CloudTransformer transform_cloud(n);
 
@@ -130,7 +131,7 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect) {
 
         /** Speichere Zwischenergebenisse **/
 
-        /**
+        /*
         savePointCloudXYZNamed(cloud_3df, "1_cloud_3d_filtered");
         savePointCloudXYZNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
         savePointCloudXYZNamed(cloud_mlsf, "3_cloud_mls_filtered");
@@ -138,25 +139,30 @@ std::vector<sensor_msgs::PointCloud2> findCluster(PointCloudXYZPtr kinect) {
         savePointCloudXYZNamed(cloud_prism, "6_cloud_prism");
         savePointCloudXYZNamed(cloud_cluster2, "7_cluster_2");
         savePointCloudXYZNamed(cloud_final, "result");
-        **/
-
-
-        ROS_INFO("%sExtraction OK", "\x1B[32m");
+        */
+        int i = 0;
+        PointIndicesVector cluster_indices = euclideanClusterExtraction(cloud_final);
+        for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+        {
+            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+            for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+            result[i]->points.push_back (result[i]->points[*pit]); //*
+            result[i]->width = result[i]->points.size ();
+            result[i]->height = 1;
+            result[i]->is_dense = true;
+            i++;
+        }
 
         if (cloud_cluster->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
             error_message_perc = "Final extracted cluster was empty. ";
             centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
         }
+        else{
+            ROS_INFO("%sExtraction OK", "\x1B[32m");
+        }
 
         error_message_perc = "";
-
-
-        // convert clustered objects
-        sensor_msgs::PointCloud2 pcloud2_msg;
-        pcl::toROSMsg(*cloud_final, pcloud2_msg);
-
-        result[0] = pcloud2_msg;                            // add clustered objects to result
 
         return result;
 
@@ -422,7 +428,8 @@ PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input) {
     return cloud_filtered;
 }
 
-pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr input) {
+float* cvfhRecognition(PointCloudXYZPtr input) {
+    // pcl::PointCloud<pcl::VFHSignature308>::Ptr
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     // Object for storing the CVFH descriptors.
@@ -451,4 +458,24 @@ pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr inpu
     cvfh.setNormalizeBins(false);
 
     cvfh.compute(*descriptors);
+    //float x [308] = descriptors->points[0].histogram; // Save calculated histogram in a float array
+    //std::vector<float> result(x, x + sizeof x / sizeof x[0]);
+    //std::vector<float> result(std::begin(descriptors->points[0].histogram), std::end(descriptors->points[0].histogram)); // Array to vector
+    return descriptors->points[0].histogram; // to vector
+}
+
+PointIndicesVector euclideanClusterExtraction(PointCloudXYZPtr input){
+    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+    tree->setInputCloud (input);
+
+    PointIndicesVector cluster_indices;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    ec.setClusterTolerance (0.03); // 2cm
+    ec.setMinClusterSize (20);
+    ec.setMaxClusterSize (25000);
+    ec.setSearchMethod (tree);
+    ec.setInputCloud (input);
+    ec.extract (cluster_indices);
+
+    return cluster_indices;
 }

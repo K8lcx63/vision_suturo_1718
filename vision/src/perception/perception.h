@@ -15,15 +15,18 @@
 #include <pcl/surface/convex_hull.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/segmentation/extract_polygonal_prism_data.h>
+#include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/surface/mls.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include "short_types.h"
 #include "transformer/CloudTransformer.h"
 #include <pcl/features/cvfh.h>
+#include <iterator>
+#include <vector>
 
 
-std::vector<sensor_msgs::PointCloud2> findCluster(const PointCloudXYZPtr kinect);
+PointCloudXYZPtrVector findCluster(const PointCloudXYZPtr kinect);
 
 geometry_msgs::PointStamped findCenterGazebo();
 
@@ -49,6 +52,8 @@ PointCloudXYZPtr voxelGridFilter(PointCloudXYZPtr input);
 
 PointCloudXYZPtr outlierRemoval(PointCloudXYZPtr input);
 
-pcl::PointCloud<pcl::VFHSignature308>::Ptr cvfhRecognition(PointCloudXYZPtr input);
+float* cvfhRecognition(PointCloudXYZPtr input);
+
+PointIndicesVector euclideanClusterExtraction(PointCloudXYZPtr input);
 
 #endif //VISION_PERCEPTION_H
