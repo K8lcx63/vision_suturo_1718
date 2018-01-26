@@ -81,7 +81,7 @@ void start_node(int argc, char **argv) {
 bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
 
     // Execute findCluster()
-    PointCloudXYZPtrVector all_clusters = findCluster(scene);
+    std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
 
     // Calculate features and put them into the message response
     float* current_features;

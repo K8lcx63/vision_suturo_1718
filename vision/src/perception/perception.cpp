@@ -8,10 +8,10 @@ std::string error_message_perc;
  * Find the object!
  * @param kinect
  */
-PointCloudXYZPtrVector findCluster(PointCloudXYZPtr kinect) {
+std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
     ros::NodeHandle n;
-    PointCloudXYZPtrVector result;
+    std::vector<PointCloudRGBPtr> result;
 
     CloudTransformer transform_cloud(n);
 
@@ -467,7 +467,7 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
  * @param input
  * @return
  */
-float* cvfhRecognition(PointCloudXYZPtr input) {
+float* cvfhRecognition(PointCloudRGBPtr input) {
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     // Object for storing the CVFH descriptors.
@@ -502,12 +502,12 @@ float* cvfhRecognition(PointCloudXYZPtr input) {
     return descriptors->points[0].histogram; // to vector
 }
 
-PointIndicesVector euclideanClusterExtraction(PointCloudXYZPtr input){
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZ>);
+PointIndicesVector euclideanClusterExtraction(PointCloudRGBPtr input){
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud (input);
 
     PointIndicesVector cluster_indices;
-    pcl::EuclideanClusterExtraction<pcl::PointXYZ> ec;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
     ec.setClusterTolerance (0.03); // 2cm
     ec.setMinClusterSize (20);
     ec.setMaxClusterSize (25000);

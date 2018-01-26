@@ -9,6 +9,7 @@
 #include <pcl/point_types.h>
 #include <pcl/PointIndices.h>
 #include <geometry_msgs/PointStamped.h>
+#include <sensor_msgs/PointCloud2.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
 typedef pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudRGBPtr;
