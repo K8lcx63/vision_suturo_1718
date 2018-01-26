@@ -537,7 +537,6 @@ pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VF
     return result;
 }
 
-
 PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target) {
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
     icp.setInputCloud(input);
@@ -549,4 +548,33 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr 
     std::cout << icp.getFinalTransformation() << std::endl;
 
     return final;
+}
+
+/**
+ * Color Histogram from RGB-PointCloud
+ * @param input
+ * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
+ */
+std::vector<float> produceColorHist(PointCloudRGBPtr input){
+
+    std::vector<float> red;
+    std::vector<float> green;
+    std::vector<float> blue;
+    std::vector<float> result;
+
+    for (size_t i = 0; i < input->size(); i++){
+        red.push_back(input->points.at(i).r);
+        green.push_back(input->points.at(i).g);
+        blue.push_back(input->points.at(i).b);
+
+    }
+
+    // concatenate red, green and blue entries
+    result.insert(result.begin(),red.begin(),red.end());
+    result.insert(result.end(),green.begin(),green.end());
+    result.insert(result.end(),blue.begin(),blue.end());
+
+
+    return result;
+
 }
