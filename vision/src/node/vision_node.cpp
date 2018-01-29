@@ -29,9 +29,30 @@ ros::Publisher pub_visualization;
  * Callback-function saving the pointcloud received by the Kinect-Camera
  * @param kinect pointcloud received from kinect
  */
-void sub_kinect_callback(PointCloudRGBPtr kinect) {
+void sub_kinect_callback(PointCloudXYZPtr kinect) {
     ROS_INFO("CALLBACK FUNCTION!");
-    scene = kinect;
+    if (kinect->size() != 0){
+        if (scene->size() == 0) {
+            for (size_t i = 0; i < kinect->size(); i++) {
+                pcl::PointXYZRGB point;
+                point.x = kinect->points[i].x;
+                point.y = kinect->points[i].y;
+                point.z = kinect->points[i].z;
+                point.r = 0;
+                point.g = 0;
+                point.b = 0;
+                scene->points.push_back(point);
+            }
+        }else {
+            ROS_INFO("Scene already filled");
+            std::cout << "SCENE is of size: " << scene->size() << std::endl;
+
+        }
+
+    } else {
+        ROS_ERROR("Kinect has no image");
+        error_message += "No image from kinect. ";
+    }
 }
 
 /**

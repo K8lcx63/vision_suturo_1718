@@ -39,12 +39,16 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
     } else {
         ROS_INFO("Starting Cluster extraction");
 
-        cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5);   // passthrough filter
+        cloud_3df =  apply3DFilter(kinect, 0.4, 0.4, 1.5);   // passthrough filter
+        // std::cout << "after 3dfilter cluster is of size: " << cloud_3df->size() << std::endl;
         cloud_voxelgridf = voxelGridFilter(cloud_3df);      // voxel grid filter
+        // std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
         cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
+        // std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
         cloud_cluster = cloud_mlsf;                         // cloud_f set after last filtering function is applied
 
         transform_cloud.removeBelowPlane(cloud_cluster);
+        // std::cout << "cluster after removeBelowPlane is of size: " << cloud_cluster->size() << std::endl;
 
         // While a segmented plane would be larger than 500 points, segment it.
         bool loop_plane_segmentations = true;
@@ -61,19 +65,10 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         }
         ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
 
+        // TODO: fix segmentation fault, that occurs somewhere below this line.
         cloud_final = outlierRemoval(cloud_cluster);
 
-        /** Speichere Zwischenergebenisse **/
 
-        /*
-        savePointCloudXYZNamed(cloud_3df, "1_cloud_3d_filtered");
-        savePointCloudXYZNamed(cloud_voxelgridf, "2_cloud_voxelgrid_filtered");
-        savePointCloudXYZNamed(cloud_mlsf, "3_cloud_mls_filtered");
-        savePointCloudXYZNamed(cloud_cluster, "4_cloud_cluster");
-        savePointCloudXYZNamed(cloud_prism, "6_cloud_prism");
-        savePointCloudXYZNamed(cloud_cluster2, "7_cluster_2");
-        savePointCloudXYZNamed(cloud_final, "result");
-        */
         int i = 0;
         PointIndicesVector cluster_indices = euclideanClusterExtraction(cloud_final);
         for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
@@ -204,7 +199,6 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
                                float y,
                                float z) {
 
-    PointCloudRGBPtr result (new PointCloudRGB);
 
 
     ROS_INFO("Starting passthrough filter");
@@ -248,7 +242,7 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
 
 
 
-    return result;
+    return input_after_xyz;
 }
 
 /**
@@ -342,24 +336,15 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
     ROS_INFO("CLUSTER EXTRACTION");
     PointCloudRGBPtr result (new PointCloudRGB);
 
-    // PointXYZRGB to PointXYZ
-
-    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
-
-    for (size_t i = 0; i < input->size(); i++){
-        input_xyz->points[i].x = input->points[i].x;
-        input_xyz->points[i].y = input->points[i].y;
-        input_xyz->points[i].z = input->points[i].z;
-    }
-    PointCloudXYZPtr objects(new PointCloudXYZ);
-    pcl::ExtractIndices<pcl::PointXYZ> extract;
-    extract.setInputCloud(input_xyz);
+    PointCloudRGBPtr objects(new PointCloudRGB);
+    pcl::ExtractIndices<pcl::PointXYZRGB> extract;
+    extract.setInputCloud(input);
     extract.setIndices(indices);
     extract.setNegative(negative);
     extract.setUserFilterValue(0.0f);
     extract.setKeepOrganized(true);
     extract.filter(*objects);
-
+/**
     for (size_t i = 0; i < objects->size(); i++){
         if (objects->points[i].x != 0.0f &&
             objects->points[i].y != 0.0f &&
@@ -378,9 +363,10 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
 
         }
     }
+    **/
 
 
-    return result;
+    return objects;
 }
 
 /**
@@ -391,15 +377,6 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
 PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
     PointCloudRGBPtr result (new PointCloudRGB);
 
-    // PointXYZRGB to PointXYZ
-
-    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
-
-    for (size_t i = 0; i < input->size(); i++){
-        input_xyz->points[i].x = input->points[i].x;
-        input_xyz->points[i].y = input->points[i].y;
-        input_xyz->points[i].z = input->points[i].z;
-    }
     int poly_ord = 1;
 
     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);

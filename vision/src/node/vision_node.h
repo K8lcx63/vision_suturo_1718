@@ -20,11 +20,8 @@
 #include "../perception/perception.h"
 
 #include "../perception/short_types.h"
-
-bool getObjectPosition(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res);
-bool getObjectPose(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res);
 bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res);
-void sub_kinect_callback(PointCloudRGBPtr kinect);
+void sub_kinect_callback(PointCloudXYZPtr kinect);
 void start_node(int argc, char **argv);
 
 #endif //VISION_VISION_NODE_H

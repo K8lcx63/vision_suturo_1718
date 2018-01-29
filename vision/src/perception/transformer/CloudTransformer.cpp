@@ -14,9 +14,7 @@ CloudTransformer::CloudTransformer(ros::NodeHandle nh) : nh_(nh) {
         buffer_->header.frame_id = "odom_combined";
 
 
-    PointCloudRGBPtr removeBelowPlane(PointCloudRGBPtr input);
-    PointCloudRGBPtr transform(const PointCloudRGBPtr cloud, std::string target_frame,
-                                      std::string source_frame);
+
 }
 
 PointCloudRGBPtr CloudTransformer::removeBelowPlane(PointCloudRGBPtr input) {
