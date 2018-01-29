@@ -65,15 +65,16 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         }
         ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
 
-        // TODO: fix segmentation fault, that occurs somewhere below this line.
         cloud_final = outlierRemoval(cloud_cluster);
+        std::cout << "outlier removal works just fine" << std::endl;
 
 
         int i = 0;
         PointIndicesVector cluster_indices = euclideanClusterExtraction(cloud_final);
         for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
         {
-            pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZ>);
+            // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
+            // TODO: fix segmentation fault, that occurs somewhere below this line.
             for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
             result[i]->points.push_back (result[i]->points[*pit]); //*
             result[i]->width = result[i]->points.size ();
@@ -93,6 +94,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
         error_message_perc = "";
 
+        std::cout << " extraction works just fine" << std::endl;
         return result;
 
     }
@@ -211,7 +213,7 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
     pass.setFilterFieldName("x");
     pass.setFilterLimits(-x, x);
 
-    pass.setUserFilterValue(0.0f);
+    //pass.setUserFilterValue(0.0f);
     pass.setKeepOrganized(true);
     pass.filter(*input_after_x);
 
@@ -220,7 +222,7 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
     pass.setFilterFieldName("y");
     pass.setFilterLimits(-y, y);
 
-    pass.setUserFilterValue(0.0f);
+    //pass.setUserFilterValue(0.0f);
     pass.setKeepOrganized(true);
     pass.filter(*input_after_xy);
 
@@ -230,7 +232,7 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
     pass.setFilterLimits(
             0.0, z); // no negative range (the pr2 can't look behind its head)
 
-    pass.setUserFilterValue(0.0f);
+    //pass.setUserFilterValue(0.0f);
     pass.setKeepOrganized(true);
     pass.filter(*input_after_xyz);
 
@@ -341,30 +343,9 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
     extract.setInputCloud(input);
     extract.setIndices(indices);
     extract.setNegative(negative);
-    extract.setUserFilterValue(0.0f);
+    //extract.setUserFilterValue(0.0f);
     extract.setKeepOrganized(true);
     extract.filter(*objects);
-/**
-    for (size_t i = 0; i < objects->size(); i++){
-        if (objects->points[i].x != 0.0f &&
-            objects->points[i].y != 0.0f &&
-            objects->points[i].z != 0.0f){
-
-            result->points[i].x = objects->points[i].x;
-            result->points[i].y = objects->points[i].y;
-            result->points[i].z = objects->points[i].z;
-            result->points[i].r = input->points[i].r;
-            result->points[i].g = input->points[i].g;
-            result->points[i].b = input->points[i].b;
-
-            // not sure if needed
-            result->points[i].rgb = input->points[i].rgb;
-            result->points[i].rgba = input->points[i].rgba;
-
-        }
-    }
-    **/
-
 
     return objects;
 }
