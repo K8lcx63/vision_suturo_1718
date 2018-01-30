@@ -429,13 +429,11 @@ PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
     ROS_INFO("AFTER EXTRACT");
     // PointIndicesVector to PointIndicesVectorPtr
     PointIndicesVectorPtr cluster_indices_ptr;
+    pcl::PointIndices::Ptr tmp_indices (new pcl::PointIndices);
     for(int n = 0; n < cluster_indices.size(); n++){
         ROS_INFO("xdxdx");
-        pcl::PointIndices::Ptr tmp_indices (new pcl::PointIndices);
         *tmp_indices = cluster_indices[n];
         cluster_indices_ptr.push_back(tmp_indices);
-
-
     }
     std::cout << " cluster_ind_vect in euclEx: " << cluster_indices.size() << std::endl;
 
