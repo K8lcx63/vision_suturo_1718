@@ -8,6 +8,7 @@ CloudContainer cloudContainer;
 
 const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/points";
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
+const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
 
 gazebo_msgs::GetModelState getmodelstate;
 

@@ -339,6 +339,7 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
  * @return
  */
 PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
+    ROS_INFO("MLS Filter!");
     PointCloudRGBPtr result (new PointCloudRGB);
 
     int poly_ord = 1;
@@ -367,7 +368,7 @@ PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
         point.rgba = input->points[i].rgba;
         result->push_back(point);
     }
-
+    ROS_INFO("Finished MLS Filter!");
     return result;
 }
 
@@ -409,6 +410,7 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
  * @return
  */
 float* cvfhRecognition(PointCloudRGBPtr input) {
+    ROS_INFO("CVFH Recognition!");
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     // Object for storing the CVFH descriptors.
@@ -444,6 +446,7 @@ float* cvfhRecognition(PointCloudRGBPtr input) {
 }
 
 PointIndicesVector euclideanClusterExtraction(PointCloudRGBPtr input){
+    ROS_INFO("Euclidean Cluster Extraction!");
     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud (input);
 
