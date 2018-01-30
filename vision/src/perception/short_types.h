@@ -23,6 +23,6 @@ typedef geometry_msgs::PointStamped PointStamped;
 typedef pcl::PointCloud<pcl::VFHSignature308>::Ptr PointCloudVFHS308Ptr;
 typedef sensor_msgs::PointCloud2 SMSGSPointCloud2;
 typedef std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> PointCloudXYZPtrVector;
-typedef std::vector<pcl::PointIndices> PointIndicesVector;
+typedef std::vector<pcl::PointIndices::Ptr> PointIndicesVector; 
 
 #endif //VISION_SHORT_TYPES_H
