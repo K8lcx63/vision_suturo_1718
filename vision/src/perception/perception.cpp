@@ -71,9 +71,11 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // Split cloud_final into one PointCloud per object
         PointIndicesVectorPtr cluster_indices = euclideanClusterExtraction(cloud_final);
         for(int i = 0; i < cluster_indices.size(); i++){
-            std::cout << "size of cluster indices vector" << i << std::endl;
+            std::cout << "size of cluster indices vector" << cluster_indices.size() << std::endl;
             result[i] = extractCluster(cloud_final, cluster_indices[i], false);
         }
+
+        ROS_INFO("XDDDDDDDDDDDDD");
 
         if (cloud_final->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
