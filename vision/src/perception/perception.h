@@ -14,7 +14,6 @@
 #include <pcl/features/normal_3d.h>
 #include <pcl/surface/convex_hull.h>
 #include <pcl/filters/voxel_grid.h>
-#include <pcl/segmentation/extract_polygonal_prism_data.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/extract_indices.h>
 #include <pcl/surface/mls.h>
@@ -37,8 +36,6 @@ PointIndices                    estimatePlaneIndices(PointCloudRGBPtr input);
 PointCloudRGBPtr                extractCluster(PointCloudRGBPtr input,
                                                PointIndices indices,
                                                bool negative);
-PointIndices                    prismSegmentation(PointCloudRGBPtr input_cloud,
-                                                  PointCloudRGBPtr plane);
 PointCloudRGBPtr                apply3DFilter(PointCloudRGBPtr input,
                                               float x,
                                               float y,

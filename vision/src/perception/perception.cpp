@@ -273,31 +273,6 @@ PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
 }
 
 /**
- * prism segmentation
- * @param input_cloud
- * @param plane
- * @return
- */
-PointIndices prismSegmentation(PointCloudRGBPtr input,
-                               PointCloudRGBPtr plane) {
-
-    PointCloudRGBPtr plane_hull = plane;
-    ROS_INFO("Starting prism segmentation...");
-    pcl::ConvexHull<pcl::PointXYZRGB> hull;
-    PointIndices prism_indices(new pcl::PointIndices);
-    hull.setInputCloud(input);
-    hull.reconstruct(*plane_hull);
-
-    pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
-    prism.setInputCloud(input_xyz);
-    prism.setInputPlanarHull(plane_xyz);
-    prism.setHeightLimits(0, 2); // Get everything up to 2 meters above the plane
-    prism.segment(*prism_indices);
-
-    return prism_indices;
-}
-
-/**
  * extract a pointcloud by indices from an input pointcloud
  * @param input
  * @param indices
