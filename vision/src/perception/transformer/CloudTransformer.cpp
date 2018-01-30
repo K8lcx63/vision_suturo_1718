@@ -18,10 +18,10 @@ CloudTransformer::CloudTransformer(ros::NodeHandle nh) : nh_(nh) {
 }
 
 PointCloudRGBPtr CloudTransformer::removeBelowPlane(PointCloudRGBPtr input) {
+    ROS_INFO("Removing points below the ground plane...");
     PointCloudRGBPtr cloud_odom_combined(new PointCloudRGB);
 
     cloud_odom_combined = CloudTransformer::transform(input, "odom_combined", "head_mount_kinect_ir_optical_frame");
-    ROS_INFO("TRANSFORMED!");
 
     // Find the bottom plane
     PointIndices planeIndices(new pcl::PointIndices);
