@@ -89,13 +89,18 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     // Execute findCluster()
     std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
 
+    std::cout << "findcluster completed" << std::endl;
     // Calculate features and put them into the message response
     float* current_features;
     for(int i = 0; i < all_clusters.size(); i++) {
         current_features = cvfhRecognition(all_clusters[i]);
+
+        // TODO: fix segfault here
         for (int n = 0; n < 308; n++) {
             res.clouds.features[i].features[n] = current_features[n];
         }
+        std::cout << "cvfh filling completed" << std::endl;
+
     }
 
 

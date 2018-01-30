@@ -66,16 +66,13 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
 
         cloud_final = outlierRemoval(cloud_cluster);
-        std::cout << "outlier removal works just fine" << std::endl;
 
         // Split cloud_final into one PointCloud per object
         PointIndicesVectorPtr cluster_indices = euclideanClusterExtraction(cloud_final);
         for(int i = 0; i < cluster_indices.size(); i++){
-            std::cout << "size of cluster indices vector" << cluster_indices.size() << std::endl;
-            result[i] = extractCluster(cloud_final, cluster_indices[i], false);
+            result.push_back(extractCluster(cloud_final, cluster_indices[i], false));
         }
 
-        ROS_INFO("XDDDDDDDDDDDDD");
 
         if (cloud_final->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
@@ -155,21 +152,11 @@ std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<SMSGSPoint
 PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
     ROS_INFO("ESTIMATING SURFACE NORMALS");
 
-    // PointXYZRGB to PointXYZ
 
-    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
-
-    for (size_t i = 0; i < input->size(); i++){
-        input_xyz->points[i].x = input->points[i].x;
-        input_xyz->points[i].y = input->points[i].y;
-        input_xyz->points[i].z = input->points[i].z;
-    }
-
-    pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
-    ne.setInputCloud(input_xyz);
-
-    pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(
-            new pcl::search::KdTree<pcl::PointXYZ>());
+    pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
+    ne.setInputCloud(input);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(
+            new pcl::search::KdTree<pcl::PointXYZRGB>());
     ne.setSearchMethod(tree);
 
     PointCloudNormalPtr cloud_normals(new PointCloudNormal);
@@ -177,6 +164,7 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
     ne.setRadiusSearch(0.03); // Use all neighbors in a sphere of radius 3cm
 
     ne.compute(*cloud_normals);
+
     return cloud_normals;
 }
 
@@ -407,6 +395,7 @@ float* cvfhRecognition(PointCloudRGBPtr input) {
     cvfh.setNormalizeBins(false);
 
     cvfh.compute(*descriptors);
+
     //float x [308] = descriptors->points[0].histogram; // Save calculated histogram in a float array
     //std::vector<float> result(x, x + sizeof x / sizeof x[0]);
     //std::vector<float> result(std::begin(descriptors->points[0].histogram), std::end(descriptors->points[0].histogram)); // Array to vector
@@ -433,11 +422,9 @@ PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
     PointIndicesVectorPtr cluster_indices_ptr;
     pcl::PointIndices::Ptr tmp_indices (new pcl::PointIndices);
     for(int n = 0; n < cluster_indices.size(); n++){
-        ROS_INFO("xdxdx");
         *tmp_indices = cluster_indices[n];
         cluster_indices_ptr.push_back(tmp_indices);
     }
-    std::cout << " cluster_ind_vect in euclEx: " << cluster_indices.size() << std::endl;
 
     ROS_INFO("Finished Euclidean Cluster Extraction!");
     return cluster_indices_ptr;
