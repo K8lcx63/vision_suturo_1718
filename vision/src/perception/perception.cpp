@@ -68,22 +68,13 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         cloud_final = outlierRemoval(cloud_cluster);
         std::cout << "outlier removal works just fine" << std::endl;
 
-
-        int i = 0;
-        PointIndicesVector cluster_indices = euclideanClusterExtraction(cloud_final);
-        for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-        {
-            // pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_cluster (new pcl::PointCloud<pcl::PointXYZRGB>);
-            // TODO: fix segmentation fault, that occurs somewhere below this line.
-            for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-            result[i]->points.push_back (result[i]->points[*pit]); //*
-            result[i]->width = result[i]->points.size ();
-            result[i]->height = 1;
-            result[i]->is_dense = true;
-            i++;
+        // Split cloud_final into one PointCloud per object
+        PointIndicesVectorPtr cluster_indices = euclideanClusterExtraction(cloud_final);
+        for(int i = 0; i < cluster_indices.size(); i++){
+            result[i] = extractCluster(cloud_final, cluster_indices[i], false);
         }
 
-        if (cloud_cluster->points.size() == 0) {
+        if (cloud_final->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
             error_message_perc = "Final extracted cluster was empty. ";
             centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
@@ -94,7 +85,6 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
         error_message_perc = "";
 
-        std::cout << " extraction works just fine" << std::endl;
         return result;
 
     }
@@ -462,7 +452,7 @@ float* cvfhRecognition(PointCloudRGBPtr input) {
     return descriptors->points[0].histogram; // to vector
 }
 
-PointIndicesVector euclideanClusterExtraction(PointCloudRGBPtr input){
+PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
     ROS_INFO("Euclidean Cluster Extraction!");
     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud (input);
@@ -476,7 +466,13 @@ PointIndicesVector euclideanClusterExtraction(PointCloudRGBPtr input){
     ec.setInputCloud (input);
     ec.extract (cluster_indices);
 
-    return cluster_indices;
+    // PointIndicesVector to PointIndicesVectorPtr
+    PointIndicesVectorPtr cluster_indices_ptr;
+    for(int n = 0; n < cluster_indices.size(); n++){
+        *cluster_indices_ptr[n] = cluster_indices[n];
+    }
+
+    return cluster_indices_ptr;
 }
 
 /**

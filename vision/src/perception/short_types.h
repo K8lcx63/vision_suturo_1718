@@ -19,10 +19,13 @@ typedef pcl::PointCloud<pcl::PointXYZ> PointCloudXYZ;
 typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudRGB;
 typedef pcl::PointCloud<pcl::Normal> PointCloudNormal;
 typedef pcl::PointIndices::Ptr PointIndices;
+typedef std::vector<pcl::PointIndices> PointIndicesVector;
+typedef std::vector<pcl::PointIndices::Ptr> PointIndicesVectorPtr;
+
 typedef geometry_msgs::PointStamped PointStamped;
 typedef pcl::PointCloud<pcl::VFHSignature308>::Ptr PointCloudVFHS308Ptr;
 typedef sensor_msgs::PointCloud2 SMSGSPointCloud2;
 typedef std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> PointCloudXYZPtrVector;
-typedef std::vector<pcl::PointIndices> PointIndicesVector;
+
 
 #endif //VISION_SHORT_TYPES_H

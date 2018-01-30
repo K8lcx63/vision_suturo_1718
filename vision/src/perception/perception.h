@@ -44,7 +44,7 @@ PointCloudRGBPtr                apply3DFilter(PointCloudRGBPtr input,
                                               float y,
                                               float z);
 PointCloudRGBPtr                mlsFilter(PointCloudRGBPtr input);
-PointIndicesVector              euclideanClusterExtraction(PointCloudRGBPtr input);
+PointIndicesVectorPtr              euclideanClusterExtraction(PointCloudRGBPtr input);
 PointCloudRGBPtr                voxelGridFilter(PointCloudRGBPtr input);
 PointCloudRGBPtr                outlierRemoval(PointCloudRGBPtr input);
 float*                          cvfhRecognition(PointCloudRGBPtr input);
