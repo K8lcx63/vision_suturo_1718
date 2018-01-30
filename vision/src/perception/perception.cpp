@@ -204,7 +204,7 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
     pass.setFilterLimits(-x, x);
 
     //pass.setUserFilterValue(0.0f);
-    pass.setKeepOrganized(true);
+    pass.setKeepOrganized(false);
     pass.filter(*input_after_x);
 
     // Create the filtering object (y-axis)
@@ -213,7 +213,7 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
     pass.setFilterLimits(-y, y);
 
     //pass.setUserFilterValue(0.0f);
-    pass.setKeepOrganized(true);
+    pass.setKeepOrganized(false);
     pass.filter(*input_after_xy);
 
     // Create the filtering object (z-axis)
@@ -278,32 +278,14 @@ PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
  * @param plane
  * @return
  */
-PointIndices prismSegmentation(PointCloudRGBPtr input_cloud,
+PointIndices prismSegmentation(PointCloudRGBPtr input,
                                PointCloudRGBPtr plane) {
 
-    // PointXYZRGB to PointXYZ
-
-    PointCloudXYZPtr input_xyz (new PointCloudXYZ);
-
-    for (size_t i = 0; i < input_cloud->size(); i++){
-        input_xyz->points[i].x = input_cloud->points[i].x;
-        input_xyz->points[i].y = input_cloud->points[i].y;
-        input_xyz->points[i].z = input_cloud->points[i].z;
-    }
-
-    PointCloudXYZPtr plane_xyz (new PointCloudXYZ);
-
-    for (size_t i = 0; i < plane->size(); i++){
-        plane_xyz->points[i].x = plane->points[i].x;
-        plane_xyz->points[i].y = plane->points[i].y;
-        plane_xyz->points[i].z = plane->points[i].z;
-    }
-
-    PointCloudXYZPtr plane_hull = plane_xyz;
+    PointCloudRGBPtr plane_hull = plane;
     ROS_INFO("Starting prism segmentation...");
-    pcl::ConvexHull<pcl::PointXYZ> hull;
+    pcl::ConvexHull<pcl::PointXYZRGB> hull;
     PointIndices prism_indices(new pcl::PointIndices);
-    hull.setInputCloud(input_xyz);
+    hull.setInputCloud(input);
     hull.reconstruct(*plane_hull);
 
     pcl::ExtractPolygonalPrismData<pcl::PointXYZ> prism;
@@ -334,7 +316,7 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
     extract.setIndices(indices);
     extract.setNegative(negative);
     //extract.setUserFilterValue(0.0f);
-    extract.setKeepOrganized(true);
+    extract.setKeepOrganized(false);
     extract.filter(*objects);
 
     return objects;
@@ -503,7 +485,7 @@ PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
     // calculate inital alignment for every input cloud and save scores
     for (size_t i = 0; i < features.size (); ++i)
     {
-pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
+        pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
 
         sac_ia.setInputCloud (objects[i]);
         sac_ia.setSourceFeatures (features[i]);

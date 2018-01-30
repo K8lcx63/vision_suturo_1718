@@ -13,8 +13,6 @@ CloudTransformer::CloudTransformer(ros::NodeHandle nh) : nh_(nh) {
         buffer_.reset(new PointCloudRGB); // (new sensor_msgs::PointCloud2)
         buffer_->header.frame_id = "odom_combined";
 
-
-
 }
 
 PointCloudRGBPtr CloudTransformer::removeBelowPlane(PointCloudRGBPtr input) {
