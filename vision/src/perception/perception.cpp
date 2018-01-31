@@ -365,8 +365,9 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
  * @param input
  * @return
  */
-float* cvfhRecognition(PointCloudRGBPtr input) {
+ std::vector<float> cvfhRecognition(PointCloudRGBPtr input) {
     ROS_INFO("CVFH Recognition!");
+    std::vector<float> result;
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     // Object for storing the CVFH descriptors.
@@ -399,7 +400,11 @@ float* cvfhRecognition(PointCloudRGBPtr input) {
     //float x [308] = descriptors->points[0].histogram; // Save calculated histogram in a float array
     //std::vector<float> result(x, x + sizeof x / sizeof x[0]);
     //std::vector<float> result(std::begin(descriptors->points[0].histogram), std::end(descriptors->points[0].histogram)); // Array to vector
-    return descriptors->points[0].histogram; // to vector
+    for (size_t i = 0; i < 308; i++){
+        result.push_back(descriptors->points[0].histogram[i]);
+    }
+
+    return result; // to vector
 }
 
 PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
@@ -527,6 +532,8 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
 std::vector<float> produceColorHist(PointCloudRGBPtr input){
+
+    input->resize(500); // resize for vector messages
 
     std::vector<float> red;
     std::vector<float> green;

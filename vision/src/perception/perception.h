@@ -44,10 +44,11 @@ PointCloudRGBPtr                mlsFilter(PointCloudRGBPtr input);
 PointIndicesVectorPtr              euclideanClusterExtraction(PointCloudRGBPtr input);
 PointCloudRGBPtr                voxelGridFilter(PointCloudRGBPtr input);
 PointCloudRGBPtr                outlierRemoval(PointCloudRGBPtr input);
-float*                          cvfhRecognition(PointCloudRGBPtr input);
+std::vector<float>              cvfhRecognition(PointCloudRGBPtr input);
 PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
                                                     std::vector<PointCloudVFHS308Ptr> features,
                                                     PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
+std::vector<float>              produceColorHist(PointCloudRGBPtr input);
 
 #endif //VISION_PERCEPTION_H

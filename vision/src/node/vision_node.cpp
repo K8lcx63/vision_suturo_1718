@@ -91,7 +91,9 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     ROS_INFO("findCluster completed!");
 
     // Calculate features and put them into the message response
-    float* current_features;
+
+
+    std::vector<float> current_features;
     std::vector<float> current_features_vector;
     for(int i = 0; i < all_clusters.size(); i++) {
         current_features = cvfhRecognition(all_clusters[i]);
@@ -104,6 +106,21 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     res.clouds.features = current_features_vector;
     std::cout << "cvfh filling completed" << std::endl;
+
+    // do the same for the color histogram
+    std::vector<float> current_color_features;
+    std::vector<float> current_color_features_vector;
+    for(int i = 0; i < all_clusters.size(); i++) {
+        current_color_features = produceColorHist(all_clusters[i]);
+
+        for(int x = 0; x < 1500; x++){
+            ROS_INFO("%f", current_color_features[x]);
+            current_color_features_vector.push_back(current_color_features[x]);
+        }
+    }
+
+    res.clouds.color_features = current_color_features_vector;
+    std::cout << "color_hist filling completed" << std::endl;
 
     return true;
 
