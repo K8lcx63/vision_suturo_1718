@@ -4,6 +4,8 @@ geometry_msgs::PointStamped centroid_stamped_perc;
 
 std::string error_message_perc;
 
+PointCloudRGBPtr cloud_final(new PointCloudRGB);
+
 /**
  * Find the object!
  * @param kinect
@@ -24,8 +26,8 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
             cloud_3df(new PointCloudRGB),
             cloud_voxelgridf(new PointCloudRGB),
             cloud_mlsf(new PointCloudRGB),
-            cloud_prism(new PointCloudRGB),
-            cloud_final(new PointCloudRGB);
+            cloud_prism(new PointCloudRGB);
+
 
     PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(
             new pcl::PointIndices);

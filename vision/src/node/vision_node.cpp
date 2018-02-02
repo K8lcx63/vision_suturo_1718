@@ -67,8 +67,14 @@ void start_node(int argc, char **argv) {
     ros::Rate r(2.0);
 
     while (n.ok()) {
-        pub_visualization_marker.publish(publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
-        pub_visualization_object.publish(cloudContainer.getObjects());
+        pub_visualization_marker.publish(
+                publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
+        sensor_msgs::PointCloud2 cloud_final_pub;
+        ROS_INFO("%d points", cloud_final->points.size());
+        pcl::toROSMsg(*cloud_final, cloud_final_pub);
+        cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
+        pub_visualization_object.publish(cloud_final_pub);
+        ROS_INFO("OBJECTS PUBLISHED");
 
         ros::spinOnce();
         r.sleep();
@@ -95,7 +101,7 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
         current_features = cvfhRecognition(all_clusters[i]);
 
         for(int x = 0; x < 308; x++){
-            ROS_INFO("%f", current_features[x]);
+            //ROS_INFO("%f", current_features[x]);
             current_features_vector.push_back(current_features[x]);
         }
     }

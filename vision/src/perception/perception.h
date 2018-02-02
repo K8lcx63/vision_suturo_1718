@@ -50,4 +50,7 @@ PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr
                                                     PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
 
+
+extern PointCloudRGBPtr cloud_final;
+
 #endif //VISION_PERCEPTION_H
