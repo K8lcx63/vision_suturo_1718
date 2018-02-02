@@ -39,7 +39,6 @@ add_executable(
 		src/perception/perception.cpp
 		src/saving/saving.cpp
 		src/viewer/viewer.cpp
-		src/perception/container/CloudContainer.cpp
 		src/perception/short_types.h
 		src/perception/transformer/CloudTransformer.cpp
 		src/node/vision_node.cpp
