@@ -96,18 +96,18 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     // Calculate features and put them into the message response
     float* current_features;
+    int object_amount = 0; // Count objects
     std::vector<float> current_features_vector;
     for(int i = 0; i < all_clusters.size(); i++) {
         current_features = cvfhRecognition(all_clusters[i]);
-
+        object_amount++;
         for(int x = 0; x < 308; x++){
             //ROS_INFO("%f", current_features[x]);
             current_features_vector.push_back(current_features[x]);
         }
     }
-
-    res.clouds.features = current_features_vector;
-    std::cout << "cvfh filling completed" << std::endl;
+    res.clouds.object_amount = object_amount;
+    res.clouds.normal_features = current_features_vector;
 
     return true;
 
