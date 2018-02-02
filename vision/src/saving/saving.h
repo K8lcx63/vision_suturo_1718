@@ -15,6 +15,9 @@
 
 std::string getTime();
 
+void savePointCloudRGBNamed(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud,
+                            std::string filename);
+
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 
 void savePointCloudXYZNamed(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string filename);
