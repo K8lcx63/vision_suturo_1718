@@ -4,7 +4,7 @@ project(pcd_to_featureCSV)
 set (CMAKE_CXX_STANDARD 11)
 
 
-find_package(PCL 1.8 REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 
 include_directories(
         ${PCL_INCLUDE_DIRS}

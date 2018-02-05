@@ -23,6 +23,9 @@
 #include <pcl/features/cvfh.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/ia_ransac.h>
+#include <pcl/impl/point_types.hpp>
+#include <pcl/visualization/point_cloud_color_handlers.h>
+#include <sensor_msgs/PointCloud2.h>
 
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
 typedef pcl::PointCloud<pcl::PointXYZRGBA>::Ptr PointCloudRGBAPtr;
@@ -102,36 +105,36 @@ std::vector<float> cvfhRecognition(PointCloudRGBAPtr input) {
  * @param input
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
-std::vector<int> produceColorHist(PointCloudRGBAPtr input){
+std::vector<int> produceColorHist(PointCloudRGBAPtr  cloud){
 
-    input->resize(500); // resize for vector messages
+    //input->resize(500); // resize for vector messages
 
-    std::vector<u_int8_t > red;
-    std::vector<u_int8_t > green;
-    std::vector<u_int8_t> blue;
+    std::vector<int> red;
+    std::vector<int> green;
+    std::vector<int> blue;
     std::vector<int> result;
 
-    for (size_t i = 0; i < input->size(); i++){
-        pcl::PointXYZRGBA point = input->points[i];
-        u_int32_t rgb = *reinterpret_cast<int*>(&point.rgb);
-        u_int8_t r = (rgb >> 16) & 0x0000ff;
-        u_int8_t g = (rgb >> 8)  & 0x0000ff;
-        u_int8_t b = (rgb)       & 0x0000ff;
 
-        point.r = r;
-        point.g = g;
-        point.b = b;
-        red.push_back((int)r);
-        green.push_back((int)g);
-        blue.push_back((int)b);
+    for (size_t i = 0; i <  cloud->size(); i++){
+        pcl::PointXYZRGBA p = cloud->points[i];
+        uint32_t rgba = *reinterpret_cast<int*>(&p,rgba);
+        uint8_t r = (rgba >> 16) & 0x0000ff;
+        uint8_t g = (rgba >> 8)  & 0x0000ff;
+        uint8_t b = (rgba)       & 0x0000ff;
+
+        red.push_back(r);
+        green.push_back(g);
+        blue.push_back(b);
+        std::cout << "cloud->points[i].r " << r << std::endl;
+        std::cout << "cloud->points[i].g " << g << std::endl;
+        std::cout << "cloud->points[i].b " << b << std::endl;
+
     }
-
 
     // concatenate red, green and blue entries
     result.insert(result.begin(),red.begin(),red.end());
     result.insert(result.end(),green.begin(),green.end());
     result.insert(result.end(),blue.begin(),blue.end());
-
 
     return result;
 
@@ -147,9 +150,8 @@ void batchPCD2histograms(std::string input, std::string object_name) {
         std::vector<float> input_cvfhs_features;
         std::vector<int> input_color_features;
 
-
         // load file
-        if (        pcl::io::loadPCDFile(line, *input_cloud) != 0){
+        if (pcl::io::loadPCDFile(line, *input_cloud) != 0){
 
             std::string normals = line + "_normals_histogram.csv";
             std::string colors = line + "_colors_histogram.csv";
@@ -164,6 +166,7 @@ void batchPCD2histograms(std::string input, std::string object_name) {
             os_colors.close();
 
         } else {
+            pcl::io::loadPCDFile(line, *input_cloud);
 
 
             line.erase(line.size() - 4, 4);
@@ -195,7 +198,28 @@ void batchPCD2histograms(std::string input, std::string object_name) {
     }
 }
 
-    int main(int argc, char** argv){
-        batchPCD2histograms(argv[1], argv[2]);
-        return 0;
-    }
+int main(int argc, char** argv){
+    batchPCD2histograms(argv[1], argv[2]);
+    return 0;
+}
+
+/**
+
+        std::cout << "unpacked r: " << r << std::endl;
+        std::cout << "r as int: " << (int) r << std::endl;
+        std::cout << "unpacked g: " << g << std::endl;
+        std::cout << "g as int: " << (int) g << std::endl;
+        std::cout << "unpacked b: " << b << std::endl;
+        std::cout << "b as int: " << (int) b << std::endl;
+
+        std::cout << "point r: " << point.r << std::endl;
+        std::cout << "r as int: " << (int) point.r << std::endl;
+        std::cout << "point g: " << point.g << std::endl;
+        std::cout << "g as int: " << (int) point.g << std::endl;
+        std::cout << "point b: " << point.b << std::endl;
+        std::cout << "b as int: " << (int) point.b << std::endl;
+        std::cout << "r in vector" << red[i] << std::endl;
+        std::cout << "g in vector" << green[i] << std::endl;
+        std::cout << "b in vector" << blue[i] << std::endl;
+
+        **/
