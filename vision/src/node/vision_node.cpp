@@ -70,7 +70,7 @@ void start_node(int argc, char **argv) {
         pub_visualization_marker.publish(
                 publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
         sensor_msgs::PointCloud2 cloud_final_pub;
-        ROS_INFO("%d points", cloud_final->points.size());
+        ROS_INFO("%lu points", cloud_final->points.size());
         pcl::toROSMsg(*cloud_final, cloud_final_pub);
         cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
         pub_visualization_object.publish(cloud_final_pub);
@@ -99,6 +99,7 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     std::vector<float> current_features;
     std::vector<float> current_features_vector;
+    int object_amount = 0;
     for(int i = 0; i < all_clusters.size(); i++) {
         current_features = cvfhRecognition(all_clusters[i]);
         object_amount++;
@@ -110,7 +111,6 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     res.clouds.object_amount = object_amount;
     res.clouds.normal_features = current_features_vector;
 
-    res.clouds.features = current_features_vector;
     std::cout << "cvfh filling completed" << std::endl;
 
     // do the same for the color histogram

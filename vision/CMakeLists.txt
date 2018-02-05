@@ -42,7 +42,7 @@ add_executable(
 		src/perception/short_types.h
 		src/perception/transformer/CloudTransformer.cpp
 		src/node/vision_node.cpp
-		src/tools/batch_processor.cpp
+
 )
 
 target_link_libraries(
