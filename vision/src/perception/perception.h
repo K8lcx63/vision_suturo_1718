@@ -20,6 +20,7 @@
 #include <pcl/filters/statistical_outlier_removal.h>
 #include "short_types.h"
 #include "transformer/CloudTransformer.h"
+#include "../saving/saving.h"
 #include <pcl/features/cvfh.h>
 #include <iterator>
 #include <vector>
@@ -50,5 +51,15 @@ PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr
                                                     PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
 std::vector<float>              produceColorHist(PointCloudRGBPtr input);
+
+extern PointCloudRGBPtr cloud_plane,
+        cloud_cluster,
+        cloud_cluster2,
+        cloud_f,
+        cloud_3df,
+        cloud_voxelgridf,
+        cloud_mlsf,
+        cloud_prism,
+        cloud_final;
 
 #endif //VISION_PERCEPTION_H

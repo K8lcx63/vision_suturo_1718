@@ -15,7 +15,6 @@
 #include "vision_msgs/ObjectClouds.h"
 #include <pcl_ros/point_cloud.h>
 #include <visualization_msgs/Marker.h>
-#include "../perception/container/CloudContainer.h"
 #include "../viewer/viewer.h"
 #include "../perception/perception.h"
 

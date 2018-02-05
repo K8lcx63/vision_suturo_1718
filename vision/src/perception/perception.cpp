@@ -4,6 +4,16 @@ geometry_msgs::PointStamped centroid_stamped_perc;
 
 std::string error_message_perc;
 
+PointCloudRGBPtr cloud_plane(new PointCloudRGB),
+        cloud_cluster(new PointCloudRGB),
+        cloud_cluster2(new PointCloudRGB),
+        cloud_f(new PointCloudRGB),
+        cloud_3df(new PointCloudRGB),
+        cloud_voxelgridf(new PointCloudRGB),
+        cloud_mlsf(new PointCloudRGB),
+        cloud_prism(new PointCloudRGB),
+        cloud_final(new PointCloudRGB);
+
 /**
  * Find the object!
  * @param kinect
@@ -17,15 +27,8 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
     // the 'f' in the identifier stands for filtered
 
-    PointCloudRGBPtr cloud_plane(new PointCloudRGB),
-            cloud_cluster(new PointCloudRGB),
-            cloud_cluster2(new PointCloudRGB),
-            cloud_f(new PointCloudRGB),
-            cloud_3df(new PointCloudRGB),
-            cloud_voxelgridf(new PointCloudRGB),
-            cloud_mlsf(new PointCloudRGB),
-            cloud_prism(new PointCloudRGB),
-            cloud_final(new PointCloudRGB);
+
+
 
     PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(
             new pcl::PointIndices);
@@ -45,10 +48,13 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
         cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
         // std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
-        cloud_cluster = cloud_mlsf;                         // cloud_f set after last filtering function is applied
+        cloud_cluster2 = cloud_mlsf;                         // cloud_f set after last filtering function is applied
 
-        transform_cloud.removeBelowPlane(cloud_cluster);
+        cloud_cluster2 = transform_cloud.removeBelowPlane(cloud_cluster2);
+        cloud_cluster = cloud_cluster2;
         // std::cout << "cluster after removeBelowPlane is of size: " << cloud_cluster->size() << std::endl;
+
+        // TODO: Irgendwas ab hier vernichtet Vorderseiten der Objekte D:
 
         // While a segmented plane would be larger than 500 points, segment it.
         bool loop_plane_segmentations = true;
@@ -84,6 +90,10 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         }
 
         error_message_perc = "";
+        savePointCloudRGBNamed(kinect, "unprocessed");
+        savePointCloudRGBNamed(cloud_cluster2, "removedBelowPlane");
+        savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
+        savePointCloudRGBNamed(cloud_final, "final");
 
         return result;
 
@@ -281,7 +291,6 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
     extract.setInputCloud(input);
     extract.setIndices(indices);
     extract.setNegative(negative);
-    //extract.setUserFilterValue(0.0f);
     extract.setKeepOrganized(false);
     extract.filter(*objects);
     ROS_INFO("CLUSTER EXTRACTION COMPLETED!");
@@ -414,8 +423,8 @@ PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
 
     PointIndicesVector cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance (0.03); // 2cm
-    ec.setMinClusterSize (20);
+    ec.setClusterTolerance (0.04); // 4cm
+    ec.setMinClusterSize (50);
     ec.setMaxClusterSize (25000);
     ec.setSearchMethod (tree);
     ec.setInputCloud (input);

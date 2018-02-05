@@ -18,6 +18,23 @@ std::string getTime() {
     return str;
 }
 
+void savePointCloudRGBNamed(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string filename) {
+    try {
+        ROS_INFO("Saving PointCloud<PointXYZRGB>");
+        std::string time_string = getTime();
+
+        std::stringstream ss;
+
+        // automatic save to $HOME/.ros folder
+
+        ss << "../../../src/vision_suturo_1718/vision/data/" << filename << "_" << time_string << ".pcd";
+        pcl::io::savePCDFileASCII(ss.str(), *cloud);
+    } catch (pcl::PCLException e) {
+        ROS_ERROR("Saving failed: %s", e.what());
+    }
+
+}
+
 void savePointCloudXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
     try {
         ROS_INFO("Saving PointCloud<PointXYZ>");
