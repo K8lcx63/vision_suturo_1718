@@ -28,6 +28,7 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/ia_ransac.h>
 
+
 std::vector<PointCloudRGBPtr>           findCluster(const PointCloudRGBPtr kinect);
 PointStamped                            findCenterGazebo();
 std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in);
@@ -43,7 +44,7 @@ PointCloudRGBPtr                apply3DFilter(PointCloudRGBPtr input,
                                               float y,
                                               float z);
 PointCloudRGBPtr                mlsFilter(PointCloudRGBPtr input);
-PointIndicesVectorPtr              euclideanClusterExtraction(PointCloudRGBPtr input);
+std::vector<PointCloudRGBPtr>   euclideanClusterExtraction(PointCloudRGBPtr input);
 PointCloudRGBPtr                voxelGridFilter(PointCloudRGBPtr input);
 PointCloudRGBPtr                outlierRemoval(PointCloudRGBPtr input);
 std::vector<float>              cvfhRecognition(PointCloudRGBPtr input);

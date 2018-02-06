@@ -73,15 +73,15 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         cloud_final = outlierRemoval(cloud_cluster);
 
         // Split cloud_final into one PointCloud per object
-        PointIndicesVectorPtr cluster_indices = euclideanClusterExtraction(cloud_final);
-        for(int i = 0; i < cluster_indices.size(); i++){
-            PointCloudRGBPtr current_cloud_final = cloud_final;
-            PointCloudRGBPtr testpcl = extractCluster(current_cloud_final, cluster_indices[i], false);
-            ROS_INFO("TESTPCL SIZE: %d", testpcl->points.size()); // Hier sind die Objekte gleich!
-            savePointCloudRGBNamed(testpcl, "testpcl"); // !
+        std::vector<PointCloudRGBPtr> result = euclideanClusterExtraction(cloud_final);
+        //for(int u = 0; u < cluster_indices.size(); u++){
+            //PointCloudRGBPtr current_cloud_final = cloud_final;
+            //PointCloudRGBPtr extracted = extractCluster(current_cloud_final, cluster_indices[u], false);
+            //ROS_INFO("EXTRACTED SIZE: %d", extracted->points.size()); // Hier sind die Objekte gleich!
+            //savePointCloudRGBNamed(extracted, "testpcl"); // !
             //result.push_back(extractCluster(current_cloud_final, cluster_indices[i], false));
-            ros::Duration(1).sleep();
-        }
+            //ros::Duration(1).sleep();
+        ROS_INFO("CALCULATED RESULT!");
 
 
         if (cloud_final->points.size() == 0) {
@@ -420,7 +420,7 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
     return result; // to vector
 }
 
-PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
+std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input){
     ROS_INFO("Euclidean Cluster Extraction!");
     pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
     tree->setInputCloud (input);
@@ -437,18 +437,28 @@ PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
 
 
     ROS_INFO("AFTER EXTRACT");
-    // PointIndicesVector to PointIndicesVectorPtr
-    PointIndicesVectorPtr cluster_indices_ptr;
-    pcl::PointIndices::Ptr tmp_indices (new pcl::PointIndices);
-    for(int n = 0; n < cluster_indices.size(); n++){
-        *tmp_indices = cluster_indices[n];
-        ROS_INFO("INDICES SIZE: %d", tmp_indices->indices.size()); // Die Objekte sind hier NOCH NICHT gleich (groß)!
-        // cluster_indices_ptr[n] = tmp_indices;
-        cluster_indices_ptr.push_back(tmp_indices);
+
+    std::vector<PointCloudRGBPtr> result;
+
+    int j = 0;
+    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
+    {
+        PointCloudRGBPtr cloud_cluster (new PointCloudRGB);
+        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
+            cloud_cluster->points.push_back (input->points[*pit]); //*
+        cloud_cluster->width = cloud_cluster->points.size ();
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
+
+        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+        j++;
+
+        result.push_back(cloud_cluster);
     }
 
+
     ROS_INFO("Finished Euclidean Cluster Extraction!");
-    return cluster_indices_ptr;
+    return result;
 }
 
 /**

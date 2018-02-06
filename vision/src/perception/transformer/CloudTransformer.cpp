@@ -19,7 +19,7 @@ PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
     ROS_INFO("Removing points below the ground plane...");
     PointCloudRGBPtr cloud_odom_combined(new PointCloudRGB);
 
-    cloud_odom_combined = CloudTransformer::transform(input, "odom_combined", "head_mount_kinect_ir_optical_frame");
+    cloud_odom_combined = CloudTransformer::transform(input, "odom_combined", "head_mount_kinect_rgb_optical_frame");
 
     // Find the bottom plane
     PointIndices planeIndices(new pcl::PointIndices);
@@ -93,45 +93,10 @@ PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
     result->width = 1;
     result->height = result->points.size();
 
-    // Now filter the whole cloud according to the calculated min and max values,
-    // eliminating all points that aren't on or above the main plane.
 
-        /*
-    PointCloudRGBPtr filtered_x(new PointCloudRGB);
-    PointCloudRGBPtr filtered_xy(new PointCloudRGB);
-
-
-
-
-
-    ROS_INFO("STARTING PASSTHROUGH FILTER");
-    pcl::PassThrough<pcl::PointXYZRGB> pass_x;
-    pass_x.setInputCloud(cloud_without_plane);
-    pass_x.setFilterFieldName("x");
-    pass_x.setFilterLimits(min_x, max_x);
-    pass_x.setKeepOrganized(false);
-    pass_x.filter(*filtered_x);
-
-    ROS_INFO("STARTING PASSTHROUGH FILTER");
-    pcl::PassThrough<pcl::PointXYZRGB> pass_y;
-    pass_y.setInputCloud(filtered_x);
-    pass_y.setFilterFieldName("y");
-    pass_y.setFilterLimits(min_y, max_y);
-    pass_y.setKeepOrganized(false);
-    pass_y.filter(*filtered_xy);
-
-    ROS_INFO("STARTING PASSTHROUGH FILTER");
-    pcl::PassThrough<pcl::PointXYZRGB> pass_z;
-    pass_z.setInputCloud(filtered_xy);
-    pass_z.setFilterFieldName("z");
-    pass_z.setFilterLimits(min_z, 5.00);
-    pass_z.setKeepOrganized(false);
-    pass_z.filter(*result);
-
-    //savePointCloudXYZNamed(result, "aaaaa");
-         */
-
-    return result; // THIS POINTCLOUD IS STILL IN ODOM_COMBINED!
+    PointCloudRGBPtr result_transformed_back (new PointCloudRGB);
+    result_transformed_back = CloudTransformer::transform(result, "head_mount_kinect_rgb_optical_frame", "odom_combined");
+    return result_transformed_back;
 
 
 };
