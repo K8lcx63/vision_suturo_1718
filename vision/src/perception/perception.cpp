@@ -44,11 +44,14 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
         cloud_3df =  apply3DFilter(kinect, 0.4, 0.4, 1.5);   // passthrough filter
         // std::cout << "after 3dfilter cluster is of size: " << cloud_3df->size() << std::endl;
+        savePointCloudRGBNamed(cloud_3df, "3df");
         cloud_voxelgridf = voxelGridFilter(cloud_3df);      // voxel grid filter
+        savePointCloudRGBNamed(cloud_voxelgridf, "voxelgrid");
         // std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
         cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
+        savePointCloudRGBNamed(cloud_mlsf, "mlsf");
         // std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
-        cloud_cluster2 = cloud_mlsf;                         // cloud_f set after last filtering function is applied
+        cloud_cluster2 = cloud_mlsf; // cloud_f set after last filtering function is applied
 
         cloud_cluster2 = transform_cloud.removeBelowPlane(cloud_cluster2);
         cloud_cluster = cloud_cluster2;

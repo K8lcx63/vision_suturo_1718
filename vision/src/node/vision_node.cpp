@@ -120,13 +120,13 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
         current_color_features = produceColorHist(all_clusters[i]);
 
         for(int x = 0; x < 1500; x++){
-            ROS_INFO("%f", current_color_features[x]);
+            //ROS_INFO("%f", current_color_features[x]);
             current_color_features_vector.push_back(current_color_features[x]);
         }
     }
 
     res.clouds.color_features = current_color_features_vector;
-    std::cout << "color_hist filling completed" << std::endl;
+    ROS_INFO("Color hist filling completed");
 
     return true;
 
