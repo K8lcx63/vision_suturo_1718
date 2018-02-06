@@ -53,11 +53,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         cloud_cluster2 = transform_cloud.extractAbovePlane(cloud_cluster2);
         cloud_cluster = cloud_cluster2;
 
-        // TODO: Irgendwas ab hier vernichtet Vorderseiten der Objekte D:
-
         // While a segmented plane would be larger than 1500 points, segment it.
-
-
         bool loop_segmentations = true;
         int segmentations_amount = 0;
         for (int n = 0; loop_segmentations; n++) {
@@ -102,6 +98,12 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // Fehler ist hier zwischen!
         savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
         savePointCloudRGBNamed(cloud_final, "final");
+        /*
+        savePointCloudRGBNamed(result[0], "object1");
+        savePointCloudRGBNamed(result[1], "object2");
+        savePointCloudRGBNamed(result[2], "object3");
+        savePointCloudRGBNamed(result[3], "object4");
+         */
 
         return result;
 
@@ -124,42 +126,37 @@ findCenterGazebo() {
  * @param object_cloud
  * @return
  */
-std::vector<geometry_msgs::PointStamped> findCenter(const std::vector<SMSGSPointCloud2> object_clouds_in) {
-    std::vector<geometry_msgs::PointStamped> result;
+std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in) {
+    std::vector<geometry_msgs::PoseStamped> result;
 
-    // convert pointclouds
-    std::vector<PointCloudRGBPtr> object_clouds;
-    PointCloudRGBPtr temp(new PointCloudRGB);
-    for (int i = 0; i < object_clouds_in.size(); i++) {
-        pcl::fromROSMsg(object_clouds_in[i], *temp);
-        object_clouds[i] = temp;
+    for (int i = 0; i < clouds_in.size(); i++){
+        geometry_msgs::PoseStamped current_pose;
+        PointCloudRGBPtr current_cloud = clouds_in.at(i);
+
+        ROS_INFO("CALCULATING CENTROID FOR OBJECT %d", i);
+        // Calculate centroids
+        Eigen::Vector4f centroid;
+        pcl::compute3DCentroid(*current_cloud, centroid);
+        current_pose.pose.position.x = centroid.x();
+        current_pose.pose.position.y = centroid.y();
+        current_pose.pose.position.z = centroid.z();
+
+        ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
+        ROS_INFO("\x1B[32mX: %f\n", current_pose.pose.position.x);
+        ROS_INFO("\x1B[32mY: %f\n", current_pose.pose.position.y);
+        ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
+
+        // Calculate quaternions
+        // TODO: QUATERNIONS!
+
+        // Add header
+        current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
+
+        // Add this PoseStamped to result vector
+        result.push_back(current_pose);
     }
 
-    // calculate centroids
-
-    PointCloudRGBPtr object_cloud = object_clouds[0];
-        if (object_cloud->points.size() != 0) {
-            int cloud_size = object_cloud->points.size();
-
-            Eigen::Vector4f centroid;
-
-            pcl::compute3DCentroid(*object_cloud, centroid);
-
-            centroid_stamped_perc.point.x = centroid.x();
-            centroid_stamped_perc.point.y = centroid.y();
-            centroid_stamped_perc.point.z = centroid.z();
-
-            ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
-            ROS_INFO("\x1B[32mX: %f\n", centroid_stamped_perc.point.x);
-            ROS_INFO("\x1B[32mY: %f\n", centroid_stamped_perc.point.y);
-            ROS_INFO("\x1B[32mZ: %f\n", centroid_stamped_perc.point.z);
-            centroid_stamped_perc.header.frame_id = "/head_mount_kinect_ir_optical_frame";
-
-            result.push_back(centroid_stamped_perc);
-        } else {
-            ROS_ERROR("CLOUD EMPTY. NO POINT EXTRACTED");
-        }
-
+    return result;
 }
 
 /**

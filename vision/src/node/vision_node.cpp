@@ -92,10 +92,13 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     // Execute findCluster()
     std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
+    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
     ROS_INFO("findCluster completed!");
+
     // Calculate features and put them into the message response
     std::vector<float> current_features;
     std::vector<float> current_features_vector;
+
     int object_amount = 0;
     for(int i = 0; i < all_clusters.size(); i++) {
         current_features = cvfhRecognition(all_clusters[i]);
@@ -107,6 +110,7 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     }
     res.clouds.object_amount = object_amount;
     res.clouds.normal_features = current_features_vector;
+    res.clouds.object_poses = all_poses;
 
     std::cout << "cvfh filling completed" << std::endl;
 

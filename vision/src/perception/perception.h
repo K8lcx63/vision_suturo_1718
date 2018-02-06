@@ -5,6 +5,7 @@
 #ifndef VISION_PERCEPTION_H
 #define VISION_PERCEPTION_H
 #include <geometry_msgs/PointStamped.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <ros/ros.h>
 #include <pcl_conversions/pcl_conversions.h>
@@ -27,9 +28,9 @@
 #include <pcl/registration/icp.h>
 #include <pcl/registration/ia_ransac.h>
 
-std::vector<PointCloudRGBPtr>   findCluster(const PointCloudRGBPtr kinect);
-PointStamped                    findCenterGazebo();
-std::vector<PointStamped>       findCenter(const std::vector<sensor_msgs::PointCloud2> object_cloud);
+std::vector<PointCloudRGBPtr>           findCluster(const PointCloudRGBPtr kinect);
+PointStamped                            findCenterGazebo();
+std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in);
 PointCloudNormalPtr             estimateSurfaceNormals(PointCloudRGBPtr input);
 PointCloudPointNormalPtr        createPointNormals(PointCloudRGBPtr input,
                                                    PointCloudNormalPtr normals);
