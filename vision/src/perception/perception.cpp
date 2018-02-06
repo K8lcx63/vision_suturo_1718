@@ -53,9 +53,8 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
         cloud_cluster2 = cloud_mlsf; // cloud_f set after last filtering function is applied
 
-        cloud_cluster2 = transform_cloud.removeBelowPlane(cloud_cluster2);
+        cloud_cluster2 = transform_cloud.extractAbovePlane(cloud_cluster2);
         cloud_cluster = cloud_cluster2;
-        // std::cout << "cluster after removeBelowPlane is of size: " << cloud_cluster->size() << std::endl;
 
         // TODO: Irgendwas ab hier vernichtet Vorderseiten der Objekte D:
 
@@ -94,7 +93,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
         error_message_perc = "";
         savePointCloudRGBNamed(kinect, "unprocessed");
-        savePointCloudRGBNamed(cloud_cluster2, "removedBelowPlane");
+        savePointCloudRGBNamed(cloud_cluster2, "abovePlane");
         savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
         savePointCloudRGBNamed(cloud_final, "final");
 

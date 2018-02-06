@@ -29,7 +29,7 @@ public:
     explicit CloudTransformer(ros::NodeHandle nh);
     PointCloudRGBPtr transform(const PointCloudRGBPtr cloud, std::string target_frame,
                                std::string source_frame) ;
-    PointCloudRGBPtr removeBelowPlane(PointCloudRGBPtr input) ;
+    PointCloudRGBPtr extractAbovePlane(PointCloudRGBPtr input) ;
 
 };
 
