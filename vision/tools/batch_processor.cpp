@@ -27,7 +27,7 @@
 #include <pcl/visualization/point_cloud_color_handlers.h>
 #include <sensor_msgs/PointCloud2.h>
 
-typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudXYZPtr;
+
 typedef pcl::PointCloud<pcl::PointXYZRGBA>::Ptr PointCloudRGBAPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
 typedef pcl::PointCloud<pcl::PointNormal>::Ptr PointCloudPointNormalPtr;
@@ -105,7 +105,8 @@ std::vector<float> cvfhRecognition(PointCloudRGBAPtr input) {
  * @param input
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
-std::vector<int> produceColorHist(PointCloudRGBAPtr  cloud){
+std::vector<int> produceColorHist(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr  cloud){
+
 
     //input->resize(500); // resize for vector messages
 
@@ -117,17 +118,30 @@ std::vector<int> produceColorHist(PointCloudRGBAPtr  cloud){
 
     for (size_t i = 0; i <  cloud->size(); i++){
         pcl::PointXYZRGBA p = cloud->points[i];
-        uint32_t rgba = *reinterpret_cast<int*>(&p,rgba);
+
+        uint32_t rgba = p.rgb;// *reinterpret_cast<int*>(&p.rgb);
         uint8_t r = (rgba >> 16) & 0x0000ff;
         uint8_t g = (rgba >> 8)  & 0x0000ff;
         uint8_t b = (rgba)       & 0x0000ff;
+/*
+            unsigned color = *(const float *)&p.rgba;
+            unsigned  r = color & 0xff;
+            unsigned  g = (color >> 8) & 0xff;
+            unsigned  b = (color >> 16) & 0xff;
+            printf("%ul,%ul,%ul\n", r, g, b);
+*/
+        red.push_back(p.r);
+        green.push_back(p.g);
+        blue.push_back(p.b);
 
-        red.push_back(r);
-        green.push_back(g);
-        blue.push_back(b);
-        std::cout << "cloud->points[i].r " << r << std::endl;
-        std::cout << "cloud->points[i].g " << g << std::endl;
-        std::cout << "cloud->points[i].b " << b << std::endl;
+        std::cout << "r " << r << std::endl;
+        std::cout << "g " << g << std::endl;
+        std::cout << "b " << b << std::endl;
+
+        std::cout << "r as int " << (int) r << std::endl;
+        std::cout << "g as int " << (int) g << std::endl;
+        std::cout << "b as int " << (int) b << std::endl;
+
 
     }
 
@@ -141,34 +155,36 @@ std::vector<int> produceColorHist(PointCloudRGBAPtr  cloud){
 }
 
 
-void batchPCD2histograms(std::string input, std::string object_name) {
+void batchPCD2histograms(std::string input) {
     std::ifstream is(input.c_str());
     std::string line;
     std::string line_trimmed;
     while (getline(is, line)) {
-        PointCloudRGBAPtr input_cloud (new PointCloudRGBA);
+        pcl::PointCloud<pcl::PointXYZRGBA>::Ptr input_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+        // sensor_msgs::PointCloud2Ptr test (new sensor_msgs::PointCloud2); // undefined reference to `ros::TimeBase<ros::Time, ros::Duration>::fromNSec(unsigned long)'
+        // pcl::PCLPointCloud2Ptr input_pclpc2 (new pcl::PCLPointCloud2);
         std::vector<float> input_cvfhs_features;
         std::vector<int> input_color_features;
 
         // load file
-        if (pcl::io::loadPCDFile(line, *input_cloud) != 0){
 
+        if (pcl::io::loadPCDFile<pcl::PointXYZRGBA>(line, *input_cloud) != 0){ // Failed to find match for field 'rgba'.
+
+            line.erase(line.size() - 4, 4);
             std::string normals = line + "_normals_histogram.csv";
             std::string colors = line + "_colors_histogram.csv";
             std::ofstream os_normals(normals.c_str());
             std::ofstream os_colors(colors.c_str());
 
-            // save features to .csv
-            os_normals << object_name << ", no_values ";
-            os_colors << object_name << ", no_values";
+            // save empty .csv
 
             os_normals.close();
             os_colors.close();
 
         } else {
-            pcl::io::loadPCDFile(line, *input_cloud);
+            //pcl::io::savePCDFile(line + ".CONV.pcd", *input_pclpc2);
 
-
+            //pcl::io::loadPCDFile<pcl::PointXYZRGBA>(line + ".CONV.pcd", *input_cloud);
             line.erase(line.size() - 4, 4);
             std::string normals = line + "_normals_histogram.csv";
             std::string colors = line + "_colors_histogram.csv";
@@ -185,11 +201,26 @@ void batchPCD2histograms(std::string input, std::string object_name) {
 
 
             // save features to .csv
-            os_normals << object_name << ", ";
-            os_colors << object_name << ", ";
 
-            for (int i = 0; i < input_cvfhs_features.size(); i++) os_normals << input_cvfhs_features[i] << ", ";
-            for (int j = 0; j < input_color_features.size(); j++) os_colors << input_color_features[j] << ", ";
+            for (int i = 0; i < input_cvfhs_features.size(); i++) {
+                if (input_cvfhs_features.size() != i) {
+                    os_normals << input_cvfhs_features[i] << ", ";
+                } else {
+                    os_normals << input_cvfhs_features[i];
+
+                }
+            }
+
+            for (int j = 0; j < input_color_features.size(); j++) {
+                if (input_color_features.size() != j){
+                    os_colors << input_color_features[j] << ", ";
+
+                } else {
+                    os_colors << input_color_features[j];
+
+                }
+            }
+
 
             os_normals.close();
             os_colors.close();
@@ -199,7 +230,7 @@ void batchPCD2histograms(std::string input, std::string object_name) {
 }
 
 int main(int argc, char** argv){
-    batchPCD2histograms(argv[1], argv[2]);
+    batchPCD2histograms(argv[1]);
     return 0;
 }
 
