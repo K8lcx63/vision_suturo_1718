@@ -48,28 +48,31 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
         cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
         // std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
-        cloud_cluster2 = cloud_mlsf;                         // cloud_f set after last filtering function is applied
+        cloud_cluster2 = cloud_mlsf; // cloud_f set after last filtering function is applied
 
-        cloud_cluster2 = transform_cloud.removeBelowPlane(cloud_cluster2);
+        cloud_cluster2 = transform_cloud.extractAbovePlane(cloud_cluster2);
         cloud_cluster = cloud_cluster2;
-        // std::cout << "cluster after removeBelowPlane is of size: " << cloud_cluster->size() << std::endl;
 
         // TODO: Irgendwas ab hier vernichtet Vorderseiten der Objekte D:
 
-        // While a segmented plane would be larger than 500 points, segment it.
-        bool loop_plane_segmentations = true;
-        int amount_plane_segmentations = 0;
-        while (loop_plane_segmentations) {
+        // While a segmented plane would be larger than 1500 points, segment it.
+
+
+        bool loop_segmentations = true;
+        int segmentations_amount = 0;
+        for (int n = 0; loop_segmentations; n++) {
             plane_indices = estimatePlaneIndices(cloud_cluster);
-            if (plane_indices->indices.size() > 500)         // is the extracted plane big enough?
+            if (plane_indices->indices.size() > 1500)         // is the extracted plane big enough?
             {
                 ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
                 ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
                 cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
-                amount_plane_segmentations++;
-            } else loop_plane_segmentations = false;          // if not big enough, stop looping.
+                n++;
+            } else loop_segmentations = false;          // if not big enough, stop looping.
+            segmentations_amount = n;
         }
-        ROS_INFO("Extracted %d planes!", amount_plane_segmentations);
+        ROS_INFO("Extracted %d planes!", segmentations_amount);
+
 
         cloud_final = outlierRemoval(cloud_cluster);
 
@@ -90,8 +93,13 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         }
 
         error_message_perc = "";
+
         savePointCloudRGBNamed(kinect, "unprocessed");
-        savePointCloudRGBNamed(cloud_cluster2, "removedBelowPlane");
+        savePointCloudRGBNamed(cloud_3df, "3df");
+        savePointCloudRGBNamed(cloud_voxelgridf, "voxelgrid");
+        savePointCloudRGBNamed(cloud_mlsf, "mlsf");
+        savePointCloudRGBNamed(cloud_cluster2, "abovePlane");
+        // Fehler ist hier zwischen!
         savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
         savePointCloudRGBNamed(cloud_final, "final");
 
@@ -245,20 +253,14 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
  */
 PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
 
-
-
     ROS_INFO("Starting plane indices estimation");
     PointIndices planeIndices(new pcl::PointIndices);
     pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
     pcl::SACSegmentation<pcl::PointXYZRGB> segmentation;
 
     segmentation.setInputCloud(input);
-    //segmentation.setModelType(pcl::SACMODEL_PERPENDICULAR_PLANE); // PERPENDICULAR
     segmentation.setModelType(pcl::SACMODEL_PLANE);
     segmentation.setMethodType(pcl::SAC_RANSAC);
-    //segmentation.setMaxIterations(500); // Default is 50 and could be problematic
-    //segmentation.setAxis(Eigen::Vector3f(0,1,0));
-    //segmentation.setEpsAngle(30.0); // plane can be within 30 degrees of X-Z plane - 30.0f * (M_PI/180.0f)
     segmentation.setDistanceThreshold(0.01); // Distance to model points
     segmentation.setOptimizeCoefficients(true);
     segmentation.segment(*planeIndices, *coefficients);
