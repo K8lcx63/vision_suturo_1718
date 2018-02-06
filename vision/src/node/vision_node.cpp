@@ -93,10 +93,7 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     // Execute findCluster()
     std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
     ROS_INFO("findCluster completed!");
-
     // Calculate features and put them into the message response
-
-
     std::vector<float> current_features;
     std::vector<float> current_features_vector;
     int object_amount = 0;
