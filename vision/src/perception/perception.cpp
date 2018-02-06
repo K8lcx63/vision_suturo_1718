@@ -75,7 +75,12 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // Split cloud_final into one PointCloud per object
         PointIndicesVectorPtr cluster_indices = euclideanClusterExtraction(cloud_final);
         for(int i = 0; i < cluster_indices.size(); i++){
-            result.push_back(extractCluster(cloud_final, cluster_indices[i], false));
+            PointCloudRGBPtr current_cloud_final = cloud_final;
+            PointCloudRGBPtr testpcl = extractCluster(current_cloud_final, cluster_indices[i], false);
+            ROS_INFO("TESTPCL SIZE: %d", testpcl->points.size()); // Hier sind die Objekte gleich!
+            savePointCloudRGBNamed(testpcl, "testpcl"); // !
+            //result.push_back(extractCluster(current_cloud_final, cluster_indices[i], false));
+            ros::Duration(1).sleep();
         }
 
 
@@ -98,12 +103,12 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // Fehler ist hier zwischen!
         savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
         savePointCloudRGBNamed(cloud_final, "final");
-        /*
+
         savePointCloudRGBNamed(result[0], "object1");
         savePointCloudRGBNamed(result[1], "object2");
         savePointCloudRGBNamed(result[2], "object3");
         savePointCloudRGBNamed(result[3], "object4");
-         */
+
 
         return result;
 
@@ -131,7 +136,7 @@ std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRG
 
     for (int i = 0; i < clouds_in.size(); i++){
         geometry_msgs::PoseStamped current_pose;
-        PointCloudRGBPtr current_cloud = clouds_in.at(i);
+        PointCloudRGBPtr current_cloud = clouds_in[i];
 
         ROS_INFO("CALCULATING CENTROID FOR OBJECT %d", i);
         // Calculate centroids
@@ -430,12 +435,15 @@ PointIndicesVectorPtr euclideanClusterExtraction(PointCloudRGBPtr input){
     ROS_INFO("BEFORE EXTRACT");
     ec.extract (cluster_indices);
 
+
     ROS_INFO("AFTER EXTRACT");
     // PointIndicesVector to PointIndicesVectorPtr
     PointIndicesVectorPtr cluster_indices_ptr;
     pcl::PointIndices::Ptr tmp_indices (new pcl::PointIndices);
     for(int n = 0; n < cluster_indices.size(); n++){
         *tmp_indices = cluster_indices[n];
+        ROS_INFO("INDICES SIZE: %d", tmp_indices->indices.size()); // Die Objekte sind hier NOCH NICHT gleich (groß)!
+        // cluster_indices_ptr[n] = tmp_indices;
         cluster_indices_ptr.push_back(tmp_indices);
     }
 
