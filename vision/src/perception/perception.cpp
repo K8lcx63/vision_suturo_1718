@@ -58,7 +58,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         int segmentations_amount = 0;
         for (int n = 0; loop_segmentations; n++) {
             plane_indices = estimatePlaneIndices(cloud_cluster);
-            if (plane_indices->indices.size() > 1500)         // is the extracted plane big enough?
+            if (plane_indices->indices.size() > 12000)         // is the extracted plane big enough?
             {
                 ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
                 ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
@@ -70,17 +70,12 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         ROS_INFO("Extracted %d planes!", segmentations_amount);
 
 
-        cloud_final = outlierRemoval(cloud_cluster);
+        cloud_final = cloud_cluster; // We currently don't need outlierRemoval here, because euclideanClusterExtraction
+        // already has a set minimum point value, which causes smaller clusters / amounts of outliers  to be extracted
+        // anyway.
 
         // Split cloud_final into one PointCloud per object
         std::vector<PointCloudRGBPtr> result = euclideanClusterExtraction(cloud_final);
-        //for(int u = 0; u < cluster_indices.size(); u++){
-            //PointCloudRGBPtr current_cloud_final = cloud_final;
-            //PointCloudRGBPtr extracted = extractCluster(current_cloud_final, cluster_indices[u], false);
-            //ROS_INFO("EXTRACTED SIZE: %d", extracted->points.size()); // Hier sind die Objekte gleich!
-            //savePointCloudRGBNamed(extracted, "testpcl"); // !
-            //result.push_back(extractCluster(current_cloud_final, cluster_indices[i], false));
-            //ros::Duration(1).sleep();
         ROS_INFO("CALCULATED RESULT!");
 
 
@@ -353,7 +348,7 @@ PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input) {
 
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud(input);
-    sor.setLeafSize(0.01f, 0.01f, 0.01f);
+    sor.setLeafSize(0.005f, 0.005f, 0.005f);
     sor.filter(*result);
     return result;
 }
@@ -428,8 +423,8 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
 
     PointIndicesVector cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance (0.02); // 4cm
-    ec.setMinClusterSize (100);
+    ec.setClusterTolerance (0.01); // 4cm
+    ec.setMinClusterSize (300);
     ec.setMaxClusterSize (25000);
     ec.setSearchMethod (tree);
     ec.setInputCloud (input);
