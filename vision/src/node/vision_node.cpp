@@ -108,15 +108,12 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
             current_features_vector.push_back(current_features[x]);
         }
     }
-    res.clouds.object_amount = object_amount;
-    res.clouds.normal_features = current_features_vector;
-    res.clouds.object_poses = all_poses;
 
-    std::cout << "cvfh filling completed" << std::endl;
+    ROS_INFO("cvfh filling completed");
 
     // do the same for the color histogram
-    std::vector<float> current_color_features;
-    std::vector<float> current_color_features_vector;
+    std::vector<uint8_t> current_color_features;
+    std::vector<uint8_t> current_color_features_vector;
     for(int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
 
@@ -125,9 +122,13 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
             current_color_features_vector.push_back(current_color_features[x]);
         }
     }
+    ROS_INFO("Color hist filling completed");
 
     res.clouds.color_features = current_color_features_vector;
-    ROS_INFO("Color hist filling completed");
+    res.clouds.object_amount = object_amount;
+    res.clouds.normal_features = current_features_vector;
+    res.clouds.object_poses = all_poses;
+
 
     return true;
 
