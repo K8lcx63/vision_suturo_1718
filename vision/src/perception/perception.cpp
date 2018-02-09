@@ -104,11 +104,12 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
         savePointCloudRGBNamed(cloud_final, "final");
 
-        savePointCloudRGBNamed(result[0], "object1");
-        savePointCloudRGBNamed(result[1], "object2");
-        savePointCloudRGBNamed(result[2], "object3");
-        savePointCloudRGBNamed(result[3], "object4");
+        for (int i = 0; i < result.size(); i++){
+            std::stringstream obj_files;
+            obj_files << "./object" << i << ".pcd";
+            savePointCloudRGBNamed(result[i], obj_files.str());
 
+        }
 
         return result;
 
@@ -557,19 +558,28 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  * @param input
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
-std::vector<float> produceColorHist(PointCloudRGBPtr input){
+std::vector<uint8_t> produceColorHist(PointCloudRGBPtr cloud){
 
-    input->resize(500); // resize for vector messages
+    cloud->resize(500); // resize for vector messages
 
-    std::vector<float> red;
-    std::vector<float> green;
-    std::vector<float> blue;
-    std::vector<float> result;
+    std::vector<uint8_t> red;
+    std::vector<uint8_t> green;
+    std::vector<uint8_t> blue;
+    std::vector<uint8_t> result;
 
-    for (size_t i = 0; i < input->size(); i++){
-        red.push_back(input->points.at(i).r);
-        green.push_back(input->points.at(i).g);
-        blue.push_back(input->points.at(i).b);
+
+    for (size_t i = 0; i <  cloud->size(); i++){
+        pcl::PointXYZRGB p = cloud->points[i];
+
+        uint32_t rgba = *reinterpret_cast<int*>(&p.rgba);
+        uint8_t r = (rgba >> 16) & 0x0000ff;
+        uint8_t g = (rgba >> 8)  & 0x0000ff;
+        uint8_t b = (rgba)       & 0x0000ff;
+
+        red.push_back(p.r);
+        green.push_back(p.g);
+        blue.push_back(p.b);
+
 
     }
 
@@ -577,7 +587,6 @@ std::vector<float> produceColorHist(PointCloudRGBPtr input){
     result.insert(result.begin(),red.begin(),red.end());
     result.insert(result.end(),green.begin(),green.end());
     result.insert(result.end(),blue.begin(),blue.end());
-
 
     return result;
 
