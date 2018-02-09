@@ -108,6 +108,8 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         savePointCloudRGBNamed(result[1], "object2");
         savePointCloudRGBNamed(result[2], "object3");
         savePointCloudRGBNamed(result[3], "object4");
+        savePointCloudRGBNamed(result[4], "object5");
+        savePointCloudRGBNamed(result[5], "object6");
 
 
         return result;
@@ -366,8 +368,8 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
     PointCloudRGBPtr cloud_filtered(new PointCloudRGB);
     pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
     sor.setInputCloud(input);
-    sor.setMeanK(25);
-    sor.setStddevMulThresh(1.0);
+    sor.setMeanK(50);
+    sor.setStddevMulThresh(2.0);
     sor.filter(*cloud_filtered);
 
     return cloud_filtered;
@@ -427,8 +429,8 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
 
     PointIndicesVector cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance (0.04); // 4cm
-    ec.setMinClusterSize (50);
+    ec.setClusterTolerance (0.02); // 4cm
+    ec.setMinClusterSize (100);
     ec.setMaxClusterSize (25000);
     ec.setSearchMethod (tree);
     ec.setInputCloud (input);
