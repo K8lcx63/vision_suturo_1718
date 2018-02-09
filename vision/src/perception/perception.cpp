@@ -1,6 +1,29 @@
 #include "perception.h"
 
 geometry_msgs::PointStamped centroid_stamped_perc;
+int best_ia_index = 0;
+
+std::string mesh_array[] = {"cup_eco_orange.pcd",
+                            "edeka_red_bowl.pcd",
+                            "hela_curry_ketchup.pcd",
+                            "ja_milch.pcd",
+                            "kellogs_toppas_mini.pcd",
+                            "koelln_muesli_knusper_honig_nuss.pcd",
+                            "pringles_paprika.pcd",
+                            "pringles_salt.pcd",
+                            "sigg_bottle.pcd",
+                            "tomato_sauce_oro_di_parma.pcd"};
+
+enum mesh_enum{ CUP_ECO_ORANGE,
+    EDEKA_RED_BOWL,
+    HELA_CURRY_KETCHUP,
+    JA_MILCH,
+    KELLOGS_TOPPAS_MINI,
+    KOELLN_MUESLI_KNUSPER_HONIG_NUSS,
+    PRINGLES_PAPRIKA,
+    PRINGLES_SALT,
+    SIGG_BOTTLE,
+    TOMATO_SAUCE_ORO_DI_PARMA};
 
 std::string error_message_perc;
 
@@ -127,7 +150,7 @@ findCenterGazebo() {
  * @param object_cloud
  * @return
  */
-std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in) {
+std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in, std::vector<PointCloudVFHS308Ptr> vfhs_vector) {
     std::vector<geometry_msgs::PoseStamped> result;
 
     for (int i = 0; i < clouds_in.size(); i++){
@@ -148,13 +171,27 @@ std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRG
         ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
 
         // Calculate quaternions
-        // TODO: QUATERNIONS!
+        int cad_models_size = 10; // max models
+        geometry_msgs::Quaternion q_msg;
 
-        // Add header
-        current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
+        //find best match for objects given
+        for (int x = 0; x < cad_models_size; x++){
+            PointCloudRGBPtr cloud_target (new PointCloudRGB);
+            PointCloudRGBPtr transformed_cloud (new PointCloudRGB);
 
-        // Add this PoseStamped to result vector
-        result.push_back(current_pose);
+            pcl::io::loadPCDFile("../../common_suturo1718/mesh_pcd/" + mesh_array[x], *cloud_target);
+
+            transformed_cloud = SACInitialAlignment(clouds_in, vfhs_vector, cloud_target);
+            // Add header
+            current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
+
+            // Add this PoseStamped to result vector
+            Eigen::Quaternion q =  transformed_cloud->sensor_orientation_;
+            tf::quaternionEigenToMsg(q, q_msg);
+
+        }
+        result.at(best_ia_index).pose.orientation = q_msg;
+
     }
 
     return result;
@@ -374,13 +411,12 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
  * @param input
  * @return
  */
- std::vector<float> cvfhRecognition(PointCloudRGBPtr input) {
+ PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
     ROS_INFO("CVFH Recognition!");
-    std::vector<float> result;
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
     // Object for storing the CVFH descriptors.
-    pcl::PointCloud<pcl::VFHSignature308>::Ptr descriptors(new pcl::PointCloud<pcl::VFHSignature308>);
+    PointCloudVFHS308Ptr descriptors(new pcl::PointCloud<pcl::VFHSignature308>);
 
     // Estimate the normals of the object.
     normals = estimateSurfaceNormals(input);
@@ -409,11 +445,8 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
     //float x [308] = descriptors->points[0].histogram; // Save calculated histogram in a float array
     //std::vector<float> result(x, x + sizeof x / sizeof x[0]);
     //std::vector<float> result(std::begin(descriptors->points[0].histogram), std::end(descriptors->points[0].histogram)); // Array to vector
-    for (size_t i = 0; i < 308; i++){
-        result.push_back(descriptors->points[0].histogram[i]);
-    }
 
-    return result; // to vector
+    return descriptors; // to vector
 }
 
 std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input){
@@ -525,6 +558,8 @@ PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
 
     pcl::transformPointCloud(*objects[best_index], *result, transformation_matrices[best_index]);
 
+    best_ia_index = best_index;
+
     return result;
 }
 
@@ -566,10 +601,10 @@ std::vector<uint8_t> produceColorHist(PointCloudRGBPtr cloud){
     for (size_t i = 0; i <  cloud->size(); i++){
         pcl::PointXYZRGB p = cloud->points[i];
 
-        uint32_t rgba = *reinterpret_cast<int*>(&p.rgba);
-        uint8_t r = (rgba >> 16) & 0x0000ff;
-        uint8_t g = (rgba >> 8)  & 0x0000ff;
-        uint8_t b = (rgba)       & 0x0000ff;
+        uint32_t rgb = *reinterpret_cast<int*>(&p.rgb);
+        uint8_t r = (rgb >> 16) & 0x0000ff;
+        uint8_t g = (rgb >> 8)  & 0x0000ff;
+        uint8_t b = (rgb)       & 0x0000ff;
 
         red.push_back(p.r);
         green.push_back(p.g);

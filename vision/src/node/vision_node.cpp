@@ -92,20 +92,23 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     // Execute findCluster()
     std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
-    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
     ROS_INFO("findCluster completed!");
 
     // Calculate features and put them into the message response
-    std::vector<float> current_features;
     std::vector<float> current_features_vector;
-
+    std::vector<PointCloudVFHS308Ptr> vfhs_vector;
+    PointCloudVFHS308Ptr vfhs (new pcl::PointCloud<pcl::VFHSignature308>);
     int object_amount = 0;
     for(int i = 0; i < all_clusters.size(); i++) {
-        current_features = cvfhRecognition(all_clusters[i]);
+        vfhs = cvfhRecognition(all_clusters[i]);
+        vfhs_vector.push_back(vfhs);
         object_amount++;
+    }
+    for (int j = 0; j < vfhs_vector.size(); j++){
+
         for(int x = 0; x < 308; x++){
             //ROS_INFO("%f", current_features[x]);
-            current_features_vector.push_back(current_features[x]);
+            current_features_vector.push_back(vfhs->points[0].histogram[x]);
         }
     }
 
@@ -123,6 +126,11 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
         }
     }
     ROS_INFO("Color hist filling completed");
+
+    // estimate poses (quaternions)
+
+    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters, vfhs_vector);
+
 
     res.clouds.color_features = current_color_features_vector;
     res.clouds.object_amount = object_amount;
