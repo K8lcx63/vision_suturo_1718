@@ -120,7 +120,7 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     for(int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
 
-        for(int x = 0; x < 1500; x++){
+        for(int x = 0; x < 6000; x++){
             //ROS_INFO("%f", current_color_features[x]);
             current_color_features_vector.push_back(current_color_features[x]);
         }
@@ -129,7 +129,8 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     // estimate poses (quaternions)
 
-    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters, vfhs_vector);
+
+    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
 
 
     res.clouds.color_features = current_color_features_vector;

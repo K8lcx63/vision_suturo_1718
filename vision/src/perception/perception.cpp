@@ -153,7 +153,7 @@ findCenterGazebo() {
  * @param object_cloud
  * @return
  */
-std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in, std::vector<PointCloudVFHS308Ptr> vfhs_vector) {
+std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in) {
     std::vector<geometry_msgs::PoseStamped> result;
 
     for (int i = 0; i < clouds_in.size(); i++){
@@ -174,27 +174,13 @@ std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRG
         ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
 
         // Calculate quaternions
-        int cad_models_size = 10; // max models
-        geometry_msgs::Quaternion q_msg;
+        // TODO: QUATERNIONS!
 
-        //find best match for objects given
-        for (int x = 0; x < cad_models_size; x++){
-            PointCloudRGBPtr cloud_target (new PointCloudRGB);
-            PointCloudRGBPtr transformed_cloud (new PointCloudRGB);
+        // Add header
+        current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
 
-            //pcl::io::loadPCDFile("../../common_suturo1718/mesh_pcd/" + mesh_array[x], *cloud_target);
-
-            //transformed_cloud = SACInitialAlignment(clouds_in, vfhs_vector, cloud_target);
-            // Add header
-            current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
-
-            // Add this PoseStamped to result vector
-            // Eigen::Quaternionf q =  transformed_cloud->sensor_orientation_;
-            //tf::quaternionEigenToMsg(q, q_msg);
-
-        }
-        //result.at(best_ia_index).pose.orientation = q_msg;
-
+        // Add this PoseStamped to result vector
+        result.push_back(current_pose);
     }
 
     return result;
