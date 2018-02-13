@@ -593,7 +593,7 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  */
 std::vector<uint8_t> produceColorHist(PointCloudRGBPtr cloud){
 
-    cloud->resize(500); // resize for vector messages
+    cloud->resize(2000); // resize for vector messages
 
     std::vector<uint8_t> red;
     std::vector<uint8_t> green;
