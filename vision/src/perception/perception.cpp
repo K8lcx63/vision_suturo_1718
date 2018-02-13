@@ -122,14 +122,15 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // Fehler ist hier zwischen!
         savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
         savePointCloudRGBNamed(cloud_final, "final");
-         **/
 
         for (int i = 0; i < result.size(); i++){
             std::stringstream obj_files;
-            obj_files << "./object" << i << ".pcd";
+            obj_files << "object_" << i;
             savePointCloudRGBNamed(result[i], obj_files.str());
 
         }
+        savePointCloudRGBNamed(kinect, "scene");
+        **/
 
         return result;
 
@@ -181,18 +182,18 @@ std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRG
             PointCloudRGBPtr cloud_target (new PointCloudRGB);
             PointCloudRGBPtr transformed_cloud (new PointCloudRGB);
 
-            pcl::io::loadPCDFile("../../common_suturo1718/mesh_pcd/" + mesh_array[x], *cloud_target);
+            //pcl::io::loadPCDFile("../../common_suturo1718/mesh_pcd/" + mesh_array[x], *cloud_target);
 
-            transformed_cloud = SACInitialAlignment(clouds_in, vfhs_vector, cloud_target);
+            //transformed_cloud = SACInitialAlignment(clouds_in, vfhs_vector, cloud_target);
             // Add header
             current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
 
             // Add this PoseStamped to result vector
-            Eigen::Quaternion q =  transformed_cloud->sensor_orientation_;
-            tf::quaternionEigenToMsg(q, q_msg);
+            // Eigen::Quaternionf q =  transformed_cloud->sensor_orientation_;
+            //tf::quaternionEigenToMsg(q, q_msg);
 
         }
-        result.at(best_ia_index).pose.orientation = q_msg;
+        //result.at(best_ia_index).pose.orientation = q_msg;
 
     }
 

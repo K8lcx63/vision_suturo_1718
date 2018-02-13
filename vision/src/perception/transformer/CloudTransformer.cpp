@@ -73,7 +73,7 @@ PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
     PointCloudRGBPtr cloud_without_plane(new PointCloudRGB);
     PointCloudRGBPtr result(new PointCloudRGB);
     cloud_without_plane = extractCluster(cloud_odom_combined, planeIndices, true);
-    savePointCloudRGBNamed(cloud_without_plane, "without_plane");
+    // savePointCloudRGBNamed(cloud_without_plane, "without_plane");
 
     ROS_INFO("Plane height: %f", min_z);
     ROS_INFO("min_x: %f", min_x);
