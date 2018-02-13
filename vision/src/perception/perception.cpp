@@ -70,7 +70,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         cloud_voxelgridf = voxelGridFilter(cloud_3df);      // voxel grid filter
         // std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
         cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
-        // std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
+        std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
         cloud_cluster2 = cloud_mlsf; // cloud_f set after last filtering function is applied
 
         cloud_cluster2 = transform_cloud.extractAbovePlane(cloud_cluster2);
@@ -113,6 +113,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
         error_message_perc = "";
 
+        /**
         savePointCloudRGBNamed(kinect, "unprocessed");
         savePointCloudRGBNamed(cloud_3df, "3df");
         savePointCloudRGBNamed(cloud_voxelgridf, "voxelgrid");
@@ -121,6 +122,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         // Fehler ist hier zwischen!
         savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
         savePointCloudRGBNamed(cloud_final, "final");
+         **/
 
         for (int i = 0; i < result.size(); i++){
             std::stringstream obj_files;

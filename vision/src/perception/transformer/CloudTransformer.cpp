@@ -39,11 +39,12 @@ PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
     PointCloudRGBPtr plane(new PointCloudRGB);
     plane = extractCluster(cloud_odom_combined, planeIndices, false); // extract the plane
 
-    ROS_INFO("TRYING TO SAVE THE GROUND PLANE");
-    savePointCloudRGBNamed(plane, "ground_plane");
+    //ROS_INFO("TRYING TO SAVE THE GROUND PLANE");
+    //savePointCloudRGBNamed(plane, "ground_plane");
 
     // Calculate min and max values of the main plane.
 
+    ROS_INFO("BEFORE CALCULATING MIN AND MAX VALUES");
     float min_x = plane->points[0].x;
     float min_y = plane->points[0].y;
     float min_z = plane->points[0].z;
