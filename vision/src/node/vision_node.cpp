@@ -115,14 +115,14 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     ROS_INFO("cvfh filling completed");
 
     // do the same for the color histogram
-    std::vector<uint8_t> current_color_features;
+    std::vector<int> current_color_features;
     std::vector<uint8_t> current_color_features_vector;
     for(int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
 
         for(int x = 0; x < 6000; x++){
             //ROS_INFO("%f", current_color_features[x]);
-            current_color_features_vector.push_back(current_color_features[x]);
+            current_color_features_vector.push_back((uint8_t)current_color_features[x]);
         }
     }
     ROS_INFO("Color hist filling completed");
