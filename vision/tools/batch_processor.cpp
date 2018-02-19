@@ -28,10 +28,10 @@
 #include <sensor_msgs/PointCloud2.h>
 
 
-typedef pcl::PointCloud<pcl::PointXYZRGBA>::Ptr PointCloudRGBAPtr;
+typedef pcl::PointCloud<pcl::PointXYZRGB>::Ptr PointCloudRGBPtr;
 typedef pcl::PointCloud<pcl::Normal>::Ptr PointCloudNormalPtr;
 typedef pcl::PointCloud<pcl::PointNormal>::Ptr PointCloudPointNormalPtr;
-typedef pcl::PointCloud<pcl::PointXYZRGBA> PointCloudRGBA;
+typedef pcl::PointCloud<pcl::PointXYZRGB> PointCloudRGB;
 typedef pcl::PointCloud<pcl::Normal> PointCloudNormal;
 typedef pcl::PointIndices::Ptr PointIndices;
 typedef std::vector<pcl::PointIndices> PointIndicesVector;
@@ -45,12 +45,12 @@ typedef sensor_msgs::PointCloud2 SMSGSPointCloud2;
  * @param input
  * @return
  */
-PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBAPtr input) {
+PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
 
-    pcl::NormalEstimation<pcl::PointXYZRGBA, pcl::Normal> ne;
+    pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
     ne.setInputCloud(input);
-    pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr tree(
-            new pcl::search::KdTree<pcl::PointXYZRGBA>());
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(
+            new pcl::search::KdTree<pcl::PointXYZRGB>());
     ne.setSearchMethod(tree);
 
     PointCloudNormalPtr cloud_normals(new PointCloudNormal);
@@ -67,7 +67,7 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBAPtr input) {
  * @param input
  * @return
  */
-std::vector<float> cvfhRecognition(PointCloudRGBAPtr input) {
+std::vector<float> cvfhRecognition(PointCloudRGBPtr input) {
     std::vector<float> result;
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
@@ -78,10 +78,10 @@ std::vector<float> cvfhRecognition(PointCloudRGBAPtr input) {
     normals = estimateSurfaceNormals(input);
 
     // New KdTree to search with.
-    pcl::search::KdTree<pcl::PointXYZRGBA>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZRGBA>);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZRGB>);
 
     // CVFH estimation object.
-    pcl::CVFHEstimation<pcl::PointXYZRGBA, pcl::Normal, pcl::VFHSignature308> cvfh;
+    pcl::CVFHEstimation<pcl::PointXYZRGB, pcl::Normal, pcl::VFHSignature308> cvfh;
     cvfh.setInputCloud(input);
     cvfh.setInputNormals(normals);
     cvfh.setSearchMethod(kdtree);
@@ -105,51 +105,40 @@ std::vector<float> cvfhRecognition(PointCloudRGBAPtr input) {
  * @param input
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
-std::vector<int> produceColorHist(pcl::PointCloud<pcl::PointXYZRGBA>::Ptr  cloud){
+std::vector<unsigned int> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
+
+    unsigned int red[256];
+    unsigned int green[256];
+    unsigned int blue[256];
+        std::vector<unsigned int> result;
 
 
-    //input->resize(500); // resize for vector messages
 
-    std::vector<int> red;
-    std::vector<int> green;
-    std::vector<int> blue;
-    std::vector<int> result;
+        for (int i = 0; i <  cloud->size(); i++){
+            pcl::PointXYZRGB p = cloud->points[i];
+            float rgb = *reinterpret_cast<int*>(&p.rgb);
+            unsigned int r = ((int)rgb >> 16) & 0x0000ff;
+            unsigned int g = ((int)rgb >> 8)  & 0x0000ff;
+            unsigned int b = ((int)rgb)       & 0x0000ff;
 
-
-    for (size_t i = 0; i <  cloud->size(); i++){
-        pcl::PointXYZRGBA p = cloud->points[i];
-
-        uint32_t rgba = p.rgb;// *reinterpret_cast<int*>(&p.rgb);
-        uint8_t r = (rgba >> 16) & 0x0000ff;
-        uint8_t g = (rgba >> 8)  & 0x0000ff;
-        uint8_t b = (rgba)       & 0x0000ff;
-/*
-            unsigned color = *(const float *)&p.rgba;
-            unsigned  r = color & 0xff;
-            unsigned  g = (color >> 8) & 0xff;
-            unsigned  b = (color >> 16) & 0xff;
-            printf("%ul,%ul,%ul\n", r, g, b);
-*/
-        red.push_back(p.r);
-        green.push_back(p.g);
-        blue.push_back(p.b);
-
-        std::cout << "r " << r << std::endl;
-        std::cout << "g " << g << std::endl;
-        std::cout << "b " << b << std::endl;
-
-        std::cout << "r as int " << (int) r << std::endl;
-        std::cout << "g as int " << (int) g << std::endl;
-        std::cout << "b as int " << (int) b << std::endl;
+            // increase value in bin
+            red[r]++;
+            green[g]++;
+            blue[b]++;
+            std::cout << "rgb is: " << (int)p.r << ", " << (int)p.g << ", " << (int)p.b << "." << std::endl;
 
 
-    }
-
-    // concatenate red, green and blue entries
-    result.insert(result.begin(),red.begin(),red.end());
-    result.insert(result.end(),green.begin(),green.end());
-    result.insert(result.end(),blue.begin(),blue.end());
-
+        }
+        // concatenate red, green and blue entries
+        for (int x = 0; x < 255; x++){
+            result.push_back(red[x]);
+        }
+        for (int y = 0; y < 255; y++){
+            result.push_back(green[y]);
+        }
+        for (int z = 0; z < 255; z++){
+            result.push_back(blue[z]);
+        }
     return result;
 
 }
@@ -160,15 +149,15 @@ void batchPCD2histograms(std::string input) {
     std::string line;
     std::string line_trimmed;
     while (getline(is, line)) {
-        pcl::PointCloud<pcl::PointXYZRGBA>::Ptr input_cloud (new pcl::PointCloud<pcl::PointXYZRGBA>);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
         // sensor_msgs::PointCloud2Ptr test (new sensor_msgs::PointCloud2); // undefined reference to `ros::TimeBase<ros::Time, ros::Duration>::fromNSec(unsigned long)'
         // pcl::PCLPointCloud2Ptr input_pclpc2 (new pcl::PCLPointCloud2);
         std::vector<float> input_cvfhs_features;
-        std::vector<int> input_color_features;
+        std::vector<unsigned int> input_color_features;
 
         // load file
-
-        if (pcl::io::loadPCDFile<pcl::PointXYZRGBA>(line, *input_cloud) != 0){ // Failed to find match for field 'rgba'.
+        std::cout << "load file " << line << std::endl;
+        if (pcl::io::loadPCDFile<pcl::PointXYZRGB>(line, *input_cloud) != 0){ // Failed to find match for field 'rgba'.
 
             line.erase(line.size() - 4, 4);
             std::string normals = line + "_normals_histogram.csv";
@@ -184,7 +173,8 @@ void batchPCD2histograms(std::string input) {
         } else {
             //pcl::io::savePCDFile(line + ".CONV.pcd", *input_pclpc2);
 
-            //pcl::io::loadPCDFile<pcl::PointXYZRGBA>(line + ".CONV.pcd", *input_cloud);
+            //pcl::io::loadPCDFile<pcl::PointXYZRGB>(line + ".CONV.pcd", *input_cloud);
+            std::cout << "cloud size is: " << input_cloud->size() << std::endl;
             line.erase(line.size() - 4, 4);
             std::string normals = line + "_normals_histogram.csv";
             std::string colors = line + "_colors_histogram.csv";
