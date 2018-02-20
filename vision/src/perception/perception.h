@@ -25,6 +25,8 @@
 #include <pcl/features/cvfh.h>
 #include <iterator>
 #include <vector>
+#include <iostream>
+#include <fstream>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/ia_ransac.h>
 #include <eigen_conversions/eigen_msg.h>
@@ -53,7 +55,7 @@ PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr
                                                     std::vector<PointCloudVFHS308Ptr> features,
                                                     PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
-std::vector<int>            produceColorHist(PointCloudRGBPtr cloud);
+std::vector<uint8_t>            produceColorHist(PointCloudRGBPtr cloud);
 
 extern PointCloudRGBPtr cloud_plane,
         cloud_cluster,

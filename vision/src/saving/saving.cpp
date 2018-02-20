@@ -27,7 +27,7 @@ void savePointCloudRGBNamed(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::s
 
         // automatic save to $HOME/.ros folder
 
-        ss << "../../../src/vision_suturo_1718/vision/data/" << filename << "_" << time_string << ".pcd";
+        ss << "/home/tammo/pcd/" << filename << "_" << time_string << ".pcd";
         pcl::io::savePCDFileASCII(ss.str(), *cloud);
     } catch (pcl::PCLException e) {
         ROS_ERROR("Saving failed: %s", e.what());

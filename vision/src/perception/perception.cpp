@@ -577,37 +577,40 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  * @param input
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
-std::vector<int> produceColorHist(PointCloudRGBPtr cloud){
+std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
 
-    // cloud->resize(2000); // resize for vector messages
+    uint8_t red[256];
+    uint8_t green[256];
+    uint8_t blue[256];
+    std::vector<uint8_t> result;
 
-    int red[256];
-    int green[256];
-    int blue[256];
-    std::vector<int> result;
-
-
+    // initialize all array-values with 0
+    for (int i = 0; i < 256;i++){
+        red[i] = 0;
+        green[i] = 0;
+        blue[i] = 0;
+    }
 
     for (size_t i = 0; i <  cloud->size(); i++){
         pcl::PointXYZRGB p = cloud->points[i];
-
-        red[(int)p.r]++;
-        green[(int)p.g]++;
-        blue[(int)p.b]++;
-
+        // increase value in bin at given index
+        red[p.r]++;
+        green[p.g]++;
+        blue[p.b]++;
     }
+
     // concatenate red, green and blue entries
-    for (size_t i = 0; i < 256; i++){
-        result.push_back(red[i]);
+    for (int r = 0; r < 256; r++){
+        result.push_back(red[r]);
     }
-    for (size_t i = 0; i < 256; i++){
-        result.push_back(green[i]);
+    for (int g = 0; g < 256; g++){
+        result.push_back(green[g]);
     }
-    for (size_t i = 0; i < 256; i++){
-        result.push_back(blue[i]);
+    for (int b = 0; b < 256; b++){
+        result.push_back(blue[b]);
     }
 
-    std::cout << "size of color-hist: " << result.size() << std::endl;
     return result;
 
 }
+

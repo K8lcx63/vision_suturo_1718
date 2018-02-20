@@ -106,39 +106,37 @@ std::vector<float> cvfhRecognition(PointCloudRGBPtr input) {
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
 std::vector<unsigned int> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
+    int red[256];
+    int green[256];
+    int blue[256];
+    std::vector<unsigned int> result;
 
-    unsigned int red[256];
-    unsigned int green[256];
-    unsigned int blue[256];
-        std::vector<unsigned int> result;
+    // initialize all array-values with 0
+    for (int i = 0; i < 256;i++){
+        red[i] = 0;
+        green[i] = 0;
+        blue[i] = 0;
+    }
 
+    for (int i = 0; i <  cloud->size(); i++){
+        pcl::PointXYZRGB p = cloud->points[i];
+        // increase value in bin at given index
+        red[p.r]++;
+        green[p.g]++;
+        blue[p.b]++;
+    }
 
+    // concatenate red, green and blue entries
+    for (int r = 0; r < 256; r++){
+        result.push_back(red[r]);
+    }
+    for (int g = 0; g < 256; g++){
+        result.push_back(green[g]);
+    }
+    for (int b = 0; b < 256; b++){
+        result.push_back(blue[b]);
+    }
 
-        for (int i = 0; i <  cloud->size(); i++){
-            pcl::PointXYZRGB p = cloud->points[i];
-            float rgb = *reinterpret_cast<int*>(&p.rgb);
-            unsigned int r = ((int)rgb >> 16) & 0x0000ff;
-            unsigned int g = ((int)rgb >> 8)  & 0x0000ff;
-            unsigned int b = ((int)rgb)       & 0x0000ff;
-
-            // increase value in bin
-            red[r]++;
-            green[g]++;
-            blue[b]++;
-            std::cout << "rgb is: " << (int)p.r << ", " << (int)p.g << ", " << (int)p.b << "." << std::endl;
-
-
-        }
-        // concatenate red, green and blue entries
-        for (int x = 0; x < 255; x++){
-            result.push_back(red[x]);
-        }
-        for (int y = 0; y < 255; y++){
-            result.push_back(green[y]);
-        }
-        for (int z = 0; z < 255; z++){
-            result.push_back(blue[z]);
-        }
     return result;
 
 }
@@ -171,9 +169,6 @@ void batchPCD2histograms(std::string input) {
             os_colors.close();
 
         } else {
-            //pcl::io::savePCDFile(line + ".CONV.pcd", *input_pclpc2);
-
-            //pcl::io::loadPCDFile<pcl::PointXYZRGB>(line + ".CONV.pcd", *input_cloud);
             std::cout << "cloud size is: " << input_cloud->size() << std::endl;
             line.erase(line.size() - 4, 4);
             std::string normals = line + "_normals_histogram.csv";
@@ -183,30 +178,33 @@ void batchPCD2histograms(std::string input) {
 
 
             // estimate features
+            std::cout << "estimating cvfh features..." << std::endl;
             input_cvfhs_features = cvfhRecognition(input_cloud);
-            std::cout << "cvfh OK" << std::endl;
 
             input_color_features = produceColorHist(input_cloud);
-            std::cout << "colors OK" << std::endl;
+            std::cout << "creating color histogram..." << std::endl;
 
-
+            if (input_cvfhs_features.size() == 308 && input_color_features.size() == 768){
             // save features to .csv
+                std::cout << "feature and color histogram size ok. saving file" << std::endl;
 
             for (int i = 0; i < input_cvfhs_features.size(); i++) {
-                if (input_cvfhs_features.size() != i) {
-                    os_normals << input_cvfhs_features[i] << ", ";
-                } else {
+                if (i == input_cvfhs_features.size()-1) {
                     os_normals << input_cvfhs_features[i];
+                } else {
+                    os_normals << input_cvfhs_features[i] << ", ";
+
 
                 }
             }
 
             for (int j = 0; j < input_color_features.size(); j++) {
-                if (input_color_features.size() != j){
-                    os_colors << input_color_features[j] << ", ";
+                if (j == input_color_features.size()-1){
+                    os_colors << input_color_features[j];
 
                 } else {
-                    os_colors << input_color_features[j];
+                    os_colors << input_color_features[j] << ", ";
+
 
                 }
             }
@@ -214,6 +212,7 @@ void batchPCD2histograms(std::string input) {
 
             os_normals.close();
             os_colors.close();
+        }
         }
 
     }

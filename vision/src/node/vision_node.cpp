@@ -100,30 +100,63 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     PointCloudVFHS308Ptr vfhs (new pcl::PointCloud<pcl::VFHSignature308>);
     int object_amount = 0;
     for(int i = 0; i < all_clusters.size(); i++) {
+        /*
+        std::stringstream line;
+        line << "object_" << i  << "_normal.csv";
+        std::ofstream normals_csv_file(line.str());
+        */
+
         vfhs = cvfhRecognition(all_clusters[i]);
         vfhs_vector.push_back(vfhs);
         object_amount++;
-    }
-    for (int j = 0; j < vfhs_vector.size(); j++){
 
-        for(int x = 0; x < 308; x++){
-            //ROS_INFO("%f", current_features[x]);
-            current_features_vector.push_back(vfhs->points[0].histogram[x]);
-        }
+            for(int x = 0; x < 308; x++){
+                //ROS_INFO("%f", current_features[x]);
+                current_features_vector.push_back(vfhs->points[0].histogram[x]);
+                /*
+                if (x == 307){
+                    normals_csv_file << vfhs->points[0].histogram[x];
+                } else {
+                    normals_csv_file << vfhs->points[0].histogram[x] << ",";
+                }
+                 */
+            }
+        /*
+            normals_csv_file.close();
+            normals_csv_file.clear();
+            line.clear();
+            */
+
+
     }
 
     ROS_INFO("cvfh filling completed");
 
     // do the same for the color histogram
-    std::vector<int> current_color_features;
+    std::vector<uint8_t> current_color_features;
     std::vector<uint8_t> current_color_features_vector;
+
     for(int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
+        //std::stringstream line;
+        //line << "object_" << i  << "_color.csv";
+        //std::ofstream color_csv_file(line.str());
 
-        for(int x = 0; x < 6000; x++){
+        for(int x = 0; x < 768; x++){
             //ROS_INFO("%f", current_color_features[x]);
-            current_color_features_vector.push_back((uint8_t)current_color_features[x]);
+            current_color_features_vector.push_back(current_color_features[x]);
+/*
+            if (x == 767){
+                color_csv_file << current_color_features[x];
+            } else {
+                color_csv_file << current_color_features[x] << ",";
+            }
+            */
         }
+        //color_csv_file.close();
+        //color_csv_file.clear();
+        //line.clear();
+
     }
     ROS_INFO("Color hist filling completed");
 
@@ -137,6 +170,11 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     res.clouds.object_amount = object_amount;
     res.clouds.normal_features = current_features_vector;
     res.clouds.object_poses = all_poses;
+
+    for (int j = 0 ; j < all_clusters.size(); j++){
+        savePointCloudRGBNamed(all_clusters[j],"object_" + j);
+
+    }
 
 
     return true;
