@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(vision)
+project(suturo_vision)
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -12,16 +12,16 @@ find_package(catkin REQUIRED COMPONENTS
         pcl_conversions
         object_detection
         message_generation
-	visualization_msgs
-	tf_conversions
-        )
+		visualization_msgs
+		tf_conversions
+)
 
 catkin_package(CATKIN_DEPENDS
         object_detection
-        vision_msgs
-        )
+        suturo_vision_msgs
+)
 
-find_package(PCL 1.6 REQUIRED)
+find_package(PCL 1.7 REQUIRED)
 
 include_directories(
         ${PCL_INCLUDE_DIRS}
@@ -34,7 +34,7 @@ add_definitions(${PCL_DEFINITIONS})
 
 
 add_executable(
-        vision_main
+        vision_node
 		src/main.cpp
 		src/perception/perception.cpp
 		src/saving/saving.cpp
@@ -46,10 +46,10 @@ add_executable(
 )
 
 target_link_libraries(
-        vision_main
+        vision_node
         ${catkin_LIBRARIES}
         ${PCL_LIBRARIES}
 
 )
 
-add_dependencies(vision_main beginner_tutorials_generate_messages_cpp gazebo_ros)
+add_dependencies(vision_node beginner_tutorials_generate_messages_cpp gazebo_ros)

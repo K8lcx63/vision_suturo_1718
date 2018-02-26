@@ -57,8 +57,8 @@ void start_node(int argc, char **argv) {
     ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
     getmodelstate.request.model_name = "eistee";  // Name des Objekts in Gazebo.
 
-    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objectClusters", getObjects);
-    ROS_INFO("%sCLUSTERS SERVICE READY\n", "\x1B[32m");
+    ros::ServiceServer object_service = n.advertiseService("objects_information", getObjects);
+    ROS_INFO("%sSuturo-Vision: service ready\n", "\x1B[32m");
 
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
@@ -74,7 +74,7 @@ void start_node(int argc, char **argv) {
         pcl::toROSMsg(*cloud_final, cloud_final_pub);
         cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
         pub_visualization_object.publish(cloud_final_pub);
-        ROS_INFO("OBJECTS PUBLISHED");
+        ROS_INFO("Suturo Vision: Visualization marker published");
 
         ros::spinOnce();
         r.sleep();
@@ -88,11 +88,11 @@ void start_node(int argc, char **argv) {
  * @param res returns all members from ObjectClouds.msg
  * @return true if service call succeeded, false otherwise
  */
-bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObjectClouds::Response &res) {
+bool getObjects(suturo_vision_msgs::objects::Request &req, suturo_vision_msgs::objects::Response &res) {
 
     // Execute findCluster()
     std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
-    ROS_INFO("findCluster completed!");
+    ROS_INFO("Suturo Vision: findCluster completed!");
 
     // Calculate features and put them into the message response
     std::vector<float> current_features_vector;
@@ -100,11 +100,13 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
     PointCloudVFHS308Ptr vfhs (new pcl::PointCloud<pcl::VFHSignature308>);
     int object_amount = 0;
     for(int i = 0; i < all_clusters.size(); i++) {
-        /*
+
         std::stringstream line;
         line << "object_" << i  << "_normal.csv";
-        std::ofstream normals_csv_file(line.str());
-        */
+        char* line_charp = NULL ;
+        line.str().copy(line_charp,line.str().size(),0);
+        std::ofstream normals_csv_file(line_charp);
+
 
         vfhs = cvfhRecognition(all_clusters[i]);
         vfhs_vector.push_back(vfhs);
@@ -113,24 +115,24 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
             for(int x = 0; x < 308; x++){
                 //ROS_INFO("%f", current_features[x]);
                 current_features_vector.push_back(vfhs->points[0].histogram[x]);
-                /*
+
                 if (x == 307){
                     normals_csv_file << vfhs->points[0].histogram[x];
                 } else {
                     normals_csv_file << vfhs->points[0].histogram[x] << ",";
                 }
-                 */
+
             }
-        /*
+
             normals_csv_file.close();
             normals_csv_file.clear();
             line.clear();
-            */
+
 
 
     }
 
-    ROS_INFO("cvfh filling completed");
+    ROS_INFO("Vision: CVFH filling completed");
 
     // do the same for the color histogram
     std::vector<uint8_t> current_color_features;
@@ -138,32 +140,35 @@ bool getObjects(vision_msgs::GetObjectClouds::Request &req, vision_msgs::GetObje
 
     for(int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
-        //std::stringstream line;
-        //line << "object_" << i  << "_color.csv";
-        //std::ofstream color_csv_file(line.str());
+        std::stringstream line;
+        line << "object_" << i  << "_color.csv";
+        char* line_charp = NULL ;
+        line.str().copy(line_charp,line.str().size(),0);
+        std::ofstream color_csv_file(line_charp);
 
         for(int x = 0; x < 768; x++){
             //ROS_INFO("%f", current_color_features[x]);
             current_color_features_vector.push_back(current_color_features[x]);
-/*
+
             if (x == 767){
                 color_csv_file << current_color_features[x];
             } else {
                 color_csv_file << current_color_features[x] << ",";
             }
-            */
+
         }
-        //color_csv_file.close();
-        //color_csv_file.clear();
-        //line.clear();
+        color_csv_file.close();
+        color_csv_file.clear();
+        line.clear();
 
     }
-    ROS_INFO("Color hist filling completed");
+    ROS_INFO("Vision: Color Histogram filling completed");
 
     // estimate poses (quaternions)
 
 
     std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
+    ROS_INFO("Vision: Finding poses completed");
 
 
     res.clouds.color_features = current_color_features_vector;

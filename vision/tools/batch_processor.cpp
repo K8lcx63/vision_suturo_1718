@@ -40,6 +40,8 @@ typedef std::vector<pcl::PointIndices::Ptr> PointIndicesVectorPtr;
 typedef pcl::PointCloud<pcl::VFHSignature308>::Ptr PointCloudVFHS308Ptr;
 typedef sensor_msgs::PointCloud2 SMSGSPointCloud2;
 
+PointCloudNormalPtr cloud_normals(new PointCloudNormal);
+
 /**
  * estimating surface normals
  * @param input
@@ -53,7 +55,6 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
             new pcl::search::KdTree<pcl::PointXYZRGB>());
     ne.setSearchMethod(tree);
 
-    PointCloudNormalPtr cloud_normals(new PointCloudNormal);
 
     ne.setRadiusSearch(0.03); // Use all neighbors in a sphere of radius 3cm
 
@@ -162,11 +163,14 @@ void batchPCD2histograms(std::string input) {
             std::string colors = line + "_colors_histogram.csv";
             std::ofstream os_normals(normals.c_str());
             std::ofstream os_colors(colors.c_str());
+            std::string normals_list = line + "_normals_only.csv";
+            std::ofstream os_normals_list(normals_list.c_str());
 
             // save empty .csv
 
             os_normals.close();
             os_colors.close();
+            os_normals_list;
 
         } else {
             std::cout << "cloud size is: " << input_cloud->size() << std::endl;
@@ -175,9 +179,12 @@ void batchPCD2histograms(std::string input) {
             std::string colors = line + "_colors_histogram.csv";
             std::ofstream os_normals(normals.c_str());
             std::ofstream os_colors(colors.c_str());
+            std::string normals_list = line + "_curvature.csv";
+            std::ofstream os_normals_list(normals_list.c_str());
 
 
-            // estimate features
+            // estimate features:q
+
             std::cout << "estimating cvfh features..." << std::endl;
             input_cvfhs_features = cvfhRecognition(input_cloud);
 
@@ -208,10 +215,36 @@ void batchPCD2histograms(std::string input) {
 
                 }
             }
+                // curvature of normals
+                int curvatures[4] = {0,0,0,0};
+                 for (int k = 0; k < cloud_normals->size(); k++) {
+                     pcl::Normal p = cloud_normals->points[k];
+                     if (p.curvature == 0) {
+                         curvatures[0]++;
+                     } else if (p.curvature > 0 && p.curvature < 0.05) {
+                         curvatures[2]++;
+                     } else if (p.curvature > 0.05 && p.curvature <= 0.001) {
+                         curvatures[3]++;
+                     } else {
+                         curvatures[1]++;
+                     }
+                 }
+
+                for (int l = 0; l < 4; l++) {
 
 
+                    if (l == 3){
+                        os_normals_list << curvatures[l];
+
+                    } else {
+                        os_normals_list << curvatures[l] << ", ";
+
+
+                    }
+                }
             os_normals.close();
             os_colors.close();
+                os_normals_list.close();
         }
         }
 

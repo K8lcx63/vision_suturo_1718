@@ -509,7 +509,7 @@ PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
     {
         pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
 
-        sac_ia.setInputCloud (objects[i]);
+        sac_ia.setInputSource(objects[i]);
         sac_ia.setSourceFeatures (features[i]);
         sac_ia.setInputTarget(target);
         // sac_ia.setTargetFeatures(target_features);
@@ -561,7 +561,7 @@ PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
 PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
                                        PointCloudRGBPtr target) {
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
-    icp.setInputCloud(input);
+    icp.setInputSource(input);
     icp.setInputTarget(target);
     PointCloudRGBPtr final (new PointCloudRGB);
     icp.align(*final);
