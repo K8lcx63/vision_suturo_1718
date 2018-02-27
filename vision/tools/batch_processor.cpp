@@ -107,13 +107,13 @@ std::vector<float> cvfhRecognition(PointCloudRGBPtr input) {
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
 std::vector<unsigned int> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
-    int red[256];
-    int green[256];
-    int blue[256];
+    int red[8];
+    int green[8];
+    int blue[8];
     std::vector<unsigned int> result;
 
     // initialize all array-values with 0
-    for (int i = 0; i < 256;i++){
+    for (int i = 0; i < 8;i++){
         red[i] = 0;
         green[i] = 0;
         blue[i] = 0;
@@ -122,19 +122,90 @@ std::vector<unsigned int> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Pt
     for (int i = 0; i <  cloud->size(); i++){
         pcl::PointXYZRGB p = cloud->points[i];
         // increase value in bin at given index
-        red[p.r]++;
-        green[p.g]++;
-        blue[p.b]++;
+        if (p.r < 32){
+            red[0]++;
+
+        } else if (p.r >= 32 && p.r < 64){
+            red[1]++;
+
+        } else if (p.r >= 64 && p.r < 96){
+            red[2]++;
+        } else if (p.r >= 96 && p.r < 128){
+            red[3]++;
+
+        } else if (p.r >= 128 && p.r < 160){
+            red[4]++;
+
+        } else if (p.r >= 160 && p.r < 192){
+            red[5]++;
+
+        } else if (p.r >= 192 && p.r < 224){
+            red[6]++;
+
+        } else if (p.r >= 224 && p.r < 256){
+            red[7]++;
+
+        }
+
+        if (p.g < 32){
+            green[0]++;
+
+        } else if (p.g >= 32 && p.g < 64){
+            green[1]++;
+
+        } else if (p.g >= 64 && p.g < 96){
+            green[2]++;
+        } else if (p.g >= 96 && p.g < 128){
+            green[3]++;
+
+        } else if (p.g >= 128 && p.g < 160){
+            green[4]++;
+
+        } else if (p.g >= 160 && p.g < 192){
+            green[5]++;
+
+        } else if (p.g >= 192 && p.g < 224){
+            green[6]++;
+
+        } else if (p.g >= 224 && p.g < 256){
+            green[7]++;
+
+        }
+
+        if (p.b < 32){
+            blue[0]++;
+
+        } else if (p.b >= 32 && p.b < 64){
+            blue[1]++;
+
+        } else if (p.b >= 64 && p.b < 96){
+            blue[2]++;
+        } else if (p.b >= 96 && p.b < 128){
+            blue[3]++;
+
+        } else if (p.b >= 128 && p.b < 160){
+            blue[4]++;
+
+        } else if (p.b >= 160 && p.b < 192){
+            blue[5]++;
+
+        } else if (p.b >= 192 && p.b < 224){
+            blue[6]++;
+
+        } else if (p.b >= 224 && p.b < 256){
+            blue[7]++;
+
+        }
     }
 
     // concatenate red, green and blue entries
-    for (int r = 0; r < 256; r++){
+    for (int r = 0; r < 8; r++){
         result.push_back(red[r]);
     }
-    for (int g = 0; g < 256; g++){
+    for (int g = 0; g < 8; g++){
         result.push_back(green[g]);
     }
-    for (int b = 0; b < 256; b++){
+    for (int b = 0; b < 8; b++){
         result.push_back(blue[b]);
     }
 
@@ -147,43 +218,58 @@ void batchPCD2histograms(std::string input) {
     std::ifstream is(input.c_str());
     std::string line;
     std::string line_trimmed;
+
     while (getline(is, line)) {
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud (new pcl::PointCloud<pcl::PointXYZRGB>);
-        // sensor_msgs::PointCloud2Ptr test (new sensor_msgs::PointCloud2); // undefined reference to `ros::TimeBase<ros::Time, ros::Duration>::fromNSec(unsigned long)'
-        // pcl::PCLPointCloud2Ptr input_pclpc2 (new pcl::PCLPointCloud2);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZRGB>), input_sampler (new pcl::PointCloud<pcl::PointXYZRGB>);
         std::vector<float> input_cvfhs_features;
         std::vector<unsigned int> input_color_features;
 
         // load file
         std::cout << "load file " << line << std::endl;
-        if (pcl::io::loadPCDFile<pcl::PointXYZRGB>(line, *input_cloud) != 0){ // Failed to find match for field 'rgba'.
+        if (pcl::io::loadPCDFile<pcl::PointXYZRGB>(line, *input_sampler) != 0){
+            //downsample partial view
+            std::cout << "input before filtering size is: " << input_sampler->size() << std::endl;
 
+            pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+            sor.setInputCloud(input_sampler);
+            sor.setLeafSize(0.005f, 0.005f, 0.005f); //from 0.005 (perception) zu
+            sor.filter(*input_cloud);
+
+            //prepare files
             line.erase(line.size() - 4, 4);
             std::string normals = line + "_normals_histogram.csv";
             std::string colors = line + "_colors_histogram.csv";
             std::ofstream os_normals(normals.c_str());
             std::ofstream os_colors(colors.c_str());
-            std::string normals_list = line + "_normals_only.csv";
-            std::ofstream os_normals_list(normals_list.c_str());
+            //std::string normals_list = line + "_normals_only.csv";
+            //std::ofstream os_normals_list(normals_list.c_str());
 
             // save empty .csv
 
             os_normals.close();
             os_colors.close();
-            os_normals_list;
+            //os_normals_list;
 
         } else {
+            //downsample partial view
+            std::cout << "input before filtering size is: " << input_sampler->size() << std::endl;
+
+            pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+            sor.setInputCloud(input_sampler);
+            sor.setLeafSize(0.005f, 0.005f, 0.005f); //from 0.005 (perception) zu
+            sor.filter(*input_cloud);
+            // prepare files
             std::cout << "cloud size is: " << input_cloud->size() << std::endl;
             line.erase(line.size() - 4, 4);
             std::string normals = line + "_normals_histogram.csv";
             std::string colors = line + "_colors_histogram.csv";
             std::ofstream os_normals(normals.c_str());
             std::ofstream os_colors(colors.c_str());
-            std::string normals_list = line + "_curvature.csv";
-            std::ofstream os_normals_list(normals_list.c_str());
+            //std::string normals_list = line + "_curvature.csv";
+            //std::ofstream os_normals_list(normals_list.c_str());
 
 
-            // estimate features:q
+            // estimate features
 
             std::cout << "estimating cvfh features..." << std::endl;
             input_cvfhs_features = cvfhRecognition(input_cloud);
@@ -191,19 +277,19 @@ void batchPCD2histograms(std::string input) {
             input_color_features = produceColorHist(input_cloud);
             std::cout << "creating color histogram..." << std::endl;
 
-            if (input_cvfhs_features.size() == 308 && input_color_features.size() == 768){
-            // save features to .csv
+                // save features to .csv
                 std::cout << "feature and color histogram size ok. saving file" << std::endl;
 
-            for (int i = 0; i < input_cvfhs_features.size(); i++) {
-                if (i == input_cvfhs_features.size()-1) {
-                    os_normals << input_cvfhs_features[i];
-                } else {
-                    os_normals << input_cvfhs_features[i] << ", ";
+                for (int i = 0; i < input_cvfhs_features.size(); i++) {
+                    if (i == input_cvfhs_features.size() - 1) {
+                        os_normals << input_cvfhs_features[i];
+                    } else {
+                        os_normals << input_cvfhs_features[i] << ", ";
 
 
+                    }
                 }
-            }
+
 
             for (int j = 0; j < input_color_features.size(); j++) {
                 if (j == input_color_features.size()-1){
@@ -215,6 +301,7 @@ void batchPCD2histograms(std::string input) {
 
                 }
             }
+                /**
                 // curvature of normals
                 int curvatures[4] = {0,0,0,0};
                  for (int k = 0; k < cloud_normals->size(); k++) {
@@ -242,10 +329,12 @@ void batchPCD2histograms(std::string input) {
 
                     }
                 }
-            os_normals.close();
-            os_colors.close();
-                os_normals_list.close();
-        }
+                 }
+                 **/
+                // os_normals_list.close();
+                os_normals.close();
+                os_colors.close();
+
         }
 
     }
