@@ -1,0 +1,4 @@
+<?xml version="1.0"?>
+<launch>
+   <node name="vision_suturo_node" pkg="vision_suturo" type="vision_node" cwd="node" output="screen"/>
+</launch>

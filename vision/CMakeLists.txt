@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(suturo_vision)
+project(vision_suturo)
 
 set (CMAKE_CXX_STANDARD 11)
 
@@ -18,7 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 catkin_package(CATKIN_DEPENDS
         object_detection
-        suturo_vision_msgs
+		vision_suturo_msgs
 )
 
 find_package(PCL 1.7 REQUIRED)

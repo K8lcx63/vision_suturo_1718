@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-    <name>suturo_vision</name>
+    <name>vision_suturo</name>
     <version>0.0.0</version>
     <description>The vision package of Suturo-project 17/18</description>
 
@@ -12,7 +12,7 @@
     <!-- <build_depend>object_detection</build_depend>
     <run_depend>object_detection</run_depend> -->
     <depend>object_detection</depend>
-    <depend>suturo_vision_msgs</depend>
+    <depend>vision_suturo_msgs</depend>
     <depend>visualization_msgs</depend>
     <depend>tf</depend>
     <buildtool_depend>catkin</buildtool_depend>

@@ -44,7 +44,7 @@ void sub_kinect_callback(PointCloudRGBPtr kinect) {
  * @param argv unused for now
  */
 void start_node(int argc, char **argv) {
-    ros::init(argc, argv, "suturo_vision");
+    ros::init(argc, argv, "vision_suturo");
 
     /** nodehandle, subscribers and publishers**/
     ros::NodeHandle n;
@@ -57,7 +57,7 @@ void start_node(int argc, char **argv) {
     ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
     getmodelstate.request.model_name = "eistee";  // Name des Objekts in Gazebo.
 
-    ros::ServiceServer object_service = n.advertiseService("suturo_vision/objects_information", getObjects);
+    ros::ServiceServer object_service = n.advertiseService("vision_suturo/objects_information", getObjects);
     ROS_INFO("%sSuturo-Vision: service ready\n", "\x1B[32m");
 
     // Visualization Publisher for debugging purposes
@@ -88,7 +88,7 @@ void start_node(int argc, char **argv) {
  * @param res returns all members from ObjectClouds.msg
  * @return true if service call succeeded, false otherwise
  */
-bool getObjects(suturo_vision_msgs::objects::Request &req, suturo_vision_msgs::objects::Response &res) {
+bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::objects::Response &res) {
 
     // Execute findCluster()
     std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
