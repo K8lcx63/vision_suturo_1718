@@ -14,7 +14,8 @@ std::string mesh_array[] = {"cup_eco_orange.pcd",
                             "sigg_bottle.pcd",
                             "tomato_sauce_oro_di_parma.pcd"};
 
-enum mesh_enum{ CUP_ECO_ORANGE,
+enum mesh_enum {
+    CUP_ECO_ORANGE,
     EDEKA_RED_BOWL,
     HELA_CURRY_KETCHUP,
     JA_MILCH,
@@ -23,20 +24,49 @@ enum mesh_enum{ CUP_ECO_ORANGE,
     PRINGLES_PAPRIKA,
     PRINGLES_SALT,
     SIGG_BOTTLE,
-    TOMATO_SAUCE_ORO_DI_PARMA};
+    TOMATO_SAUCE_ORO_DI_PARMA
+};
 
 std::string error_message_perc;
 
-PointCloudRGBPtr cloud_plane(new PointCloudRGB),
-        cloud_cluster(new PointCloudRGB),
-        cloud_cluster2(new PointCloudRGB),
-        cloud_f(new PointCloudRGB),
-        cloud_3df(new PointCloudRGB),
-        cloud_voxelgridf(new PointCloudRGB),
-        cloud_mlsf(new PointCloudRGB),
-        cloud_prism(new PointCloudRGB),
-        cloud_final(new PointCloudRGB);
 
+
+
+PointCloudRGBPtr preprocessCloud(PointCloudRGBPtr kinect) {
+    PointCloudRGBPtr cloud_3df(new PointCloudRGB),
+            cloud_voxelgridf(new PointCloudRGB),
+            cloud_mlsf(new PointCloudRGB),
+            cloud_prism(new PointCloudRGB),
+            cloud_preprocessed(new PointCloudRGB);
+    cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5);   // passthrough filter
+// std::cout << "after 3dfilter cluster is of size: " << cloud_3df->size() << std::endl;
+    cloud_voxelgridf = voxelGridFilter(cloud_3df);      // voxel grid filter
+// std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
+    cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
+//std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
+    cloud_preprocessed = cloud_mlsf; // cloud_f set after last filtering function is applied
+    return cloud_preprocessed;
+}
+
+void segmentPlanes(PointCloudRGBPtr cloud_cluster){
+    // While a segmented plane would be larger than plane_size_threshold points, segment it.
+    bool loop_segmentations = true;
+    int segmentations_amount = 0;
+    int plane_size_threshold = 12000;
+    PointIndices plane_indices(new pcl::PointIndices);
+    for (int n = 0; loop_segmentations; n++) {
+        plane_indices = estimatePlaneIndices(cloud_cluster);
+        if (plane_indices->indices.size() > plane_size_threshold)         // is the extracted plane big enough?
+        {
+            ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
+            ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
+            cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
+            n++;
+        } else loop_segmentations = false;          // if not big enough, stop looping.
+        segmentations_amount = n;
+    }
+    ROS_INFO("Extracted %d planes!", segmentations_amount);
+}
 /**
  * Find the object!
  * @param kinect
@@ -45,17 +75,12 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
     ros::NodeHandle n;
     std::vector<PointCloudRGBPtr> result;
-
     CloudTransformer transform_cloud(n);
-
-    // the 'f' in the identifier stands for filtered
-
-
-
-
-    PointIndices plane_indices(new pcl::PointIndices), plane_indices2(new pcl::PointIndices), prism_indices(
-            new pcl::PointIndices);
-
+    PointCloudRGBPtr cloud_cluster(new PointCloudRGB),
+            cloud_preprocessed(new PointCloudRGB);
+    PointIndices
+            plane_indices2(new pcl::PointIndices),
+            prism_indices(new pcl::PointIndices);
 
     if (kinect->points.size() < 500)                        // if PR2 is not looking at anything
     {
@@ -65,71 +90,42 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
     } else {
         ROS_INFO("Starting Cluster extraction");
 
-        cloud_3df =  apply3DFilter(kinect, 0.4, 0.4, 1.5);   // passthrough filter
-        // std::cout << "after 3dfilter cluster is of size: " << cloud_3df->size() << std::endl;
-        cloud_voxelgridf = voxelGridFilter(cloud_3df);      // voxel grid filter
-        // std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
-        cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
-        std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
-        cloud_cluster2 = cloud_mlsf; // cloud_f set after last filtering function is applied
+        cloud_preprocessed = preprocessCloud(kinect);
 
-        cloud_cluster2 = transform_cloud.extractAbovePlane(cloud_cluster2);
-        cloud_cluster = cloud_cluster2;
+        cloud_preprocessed = transform_cloud.extractAbovePlane(cloud_preprocessed);
+        cloud_cluster = cloud_preprocessed;
 
-        // While a segmented plane would be larger than 1500 points, segment it.
-        bool loop_segmentations = true;
-        int segmentations_amount = 0;
-        for (int n = 0; loop_segmentations; n++) {
-            plane_indices = estimatePlaneIndices(cloud_cluster);
-            if (plane_indices->indices.size() > 12000)         // is the extracted plane big enough?
-            {
-                ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
-                ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
-                cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
-                n++;
-            } else loop_segmentations = false;          // if not big enough, stop looping.
-            segmentations_amount = n;
-        }
-        ROS_INFO("Extracted %d planes!", segmentations_amount);
+        segmentPlanes(cloud_cluster);
+        cloud_global = cloud_cluster;
 
-
-        cloud_final = cloud_cluster; // We currently don't need outlierRemoval here, because euclideanClusterExtraction
-        // already has a set minimum point value, which causes smaller clusters / amounts of outliers  to be extracted
-        // anyway.
+        /*
+         * We currently don't need outlierRemoval here, because euclideanClusterExtraction
+         * already has a set minimum point value, which causes smaller clusters / amounts of outliers  to be extracted
+         * anyway.
+        */
 
         // Split cloud_final into one PointCloud per object
-        std::vector<PointCloudRGBPtr> result = euclideanClusterExtraction(cloud_final);
+        std::vector<PointCloudRGBPtr> result = euclideanClusterExtraction(cloud_cluster);
         ROS_INFO("CALCULATED RESULT!");
 
 
-        if (cloud_final->points.size() == 0) {
+        if (cloud_global->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
             error_message_perc = "Final extracted cluster was empty. ";
             centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
-        }
-        else{
+        } else {
             ROS_INFO("%sExtraction OK", "\x1B[32m");
         }
 
         error_message_perc = "";
 
         /**
-        savePointCloudRGBNamed(kinect, "unprocessed");
-        savePointCloudRGBNamed(cloud_3df, "3df");
-        savePointCloudRGBNamed(cloud_voxelgridf, "voxelgrid");
-        savePointCloudRGBNamed(cloud_mlsf, "mlsf");
-        savePointCloudRGBNamed(cloud_cluster2, "abovePlane");
-        // Fehler ist hier zwischen!
-        savePointCloudRGBNamed(cloud_cluster, "final_with_outliers");
-        savePointCloudRGBNamed(cloud_final, "final");
-
         for (int i = 0; i < result.size(); i++){
             std::stringstream obj_files;
             obj_files << "object_" << i;
             savePointCloudRGBNamed(result[i], obj_files.str());
 
         }
-        savePointCloudRGBNamed(kinect, "scene");
         **/
 
         return result;
@@ -156,7 +152,7 @@ findCenterGazebo() {
 std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in) {
     std::vector<geometry_msgs::PoseStamped> result;
 
-    for (int i = 0; i < clouds_in.size(); i++){
+    for (int i = 0; i < clouds_in.size(); i++) {
         geometry_msgs::PoseStamped current_pose;
         PointCloudRGBPtr current_cloud = clouds_in[i];
 
@@ -225,7 +221,6 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
                                float z) {
 
 
-
     ROS_INFO("Starting passthrough filter");
     PointCloudRGBPtr input_after_x(new PointCloudRGB),
             input_after_xy(new PointCloudRGB), input_after_xyz(new PointCloudRGB);
@@ -264,7 +259,6 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
         error_message_perc = "Cloud was empty after filtering. ";
         centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
     }
-
 
 
     return input_after_xyz;
@@ -310,7 +304,7 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
                                 PointIndices indices,
                                 bool negative) {
     ROS_INFO("CLUSTER EXTRACTION");
-    PointCloudRGBPtr result (new PointCloudRGB);
+    PointCloudRGBPtr result(new PointCloudRGB);
 
     PointCloudRGBPtr objects(new PointCloudRGB);
     pcl::ExtractIndices<pcl::PointXYZRGB> extract;
@@ -331,7 +325,7 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
  */
 PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
     ROS_INFO("MLS Filter!");
-    PointCloudRGBPtr result (new PointCloudRGB);
+    PointCloudRGBPtr result(new PointCloudRGB);
 
     int poly_ord = 1;
 
@@ -400,7 +394,7 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
  * @param input
  * @return
  */
- PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
+PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
     ROS_INFO("CVFH Recognition!");
     // Object for storing the normals.
     pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
@@ -438,20 +432,25 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
     return descriptors; // to vector
 }
 
-std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input){
+/**
+ *
+ * @param input
+ * @return
+ */
+std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input) {
     ROS_INFO("Euclidean Cluster Extraction!");
-    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB>);
-    tree->setInputCloud (input);
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
+    tree->setInputCloud(input);
 
     PointIndicesVector cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance (0.01); // 4cm
-    ec.setMinClusterSize (300);
-    ec.setMaxClusterSize (25000);
-    ec.setSearchMethod (tree);
-    ec.setInputCloud (input);
+    ec.setClusterTolerance(0.01); // 4cm
+    ec.setMinClusterSize(300);
+    ec.setMaxClusterSize(25000);
+    ec.setSearchMethod(tree);
+    ec.setInputCloud(input);
     ROS_INFO("BEFORE EXTRACT");
-    ec.extract (cluster_indices);
+    ec.extract(cluster_indices);
 
 
     ROS_INFO("AFTER EXTRACT");
@@ -459,16 +458,17 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
     std::vector<PointCloudRGBPtr> result;
 
     int j = 0;
-    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin (); it != cluster_indices.end (); ++it)
-    {
-        PointCloudRGBPtr cloud_cluster (new PointCloudRGB);
-        for (std::vector<int>::const_iterator pit = it->indices.begin (); pit != it->indices.end (); ++pit)
-            cloud_cluster->points.push_back (input->points[*pit]); //*
-        cloud_cluster->width = cloud_cluster->points.size ();
+    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();
+         it != cluster_indices.end(); ++it) {
+        PointCloudRGBPtr cloud_cluster(new PointCloudRGB);
+        for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
+            cloud_cluster->points.push_back(input->points[*pit]); //*
+        cloud_cluster->width = cloud_cluster->points.size();
         cloud_cluster->height = 1;
         cloud_cluster->is_dense = true;
 
-        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size () << " data points." << std::endl;
+        std::cout << "PointCloud representing the Cluster: " << cloud_cluster->points.size() << " data points."
+                  << std::endl;
         j++;
 
         result.push_back(cloud_cluster);
@@ -490,11 +490,11 @@ PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
                                      std::vector<PointCloudVFHS308Ptr> features,
                                      PointCloudRGBPtr target) {
 
-    PointCloudRGBPtr result (new PointCloudRGB);
+    PointCloudRGBPtr result(new PointCloudRGB);
     // preprocess cloud
     // apply3DFilter(target, 1.0,1.0,1.0);
 
-    PointCloudRGBPtr temp (new PointCloudRGB);
+    PointCloudRGBPtr temp(new PointCloudRGB);
     temp = target;
     target = voxelGridFilter(temp);
 
@@ -505,43 +505,40 @@ PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
 
 
     // calculate inital alignment for every input cloud and save scores
-    for (size_t i = 0; i < features.size (); ++i)
-    {
+    for (size_t i = 0; i < features.size(); ++i) {
         pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
 
         sac_ia.setInputSource(objects[i]);
-        sac_ia.setSourceFeatures (features[i]);
+        sac_ia.setSourceFeatures(features[i]);
         sac_ia.setInputTarget(target);
         // sac_ia.setTargetFeatures(target_features);
         PointCloudRGB registration_output;
-        sac_ia.align (registration_output);
+        sac_ia.align(registration_output);
 
         // get fitness score with max squared distance for correspondence
-        fitness_scores[i] = (float) sac_ia.getFitnessScore (0.01f*0.01f);
-        transformation_matrices[i] = sac_ia.getFinalTransformation ();
+        fitness_scores[i] = (float) sac_ia.getFitnessScore(0.01f * 0.01f);
+        transformation_matrices[i] = sac_ia.getFinalTransformation();
     }
 
 
     // Find the best template alignment
 
     // Find the template with the best (lowest) fitness score
-    float lowest_score = std::numeric_limits<float>::infinity ();
+    float lowest_score = std::numeric_limits<float>::infinity();
     int best_template = 0;
-    for (size_t i = 0; i < sizeof(fitness_scores); ++i)
-    {
-        if (fitness_scores[i] < lowest_score)
-        {
+    for (size_t i = 0; i < sizeof(fitness_scores); ++i) {
+        if (fitness_scores[i] < lowest_score) {
             lowest_score = fitness_scores[i];
-            best_index =  i;
+            best_index = i;
         }
     }
 
     // Print the alignment fitness score (values less than 0.00002 are good)
-    printf ("Best fitness score: %f\n", fitness_scores[best_index]);
+    printf("Best fitness score: %f\n", fitness_scores[best_index]);
 
     // Print the rotation matrix and translation vector
-    Eigen::Matrix3f rotation = transformation_matrices[best_index].block<3,3>(0, 0);
-    Eigen::Vector3f translation =  transformation_matrices[best_index].block<3,1>(0, 3);
+    Eigen::Matrix3f rotation = transformation_matrices[best_index].block<3, 3>(0, 0);
+    Eigen::Vector3f translation = transformation_matrices[best_index].block<3, 1>(0, 3);
 
     // transform with best Transformation
 
@@ -563,7 +560,7 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
     icp.setInputSource(input);
     icp.setInputTarget(target);
-    PointCloudRGBPtr final (new PointCloudRGB);
+    PointCloudRGBPtr final(new PointCloudRGB);
     icp.align(*final);
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
               icp.getFitnessScore() << std::endl;
@@ -577,7 +574,7 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  * @param input
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
-std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
+std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
 
     uint8_t red[256];
     uint8_t green[256];
@@ -585,13 +582,13 @@ std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cl
     std::vector<uint8_t> result;
 
     // initialize all array-values with 0
-    for (int i = 0; i < 256;i++){
+    for (int i = 0; i < 256; i++) {
         red[i] = 0;
         green[i] = 0;
         blue[i] = 0;
     }
 
-    for (size_t i = 0; i <  cloud->size(); i++){
+    for (size_t i = 0; i < cloud->size(); i++) {
         pcl::PointXYZRGB p = cloud->points[i];
         // increase value in bin at given index
         red[p.r]++;
@@ -600,13 +597,13 @@ std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cl
     }
 
     // concatenate red, green and blue entries
-    for (int r = 0; r < 256; r++){
+    for (int r = 0; r < 256; r++) {
         result.push_back(red[r]);
     }
-    for (int g = 0; g < 256; g++){
+    for (int g = 0; g < 256; g++) {
         result.push_back(green[g]);
     }
-    for (int b = 0; b < 256; b++){
+    for (int b = 0; b < 256; b++) {
         result.push_back(blue[b]);
     }
 
@@ -614,3 +611,84 @@ std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cl
 
 }
 
+void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> vfhs_vector,
+                    std::vector<uint8_t> color_features_vector) {
+
+
+    getNormalFeatures(all_clusters, vfhs_vector);
+    ROS_INFO("Vision: CVFH filling completed");
+
+    // do the same for the color histogram
+    getColorFeatures(all_clusters, color_features_vector);
+    ROS_INFO("Vision: Color Histogram filling completed");
+}
+
+void getNormalFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> current_features_vector) {
+
+    std::vector<PointCloudVFHS308Ptr> vfhs_vector;
+    PointCloudVFHS308Ptr vfhs(new pcl::PointCloud<pcl::VFHSignature308>);
+
+
+    for (int i = 0; i < all_clusters.size(); i++) {
+
+        std::stringstream line;
+        line << "object_" << i << "_normal.csv";
+
+        char *line_charp;
+        line.str().copy(line_charp, line.str().size(), 0);
+        std::ofstream normals_csv_file(line_charp);
+
+
+        vfhs = cvfhRecognition(all_clusters[i]);
+        vfhs_vector.push_back(vfhs);
+
+        for (int x = 0; x < 308; x++) {
+            //ROS_INFO("%f", current_features[x]);
+            current_features_vector.push_back(vfhs->points[0].histogram[x]);
+
+            if (x == 307) {
+                normals_csv_file << vfhs->points[0].histogram[x];
+            } else {
+                normals_csv_file << vfhs->points[0].histogram[x] << ",";
+            }
+
+        }
+
+        normals_csv_file.close();
+        normals_csv_file.clear();
+        line.clear();
+
+
+    }
+}
+
+void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<uint8_t> color_features_vector) {
+
+    std::vector<uint8_t> current_color_features;
+
+    for (int i = 0; i < all_clusters.size(); i++) {
+        current_color_features = produceColorHist(all_clusters[i]);
+        std::stringstream line;
+        line << "object_" << i << "_color.csv";
+
+        char *line_charp;
+        line.str().copy(line_charp, line.str().size(), 0);
+        std::ofstream color_csv_file(line_charp);
+
+        for (int x = 0; x < 768; x++) {
+            //ROS_INFO("%f", current_color_features[x]);
+            color_features_vector.push_back(current_color_features[x]);
+
+            if (x == 767) {
+                color_csv_file << current_color_features[x];
+            } else {
+                color_csv_file << current_color_features[x] << ",";
+            }
+
+        }
+        color_csv_file.close();
+        color_csv_file.clear();
+        line.clear();
+
+    }
+}

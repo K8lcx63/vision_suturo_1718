@@ -27,6 +27,7 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <string>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/ia_ransac.h>
 #include <eigen_conversions/eigen_msg.h>
@@ -56,15 +57,16 @@ PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr
                                                     PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
 std::vector<uint8_t>            produceColorHist(PointCloudRGBPtr cloud);
+void                            getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters,
+                                               std::vector<float> vfhs_vector,
+                                               std::vector<uint8_t> color_features_vector);
 
-extern PointCloudRGBPtr cloud_plane,
-        cloud_cluster,
-        cloud_cluster2,
-        cloud_f,
-        cloud_3df,
-        cloud_voxelgridf,
-        cloud_mlsf,
-        cloud_prism,
-        cloud_final;
+void                            getNormalFeatures(std::vector<PointCloudRGBPtr> all_clusters,
+                                                  std::vector<float> vfhs_vector);
+void                            getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters,
+                                                 std::vector<uint8_t> color_features_vector);
+
+
+extern PointCloudRGBPtr cloud_global;
 
 #endif //VISION_PERCEPTION_H
