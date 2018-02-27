@@ -2,7 +2,6 @@
 add the following to your bashrc (or zshrc):
 export KINECT1=true  
 export GAZEBO_MODEL_PATH=${HOME}/catkin_ws/vision_suturo_1718/vision/models  
-export GAZEBO_RESOURCE_PATH=${HOME}/catkin_ws/vision_suturo_1718/vision/worlds  
 
 Use "catkin build object_detection" to build the messages-package beforehand.
 
@@ -19,7 +18,7 @@ Get Information about:
 - object_information (additional information)
 - object_errors (errors while extracting)
 
-> rosservice call /suturo_vision/objects_information
+> rosservice call /vision_suturo/objects_information
 
 ### Kinect
 #### setup
@@ -39,5 +38,5 @@ rosrun pcl_ros pointcloud_to_pcd input:=/camera/depth_registered/points
 Topic: /kinect_head/depth_registered/points
 
 #### Rosbags
-**Recording:** rosbag record /kinect_head/depth_registered/points /tf
-**Playing:** rosbag play -l filename.bag
+- **Recording:** rosbag record /kinect_head/depth_registered/points /tf   
+- **Playing:** rosbag play -l filename.bag
