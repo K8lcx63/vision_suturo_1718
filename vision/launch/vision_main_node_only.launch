@@ -1,4 +1,0 @@
-<?xml version="1.0"?>
-<launch>
-   <node name="vision_main" pkg="vision" type="vision_main" cwd="node" output="screen"/>
-</launch>

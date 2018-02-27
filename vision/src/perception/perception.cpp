@@ -29,7 +29,7 @@ enum mesh_enum {
 
 std::string error_message_perc;
 
-
+PointCloudRGBPtr cloud_global(new PointCloudRGB);
 
 
 PointCloudRGBPtr preprocessCloud(PointCloudRGBPtr kinect) {
