@@ -10,13 +10,16 @@ Use "catkin build object_detection" to build the messages-package beforehand.
 
 ### Services
 
-#### Get Object Position
-What is the center coordinate of the perceived object?
-> rosservice call /vision_main/objectPoint
+#### Get Object Information
+Get Information about:
+- normal_features (VHFSignature308 as vector)
+- color_features (Color Histogram as vector)
+- object_amount (Number of objects in scene)
+- object_poses  (PoseStamped of objects in scene)
+- object_information (additional information)
+- object_errors (errors while extracting)
 
-#### Get Object Pose (currently in development)
-Is the perceived object standing up or lying down?
->  rosservice call /vision_main/objectPose   
+> rosservice call /suturo_vision/objects_information
 
 ### Kinect
 #### setup
