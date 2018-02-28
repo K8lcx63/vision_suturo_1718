@@ -96,7 +96,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
 
     // Calculate features and put them into the message response
     std::vector<float> current_features_vector;
-    std::vector<uint8_t> color_features_vector;
+    std::vector<uint64_t> color_features_vector;
     getAllFeatures(all_clusters, current_features_vector, color_features_vector);
 
     // estimate poses (quaternions)
