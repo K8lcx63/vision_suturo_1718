@@ -106,11 +106,11 @@ std::vector<float> cvfhRecognition(PointCloudRGBPtr input) {
  * @param input
  * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
  */
-std::vector<unsigned int> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
+std::vector<uint64_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
     int red[8];
     int green[8];
     int blue[8];
-    std::vector<unsigned int> result;
+    std::vector<uint64_t> result;
 
     // initialize all array-values with 0
     for (int i = 0; i < 8;i++){
@@ -222,7 +222,7 @@ void batchPCD2histograms(std::string input) {
     while (getline(is, line)) {
         pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZRGB>), input_sampler (new pcl::PointCloud<pcl::PointXYZRGB>);
         std::vector<float> input_cvfhs_features;
-        std::vector<unsigned int> input_color_features;
+        std::vector<uint64_t> input_color_features;
 
         // load file
         std::cout << "load file " << line << std::endl;

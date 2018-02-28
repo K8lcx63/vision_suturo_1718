@@ -580,36 +580,106 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  * @param Input PointCloud cloud
  * @return Concatenated floats (r,g,b) from PointCloud points
  */
-std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
-
-    uint8_t red[256];
-    uint8_t green[256];
-    uint8_t blue[256];
-    std::vector<uint8_t> result;
+std::vector<uint64_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
+    int red[8];
+    int green[8];
+    int blue[8];
+    std::vector<uint64_t> result;
 
     // initialize all array-values with 0
-    for (int i = 0; i < 256; i++) {
+    for (int i = 0; i < 8;i++){
         red[i] = 0;
         green[i] = 0;
         blue[i] = 0;
     }
 
-    for (size_t i = 0; i < cloud->size(); i++) {
+    for (int i = 0; i <  cloud->size(); i++){
         pcl::PointXYZRGB p = cloud->points[i];
         // increase value in bin at given index
-        red[p.r]++;
-        green[p.g]++;
-        blue[p.b]++;
+        if (p.r < 32){
+            red[0]++;
+
+        } else if (p.r >= 32 && p.r < 64){
+            red[1]++;
+
+        } else if (p.r >= 64 && p.r < 96){
+            red[2]++;
+        } else if (p.r >= 96 && p.r < 128){
+            red[3]++;
+
+        } else if (p.r >= 128 && p.r < 160){
+            red[4]++;
+
+        } else if (p.r >= 160 && p.r < 192){
+            red[5]++;
+
+        } else if (p.r >= 192 && p.r < 224){
+            red[6]++;
+
+        } else if (p.r >= 224 && p.r < 256){
+            red[7]++;
+
+        }
+
+        if (p.g < 32){
+            green[0]++;
+
+        } else if (p.g >= 32 && p.g < 64){
+            green[1]++;
+
+        } else if (p.g >= 64 && p.g < 96){
+            green[2]++;
+        } else if (p.g >= 96 && p.g < 128){
+            green[3]++;
+
+        } else if (p.g >= 128 && p.g < 160){
+            green[4]++;
+
+        } else if (p.g >= 160 && p.g < 192){
+            green[5]++;
+
+        } else if (p.g >= 192 && p.g < 224){
+            green[6]++;
+
+        } else if (p.g >= 224 && p.g < 256){
+            green[7]++;
+
+        }
+
+        if (p.b < 32){
+            blue[0]++;
+
+        } else if (p.b >= 32 && p.b < 64){
+            blue[1]++;
+
+        } else if (p.b >= 64 && p.b < 96){
+            blue[2]++;
+        } else if (p.b >= 96 && p.b < 128){
+            blue[3]++;
+
+        } else if (p.b >= 128 && p.b < 160){
+            blue[4]++;
+
+        } else if (p.b >= 160 && p.b < 192){
+            blue[5]++;
+
+        } else if (p.b >= 192 && p.b < 224){
+            blue[6]++;
+
+        } else if (p.b >= 224 && p.b < 256){
+            blue[7]++;
+
+        }
     }
 
     // concatenate red, green and blue entries
-    for (int r = 0; r < 256; r++) {
+    for (int r = 0; r < 8; r++){
         result.push_back(red[r]);
     }
-    for (int g = 0; g < 256; g++) {
+    for (int g = 0; g < 8; g++){
         result.push_back(green[g]);
     }
-    for (int b = 0; b < 256; b++) {
+    for (int b = 0; b < 8; b++){
         result.push_back(blue[b]);
     }
 
@@ -622,7 +692,7 @@ std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr clo
  * @param PointClouds all_clusters
  */
 void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> vfhs_vector,
-                    std::vector<uint8_t> color_features_vector) {
+                    std::vector<uint64_t> color_features_vector) {
 
 
     getCVFHFeatures(all_clusters, vfhs_vector);
@@ -685,7 +755,7 @@ void getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<flo
  */
 void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<uint8_t> color_features_vector) {
 
-    std::vector<uint8_t> current_color_features;
+    std::vector<uint64_t> current_color_features;
 
     for (int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
@@ -696,11 +766,11 @@ void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<ui
         line.str().copy(line_charp, line.str().size(), 0);
         std::ofstream color_csv_file(line_charp);
 
-        for (int x = 0; x < 768; x++) {
+        for (int x = 0; x < 24; x++) {
             //ROS_INFO("%f", current_color_features[x]);
             color_features_vector.push_back(current_color_features[x]);
 
-            if (x == 767) {
+            if (x == 23) {
                 color_csv_file << current_color_features[x];
             } else {
                 color_csv_file << current_color_features[x] << ",";

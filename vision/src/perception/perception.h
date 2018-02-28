@@ -56,15 +56,15 @@ PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr
                                                     std::vector<PointCloudVFHS308Ptr> features,
                                                     PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
-std::vector<uint8_t>            produceColorHist(PointCloudRGBPtr cloud);
+std::vector<uint64_t>            produceColorHist(PointCloudRGBPtr cloud);
 void                            getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters,
                                                std::vector<float> vfhs_vector,
-                                               std::vector<uint8_t> color_features_vector);
+                                               std::vector<uint64_t> color_features_vector);
 
 void                            getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters,
                                                   std::vector<float> vfhs_vector);
 void                            getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters,
-                                                 std::vector<uint8_t> color_features_vector);
+                                                 std::vector<uint64_t> color_features_vector);
 
 
 extern PointCloudRGBPtr cloud_global;
