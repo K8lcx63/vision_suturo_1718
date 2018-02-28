@@ -61,7 +61,7 @@ void                            getAllFeatures(std::vector<PointCloudRGBPtr> all
                                                std::vector<float> vfhs_vector,
                                                std::vector<uint8_t> color_features_vector);
 
-void                            getNormalFeatures(std::vector<PointCloudRGBPtr> all_clusters,
+void                            getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters,
                                                   std::vector<float> vfhs_vector);
 void                            getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters,
                                                  std::vector<uint8_t> color_features_vector);

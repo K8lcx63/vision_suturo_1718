@@ -48,6 +48,10 @@ PointCloudRGBPtr preprocessCloud(PointCloudRGBPtr kinect) {
     return cloud_preprocessed;
 }
 
+/**
+ * Segment planes that aren't relevant to the objects.
+ * @param cloud_cluster
+ */
 void segmentPlanes(PointCloudRGBPtr cloud_cluster){
     // While a segmented plane would be larger than plane_size_threshold points, segment it.
     bool loop_segmentations = true;
@@ -68,8 +72,9 @@ void segmentPlanes(PointCloudRGBPtr cloud_cluster){
     ROS_INFO("Extracted %d planes!", segmentations_amount);
 }
 /**
- * Find the object!
+ * Find the objects.
  * @param kinect
+ * @return
  */
 std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
@@ -135,8 +140,8 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
 
 /**
  * Returns a fake point (not estimated) with its origin in the model in simulation.
- * It is only called, when findCluster() cannot find a point in simulation
- * @return
+ * It is only called, when findCluster() cannot find a point in simulation.
+ * @return The centroid (point) of an object in gazebo.
  */
 geometry_msgs::PointStamped
 findCenterGazebo() {
@@ -145,9 +150,9 @@ findCenterGazebo() {
 }
 
 /**
- * finding the geometrical center of a given pointcloud
- * @param object_cloud
- * @return
+ * Finds the geometrical center and rotation of an object.
+ * @param The pointcloud object_cloud
+ * @return The pose of the object contained in object_cloud
  */
 std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in) {
     std::vector<geometry_msgs::PoseStamped> result;
@@ -183,9 +188,9 @@ std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRG
 }
 
 /**
- * estimating surface normals
- * @param input
- * @return
+ * Estimates surface normals.
+ * @param Pointcloud input
+ * @return The estimated surface normals of the input Pointcloud
  */
 PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
     ROS_INFO("ESTIMATING SURFACE NORMALS");
@@ -207,13 +212,13 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
 }
 
 /**
- * apply a passthrough Filter to all dimensions, reducing points and
- * narrowing Field of Vision
- * @param input
+ * Applies a PassThrough filter to all dimensions, reducing points and
+ * narrowing field of vision.
+ * @param input Pointcloud
  * @param x
  * @param y
  * @param z
- * @return
+ * @return Filtered Pointcloud
  */
 PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
                                float x,
@@ -265,9 +270,9 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
 }
 
 /**
- * estimating plane indices
- * @param input
- * @return
+ * Estimates plane indices of a PointCloud.
+ * @param input PointCloud
+ * @return Indices of the plane points in the PointCloud.
  */
 PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
 
@@ -294,11 +299,12 @@ PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
 }
 
 /**
- * extract a pointcloud by indices from an input pointcloud
- * @param input
+ * Extracts a PointCloud from an input PointCloud, using indices.
+ * @param input PointCloud
  * @param indices
- * @param negative
- * @return
+ * @param bool negative to decide whether to return all points fulfilling the indices,
+ * or all points not fulfilling the indices.
+ * @return Extracted PointCloud
  */
 PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
                                 PointIndices indices,
@@ -319,9 +325,9 @@ PointCloudRGBPtr extractCluster(PointCloudRGBPtr input,
 }
 
 /**
- * Filtering the input cloud with a moving least squares algorithm
- * @param input
- * @return
+ * Filters the input cloud with a moving least squares algorithm.
+ * @param PointCloud input
+ * @return The filtered PointCloud
  */
 PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
     ROS_INFO("MLS Filter!");
@@ -359,9 +365,9 @@ PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
 
 
 /**
- * Filtering the input cloud with a voxel grid
- * @param input
- * @return
+ * Filters the input cloud with a voxel grid filter.
+ * @param PointCloud input
+ * @return Filtered PointCloud
  */
 PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input) {
     PointCloudRGBPtr result(new PointCloudRGB);
@@ -374,9 +380,9 @@ PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input) {
 }
 
 /**
- * removes statistical outliers from pointcloud
- * @param input
- * @return
+ * Removes statistical outliers from a PointCloud.
+ * @param input PointCloud
+ * @return Filtered PointCloud
  */
 PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
     PointCloudRGBPtr cloud_filtered(new PointCloudRGB);
@@ -390,9 +396,9 @@ PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
 }
 
 /**
- * estimate the Features of a pointcloud using VFHSignature308
- * @param input
- * @return
+ * Estimates features of an object in a PointCloud using VFHSignature308.
+ * @param input PointCloud
+ * @return VFHSignature308 Features
  */
 PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
     ROS_INFO("CVFH Recognition!");
@@ -433,9 +439,9 @@ PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
 }
 
 /**
- *
- * @param input
- * @return
+ * Seperates clusters from each other using euclidean cluster extraction.
+ * @param input PointCloud
+ * @return Seperated PointClouds
  */
 std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input) {
     ROS_INFO("Euclidean Cluster Extraction!");
@@ -480,11 +486,11 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
 }
 
 /**
- * calculating the alignment of an object to a certain target using sample consensus
- * @param objects
- * @param features
- * @param target
- * @return
+ * Calculating the alignment of an object to a certain target using sample consensus.
+ * @param PointClouds objects
+ * @param VFHSignature308 features
+ * @param target PointCloud
+ * @return Output PointCloud
  */
 PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
                                      std::vector<PointCloudVFHS308Ptr> features,
@@ -550,10 +556,10 @@ PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
 }
 
 /**
- * calculating the alignment of an object to a certain target using iterative closest point algorithm
- * @param input
- * @param target
- * @return
+ * Calculates the alignment of an object to a certain target using iterative closest point algorithm.
+ * @param input PointCloud
+ * @param target PointCloud
+ * @return output PointCloud
  */
 PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
                                        PointCloudRGBPtr target) {
@@ -570,9 +576,9 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
 }
 
 /**
- * Color Histogram from RGB-PointCloud
- * @param input
- * @return concatenated floats (r,g,b (in that order) from Pointcloud-Points
+ * Gets the color histogram from a PointCloud.
+ * @param Input PointCloud cloud
+ * @return Concatenated floats (r,g,b) from PointCloud points
  */
 std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud) {
 
@@ -611,11 +617,15 @@ std::vector<uint8_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr clo
 
 }
 
+/**
+ * Gets both CVFH and color features for all object clusters
+ * @param PointClouds all_clusters
+ */
 void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> vfhs_vector,
                     std::vector<uint8_t> color_features_vector) {
 
 
-    getNormalFeatures(all_clusters, vfhs_vector);
+    getCVFHFeatures(all_clusters, vfhs_vector);
     ROS_INFO("Vision: CVFH filling completed");
 
     // do the same for the color histogram
@@ -623,7 +633,12 @@ void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<floa
     ROS_INFO("Vision: Color Histogram filling completed");
 }
 
-void getNormalFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> current_features_vector) {
+/**
+ * Gets the CVFH features from a PointCloud.
+ * @param all_clusters PointCloud
+ * @return CVFH features, a histogram of angles between a central viewpoint direction and each normal
+ */
+void getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> current_features_vector) {
 
     std::vector<PointCloudVFHS308Ptr> vfhs_vector;
     PointCloudVFHS308Ptr vfhs(new pcl::PointCloud<pcl::VFHSignature308>);
@@ -662,6 +677,12 @@ void getNormalFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<f
     }
 }
 
+
+/**
+ * Gets the color features from a PointCloud.
+ * @param all_clusters PointCloud
+ * @param color_features_vector to be filled
+ */
 void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<uint8_t> color_features_vector) {
 
     std::vector<uint8_t> current_color_features;
