@@ -753,7 +753,7 @@ void getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<flo
  * @param all_clusters PointCloud
  * @param color_features_vector to be filled
  */
-void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<uint8_t> color_features_vector) {
+void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<uint64_t> color_features_vector) {
 
     std::vector<uint64_t> current_color_features;
 
