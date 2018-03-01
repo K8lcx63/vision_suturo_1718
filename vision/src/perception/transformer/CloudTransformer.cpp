@@ -15,6 +15,11 @@ CloudTransformer::CloudTransformer(ros::NodeHandle nh) : nh_(nh) {
 
 }
 
+/**
+ * Finds the main plane (-> table, etc.) and extracts only the points above that plane.
+ * @param input PointCloud
+ * @return Extracted PointCloud
+ */
 PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
     ROS_INFO("Removing points below the ground plane...");
     PointCloudRGBPtr cloud_odom_combined(new PointCloudRGB);
@@ -102,6 +107,13 @@ PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
 
 };
 
+/**
+ * Transforms a PointCloud into another frame.
+ * @param cloud
+ * @param target_frame
+ * @param source_frame
+ * @return Transformed PointCloud
+ */
 PointCloudRGBPtr CloudTransformer::transform(const PointCloudRGBPtr cloud, std::string target_frame,
                            std::string source_frame) // sensor_msgs::PointCloud2ConstPtr&
 {

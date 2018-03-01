@@ -25,8 +25,8 @@ ros::Publisher pub_visualization;
 
 // Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
 /**
- * Callback-function saving the pointcloud received by the Kinect-Camera
- * @param kinect pointcloud received from kinect
+ * Callback-function saves the PointCloud received through the kinect
+ * @param kinect PointCloud
  */
 void sub_kinect_callback(PointCloudRGBPtr kinect) {
 
@@ -39,7 +39,7 @@ void sub_kinect_callback(PointCloudRGBPtr kinect) {
 }
 
 /**
- * starts the node for processing the pointclouds and communicating with other nodes
+ * Starts the node for processing the PointClouds and communicating with other nodes
  * @param argc unused for now
  * @param argv unused for now
  */
@@ -83,9 +83,9 @@ void start_node(int argc, char **argv) {
 }
 
 /**
- * Service to extract objects from scene to work with and to get all required information from them
+ * Service to extract objects from scene to work with and to get all required information from them.
  * @param req empty request
- * @param res returns all members from ObjectClouds.msg
+ * @param res returns all members from ObjectsInfo.msg
  * @return true if service call succeeded, false otherwise
  */
 bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::objects::Response &res) {

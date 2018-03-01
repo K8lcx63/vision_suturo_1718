@@ -31,7 +31,11 @@ std::string error_message_perc;
 
 PointCloudRGBPtr cloud_global(new PointCloudRGB);
 
-
+/**
+ * Applies all the filters to a PointCloud.
+ * @param kinect PointCloud
+ * @return Preprocessed PointCloud
+ */
 PointCloudRGBPtr preprocessCloud(PointCloudRGBPtr kinect) {
     PointCloudRGBPtr cloud_3df(new PointCloudRGB),
             cloud_voxelgridf(new PointCloudRGB),
@@ -704,7 +708,7 @@ void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<floa
 }
 
 /**
- * Gets the CVFH features from a PointCloud.
+ * Gets the CVFH features from PointClouds.
  * @param all_clusters PointCloud
  * @return CVFH features, a histogram of angles between a central viewpoint direction and each normal
  */
