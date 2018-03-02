@@ -1,6 +1,5 @@
 #include "perception.h"
 
-geometry_msgs::PointStamped centroid_stamped_perc;
 int best_ia_index = 0;
 
 std::string mesh_array[] = {"cup_eco_orange.pcd",
@@ -95,7 +94,6 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
     {
         ROS_ERROR("Input from kinect is empty");
         error_message_perc = "Cloud empty. ";
-        centroid_stamped_perc = findCenterGazebo();         // Use gazebo data instead
     } else {
         ROS_INFO("Starting Cluster extraction");
 
@@ -121,36 +119,23 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         if (cloud_global->points.size() == 0) {
             ROS_ERROR("Extracted Cluster is empty");
             error_message_perc = "Final extracted cluster was empty. ";
-            centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
         } else {
             ROS_INFO("%sExtraction OK", "\x1B[32m");
         }
 
         error_message_perc = "";
 
-        /**
+        /*
         for (int i = 0; i < result.size(); i++){
             std::stringstream obj_files;
             obj_files << "object_" << i;
             savePointCloudRGBNamed(result[i], obj_files.str());
-
         }
-        **/
+        */
 
         return result;
 
     }
-}
-
-/**
- * Returns a fake point (not estimated) with its origin in the model in simulation.
- * It is only called, when findCluster() cannot find a point in simulation.
- * @return The centroid (point) of an object in gazebo.
- */
-geometry_msgs::PointStamped
-findCenterGazebo() {
-    centroid_stamped_perc.point.x = 0, centroid_stamped_perc.point.y = 0, centroid_stamped_perc.point.z = 0;
-    return centroid_stamped_perc;
 }
 
 /**
@@ -266,7 +251,6 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
     if (input_after_xyz->points.size() == 0) {
         ROS_ERROR("Cloud empty after passthrough filtering");
         error_message_perc = "Cloud was empty after filtering. ";
-        centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
     }
 
 
@@ -296,7 +280,6 @@ PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
     if (planeIndices->indices.size() == 0) {
         ROS_ERROR("No plane (indices) found");
         error_message_perc = "No plane found. ";
-        centroid_stamped_perc = findCenterGazebo(); // Use gazebo data instead
     }
 
     return planeIndices;

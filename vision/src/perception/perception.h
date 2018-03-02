@@ -36,7 +36,6 @@
 
 
 std::vector<PointCloudRGBPtr>           findCluster(const PointCloudRGBPtr kinect);
-PointStamped                            findCenterGazebo();
 std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in);
 PointCloudNormalPtr             estimateSurfaceNormals(PointCloudRGBPtr input);
 PointCloudPointNormalPtr        createPointNormals(PointCloudRGBPtr input,

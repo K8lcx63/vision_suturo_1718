@@ -8,8 +8,6 @@ const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/point
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
 
-gazebo_msgs::GetModelState getmodelstate;
-
 PointCloudRGBPtr scene(new PointCloudRGB);
 
 // ros::NodeHandle n_global;
@@ -54,9 +52,6 @@ void start_node(int argc, char **argv) {
     ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kinect_callback);
 
     /** services and clients **/
-    // ServiceClient for calling the object position through gazebo
-    ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
-    getmodelstate.request.model_name = "eistee";  // Name des Objekts in Gazebo.
 
     ros::ServiceServer object_service = n.advertiseService("vision_suturo/objects_information", getObjects);
     ros::ServiceServer pose_service = n.advertiseService("vision_suturo/objects_poses", getPoses);

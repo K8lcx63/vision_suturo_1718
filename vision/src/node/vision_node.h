@@ -1,7 +1,5 @@
 #ifndef VISION_VISION_NODE_H
 #define VISION_VISION_NODE_H
-#include "gazebo_msgs/GetModelState.h"
-#include "gazebo_msgs/ModelState.h"
 #include "object_detection/ObjectDetection.h"
 #include "object_detection/VisObjectInfo.h"
 #include <pcl_ros/point_cloud.h>
