@@ -720,34 +720,14 @@ void getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<flo
 
     for (int i = 0; i < all_clusters.size(); i++) {
 
-        std::stringstream line;
-        line << "object_" << i << "_normal.csv";
-
-        //char *line_charp;
-        //line.str().copy(line_charp, line.str().size(), 0);
-        std::ofstream normals_csv_file(line.str(), std::ofstream::out);
-
-
-        vfhs = cvfhRecognition(all_clusters[i]);
+             vfhs = cvfhRecognition(all_clusters[i]);
         vfhs_vector.push_back(vfhs);
 
         for (int x = 0; x < 308; x++) {
             //ROS_INFO("%f", current_features[x]);
             current_features_vector.push_back(vfhs->points[0].histogram[x]);
 
-            if (x == 307) {
-                normals_csv_file << vfhs->points[0].histogram[x];
-            } else {
-                normals_csv_file << vfhs->points[0].histogram[x] << ",";
-            }
-
         }
-
-        normals_csv_file.close();
-        normals_csv_file.clear();
-        line.clear();
-
-
     }
 }
 
@@ -763,27 +743,14 @@ void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<ui
 
     for (int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
-        std::stringstream line;
-        line << "object_" << i << "_color.csv";
 
-        //char *line_charp;
-        //line.str().copy(line_charp, line.str().size(), 0);
-        std::ofstream color_csv_file(line.str(), std::ofstream::out);
 
         for (int x = 0; x < 24; x++) {
             //ROS_INFO("%f", current_color_features[x]);
             color_features_vector.push_back(current_color_features[x]);
 
-            if (x == 23) {
-                color_csv_file << current_color_features[x];
-            } else {
-                color_csv_file << current_color_features[x] << ",";
-            }
 
         }
-        color_csv_file.close();
-        color_csv_file.clear();
-        line.clear();
 
     }
 }
