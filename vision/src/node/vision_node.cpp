@@ -122,8 +122,16 @@ bool getPoses(vision_suturo_msgs::poses::Request &req, vision_suturo_msgs::poses
     // Get poses for the objects
     // TODO: Use object information of the last object_information service call!
     // TODO: Only return a single Pose, depending on the given index!
-    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
-    res.object_poses = all_poses;
+    // Currently computes all centroids, but only takes the relevant one.
+    if(all_clusters.size() > 0) { // If objects have been perceived
+        std::vector <geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
+        res.object_pose = all_poses[req.index];
+    }
+    else{
+        geometry_msgs::PoseStamped dummy_pose;
+        res.object_pose = dummy_pose;
+        ROS_WARN("Returned empty pose. Call 'vision_suturo/objects_information' first!");
+    }
 
     return true;
 }
