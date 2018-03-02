@@ -19,6 +19,8 @@ std::string error_message; // Wird durch den Object Position Service mit ausgege
 
 geometry_msgs::PointStamped centroid_stamped;
 
+std::vector<PointCloudRGBPtr> all_clusters;
+
 
 ros::Publisher pub_visualization;
 
@@ -92,7 +94,8 @@ void start_node(int argc, char **argv) {
 bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::objects::Response &res) {
 
     // Execute findCluster()
-    std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
+    //std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
+    all_clusters = findCluster(scene);
     ROS_INFO("Suturo Vision: findCluster completed!");
 
     // Calculate features and put them into the message response

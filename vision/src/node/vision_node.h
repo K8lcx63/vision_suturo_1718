@@ -1,6 +1,7 @@
 #ifndef VISION_VISION_NODE_H
 #define VISION_VISION_NODE_H
 #include <vision_suturo_msgs/objects.h>
+#include <vision_suturo_msgs/poses.h>
 #include "gazebo_msgs/GetModelState.h"
 #include "gazebo_msgs/ModelState.h"
 #include "object_detection/ObjectDetection.h"
