@@ -584,108 +584,109 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  * @param Input PointCloud cloud
  * @return Concatenated floats (r,g,b) from PointCloud points
  */
-std::vector<uint64_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  cloud){
+std::vector<uint64_t> produceColorHist(PointCloudRGBPtr cloud){
     int red[8];
     int green[8];
     int blue[8];
     std::vector<uint64_t> result;
 
-    // initialize all array-values with 0
-    for (int i = 0; i < 8;i++){
-        red[i] = 0;
-        green[i] = 0;
-        blue[i] = 0;
-    }
+       // initialize all array-values with 0
+       for (int i = 0; i < 8;i++){
+           red[i] = 0;
+           green[i] = 0;
+           blue[i] = 0;
+       }
 
-    for (int i = 0; i <  cloud->size(); i++){
-        pcl::PointXYZRGB p = cloud->points[i];
-        // increase value in bin at given index
-        if (p.r < 32){
-            red[0]++;
+       for (int i = 0; i <  cloud->size(); i++){
+           pcl::PointXYZRGB p = cloud->points[i];
+           // increase value in bin at given index
+           if (p.r < 32){
+               red[0]++;
 
-        } else if (p.r >= 32 && p.r < 64){
-            red[1]++;
+           } else if (p.r >= 32 && p.r < 64){
+               red[1]++;
 
-        } else if (p.r >= 64 && p.r < 96){
-            red[2]++;
-        } else if (p.r >= 96 && p.r < 128){
-            red[3]++;
+           } else if (p.r >= 64 && p.r < 96){
+               red[2]++;
+           } else if (p.r >= 96 && p.r < 128){
+               red[3]++;
 
-        } else if (p.r >= 128 && p.r < 160){
-            red[4]++;
+           } else if (p.r >= 128 && p.r < 160){
+               red[4]++;
 
-        } else if (p.r >= 160 && p.r < 192){
-            red[5]++;
+           } else if (p.r >= 160 && p.r < 192){
+               red[5]++;
 
-        } else if (p.r >= 192 && p.r < 224){
-            red[6]++;
+           } else if (p.r >= 192 && p.r < 224){
+               red[6]++;
 
-        } else if (p.r >= 224 && p.r < 256){
-            red[7]++;
+           } else if (p.r >= 224 && p.r < 256){
+               red[7]++;
 
-        }
+           }
 
-        if (p.g < 32){
-            green[0]++;
+           if (p.g < 32){
+               green[0]++;
 
-        } else if (p.g >= 32 && p.g < 64){
-            green[1]++;
+           } else if (p.g >= 32 && p.g < 64){
+               green[1]++;
 
-        } else if (p.g >= 64 && p.g < 96){
-            green[2]++;
-        } else if (p.g >= 96 && p.g < 128){
-            green[3]++;
+           } else if (p.g >= 64 && p.g < 96){
+               green[2]++;
+           } else if (p.g >= 96 && p.g < 128){
+               green[3]++;
 
-        } else if (p.g >= 128 && p.g < 160){
-            green[4]++;
+           } else if (p.g >= 128 && p.g < 160){
+               green[4]++;
 
-        } else if (p.g >= 160 && p.g < 192){
-            green[5]++;
+           } else if (p.g >= 160 && p.g < 192){
+               green[5]++;
 
-        } else if (p.g >= 192 && p.g < 224){
-            green[6]++;
+           } else if (p.g >= 192 && p.g < 224){
+               green[6]++;
 
-        } else if (p.g >= 224 && p.g < 256){
-            green[7]++;
+           } else if (p.g >= 224 && p.g < 256){
+               green[7]++;
 
-        }
+           }
 
-        if (p.b < 32){
-            blue[0]++;
+           if (p.b < 32){
+               blue[0]++;
 
-        } else if (p.b >= 32 && p.b < 64){
-            blue[1]++;
+           } else if (p.b >= 32 && p.b < 64){
+               blue[1]++;
 
-        } else if (p.b >= 64 && p.b < 96){
-            blue[2]++;
-        } else if (p.b >= 96 && p.b < 128){
-            blue[3]++;
+           } else if (p.b >= 64 && p.b < 96){
+               blue[2]++;
+           } else if (p.b >= 96 && p.b < 128){
+               blue[3]++;
 
-        } else if (p.b >= 128 && p.b < 160){
-            blue[4]++;
+           } else if (p.b >= 128 && p.b < 160){
+               blue[4]++;
 
-        } else if (p.b >= 160 && p.b < 192){
-            blue[5]++;
+           } else if (p.b >= 160 && p.b < 192){
+               blue[5]++;
 
-        } else if (p.b >= 192 && p.b < 224){
-            blue[6]++;
+           } else if (p.b >= 192 && p.b < 224){
+               blue[6]++;
 
-        } else if (p.b >= 224 && p.b < 256){
-            blue[7]++;
+           } else if (p.b >= 224 && p.b < 256){
+               blue[7]++;
 
-        }
-    }
+           }
+       }
 
-    // concatenate red, green and blue entries
-    for (int r = 0; r < 8; r++){
-        result.push_back(red[r]);
-    }
-    for (int g = 0; g < 8; g++){
-        result.push_back(green[g]);
-    }
-    for (int b = 0; b < 8; b++){
-        result.push_back(blue[b]);
-    }
+       // concatenate red, green and blue entries
+       for (int r = 0; r < 8; r++){
+           result.push_back(red[r]);
+       }
+       for (int g = 0; g < 8; g++){
+           result.push_back(green[g]);
+       }
+       for (int b = 0; b < 8; b++){
+           result.push_back(blue[b]);
+       }
+
 
     return result;
 
@@ -699,11 +700,11 @@ void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<floa
                     std::vector<uint64_t> color_features_vector) {
 
 
-    getCVFHFeatures(all_clusters, vfhs_vector);
+    getCVFHFeatures(all_clusters);
     ROS_INFO("Vision: CVFH filling completed");
 
     // do the same for the color histogram
-    getColorFeatures(all_clusters, color_features_vector);
+    getColorFeatures(all_clusters);
     ROS_INFO("Vision: Color Histogram filling completed");
 }
 
@@ -712,23 +713,23 @@ void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<floa
  * @param all_clusters PointCloud
  * @return CVFH features, a histogram of angles between a central viewpoint direction and each normal
  */
-void getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> current_features_vector) {
+std::vector<float> getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters) {
 
-    std::vector<PointCloudVFHS308Ptr> vfhs_vector;
     PointCloudVFHS308Ptr vfhs(new pcl::PointCloud<pcl::VFHSignature308>);
+std::vector<float> result;
 
 
     for (int i = 0; i < all_clusters.size(); i++) {
 
              vfhs = cvfhRecognition(all_clusters[i]);
-        vfhs_vector.push_back(vfhs);
 
         for (int x = 0; x < 308; x++) {
             //ROS_INFO("%f", current_features[x]);
-            current_features_vector.push_back(vfhs->points[0].histogram[x]);
+            result.push_back(vfhs->points[0].histogram[x]);
 
         }
     }
+    return result;
 }
 
 
@@ -737,9 +738,10 @@ void getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<flo
  * @param all_clusters PointCloud
  * @param color_features_vector to be filled
  */
-void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<uint64_t> color_features_vector) {
+std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters) {
 
     std::vector<uint64_t> current_color_features;
+std::vector<uint64_t> result;
 
     for (int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
@@ -747,10 +749,10 @@ void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<ui
 
         for (int x = 0; x < 24; x++) {
             //ROS_INFO("%f", current_color_features[x]);
-            color_features_vector.push_back(current_color_features[x]);
-
+            result.push_back(current_color_features[x]);
 
         }
 
     }
+    return result;
 }
