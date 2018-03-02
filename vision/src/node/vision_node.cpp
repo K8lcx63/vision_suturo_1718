@@ -32,7 +32,6 @@ ros::Publisher pub_visualization;
  */
 void sub_kinect_callback(PointCloudRGBPtr kinect) {
 
-    ROS_INFO("CALLBACK FUNCTION!");
     if (kinect->size() == 0) {
         ROS_ERROR("Kinect has no image");
         error_message += "No image from kinect. ";
@@ -65,7 +64,7 @@ void start_node(int argc, char **argv) {
 
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
-    ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("visualization_cloud", 0);
+    ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/visualization_cloud", 0);
 
     ros::Rate r(2.0);
 
@@ -77,7 +76,6 @@ void start_node(int argc, char **argv) {
         pcl::toROSMsg(*cloud_global, cloud_final_pub);
         cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
         pub_visualization_object.publish(cloud_final_pub);
-        ROS_INFO("Suturo Vision: Visualization marker published");
 
         ros::spinOnce();
         r.sleep();
