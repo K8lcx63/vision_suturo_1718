@@ -96,9 +96,9 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     ROS_INFO("Suturo Vision: findCluster completed!");
 
     // Calculate features and put them into the message response
-    std::vector<float> current_features_vector;
-    std::vector<uint64_t> color_features_vector;
-    getAllFeatures(all_clusters, current_features_vector, color_features_vector);
+    std::vector<float> current_features_vector = getCVFHFeatures(all_clusters);
+    std::vector<uint64_t> color_features_vector = getColorFeatures(all_clusters);
+    //getAllFeatures(all_clusters, current_features_vector, color_features_vector);
 
     // estimate poses (quaternions)
 
@@ -110,12 +110,6 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     res.clouds.normal_features = current_features_vector;
     res.clouds.color_features = color_features_vector;
     res.clouds.object_amount = all_clusters.size();
-
-    for (int j = 0; j < all_clusters.size(); j++) {
-        savePointCloudRGBNamed(all_clusters[j], "object_" + j);
-
-    }
-
 
     return true;
 

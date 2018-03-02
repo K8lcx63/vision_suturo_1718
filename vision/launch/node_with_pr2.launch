@@ -32,16 +32,14 @@
    <arg name="ICETEA_POSE_TABLE" default="-x -1.0 -y 1.0 -z 1.1"/>
 
    <!-- bring up an empty world -->
-   <include file="$(find vision)/launch/vision_custom_world.launch">
-     <arg name="paused" value="true"/>
-     <arg name="use_sim_time" value="true"/>
-     <arg name="gui" value="true"/>
-     <arg name="headless" value="false"/>
-     <arg name="debug" value="false"/>
-     <arg name="world_name" default="$(env GAZEBO_RESOURCE_PATH)/custom.world"/>
-   </include>
-
+<include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="paused" value="false"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="true"/>
+    <arg name="debug" value="false"/>
+  </include>
    <!-- Build Kitchen in Gazebo (iai_kitchen_gazebo.launch from iai_kitchen pkg)-->
+
    <arg name="model" default="$(find iai_kitchen)/urdf/IAI_kitchen.urdf.xacro"/>
 
    <param name="kitchen_description" command="$(find xacro)/xacro.py '$(arg model)'" />
