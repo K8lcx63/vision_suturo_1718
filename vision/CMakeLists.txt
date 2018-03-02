@@ -21,7 +21,7 @@ catkin_package(CATKIN_DEPENDS
 		vision_suturo_msgs
 )
 
-find_package(PCL 1.7 REQUIRED)
+find_package(PCL 1.6 REQUIRED)
 
 include_directories(
         ${PCL_INCLUDE_DIRS}

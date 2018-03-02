@@ -723,9 +723,9 @@ void getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<flo
         std::stringstream line;
         line << "object_" << i << "_normal.csv";
 
-        char *line_charp;
-        line.str().copy(line_charp, line.str().size(), 0);
-        std::ofstream normals_csv_file(line_charp);
+        //char *line_charp;
+        //line.str().copy(line_charp, line.str().size(), 0);
+        std::ofstream normals_csv_file(line.str(), std::ofstream::out);
 
 
         vfhs = cvfhRecognition(all_clusters[i]);
@@ -766,9 +766,9 @@ void getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<ui
         std::stringstream line;
         line << "object_" << i << "_color.csv";
 
-        char *line_charp;
-        line.str().copy(line_charp, line.str().size(), 0);
-        std::ofstream color_csv_file(line_charp);
+        //char *line_charp;
+        //line.str().copy(line_charp, line.str().size(), 0);
+        std::ofstream color_csv_file(line.str(), std::ofstream::out);
 
         for (int x = 0; x < 24; x++) {
             //ROS_INFO("%f", current_color_features[x]);
