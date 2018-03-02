@@ -5,15 +5,18 @@
 #ifndef VISION_CLOUDTRANSFORMER_H
 #define VISION_CLOUDTRANSFORMER_H
 
-#include <string>
+#include <pcl/common/transforms.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <ros/ros.h>
+#include <tf_conversions/tf_eigen.h>
+#include <tf/transform_listener.h>
+
 #include "../short_types.h"
 #include "../perception.h"
-#include <ros/ros.h>
-#include <pcl/common/transforms.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <tf/transform_listener.h>
-#include <tf_conversions/tf_eigen.h>
-#include <pcl/filters/passthrough.h>
+
+#include <string>
+
 class CloudTransformer {
 private:
     ros::NodeHandle nh_;
