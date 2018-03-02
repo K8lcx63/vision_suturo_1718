@@ -164,7 +164,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
         geometry_msgs::PoseStamped current_pose;
 
-        ROS_INFO("CALCULATING CENTROID FOR OBJECT %d", i);
+        ROS_INFO("CALCULATING CENTROID FOR OBJECT");
         // Calculate centroids
         Eigen::Vector4f centroid;
         pcl::compute3DCentroid(*input, centroid);
