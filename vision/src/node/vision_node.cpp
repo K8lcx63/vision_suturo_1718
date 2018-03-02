@@ -106,9 +106,6 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     // estimate poses (quaternions)
 
 
-    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
-    ROS_INFO("Vision: Finding poses completed");
-
 
     res.clouds.normal_features = current_features_vector;
     res.clouds.color_features = color_features_vector;
@@ -123,9 +120,10 @@ bool getPoses(vision_suturo_msgs::poses::Request &req, vision_suturo_msgs::poses
     // TODO: Use object information of the last object_information service call!
     // TODO: Only return a single Pose, depending on the given index!
     // Currently computes all centroids, but only takes the relevant one.
-    if(all_clusters.size() > 0) { // If objects have been perceived
-        std::vector <geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
-        res.object_pose = all_poses[req.index];
+    if(!all_clusters.empty()) { // If objects have been perceived
+
+        geometry_msgs::PoseStamped pose = findPose(all_clusters[req.index], req.labels);
+        res.object_pose = pose;
     }
     else{
         geometry_msgs::PoseStamped dummy_pose;

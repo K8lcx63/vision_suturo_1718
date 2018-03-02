@@ -9,6 +9,7 @@
 #include "sensor_msgs/PointCloud2.h"
 #include <pcl_ros/point_cloud.h>
 #include <visualization_msgs/Marker.h>
+#include <vision_suturo_msgs/poses.h>
 #include "../viewer/viewer.h"
 #include "../perception/perception.h"
 #include "../perception/short_types.h"

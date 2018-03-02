@@ -35,7 +35,7 @@
 
 std::vector<PointCloudRGBPtr>           findCluster(const PointCloudRGBPtr kinect);
 PointStamped                            findCenterGazebo();
-std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in);
+geometry_msgs::PoseStamped      findPose(const PointCloudRGBPtr input, std::string label);
 PointCloudNormalPtr             estimateSurfaceNormals(PointCloudRGBPtr input);
 PointCloudPointNormalPtr        createPointNormals(PointCloudRGBPtr input,
                                                    PointCloudNormalPtr normals);
@@ -52,9 +52,7 @@ std::vector<PointCloudRGBPtr>   euclideanClusterExtraction(PointCloudRGBPtr inpu
 PointCloudRGBPtr                voxelGridFilter(PointCloudRGBPtr input);
 PointCloudRGBPtr                outlierRemoval(PointCloudRGBPtr input);
 PointCloudVFHS308Ptr            cvfhRecognition(PointCloudRGBPtr input);
-PointCloudRGBPtr                SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
-                                                    std::vector<PointCloudVFHS308Ptr> features,
-                                                    PointCloudRGBPtr target);
+PointCloudRGBPtr                SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
 std::vector<uint64_t>           produceColorHist(PointCloudRGBPtr cloud);
 void                            getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters,
@@ -63,6 +61,7 @@ void                            getAllFeatures(std::vector<PointCloudRGBPtr> all
 
 std::vector<float>              getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters);
 std::vector<uint64_t>           getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters);
+PointCloudRGBPtr                getTargetByLabel(std::string label);
 
 
 extern PointCloudRGBPtr cloud_global;

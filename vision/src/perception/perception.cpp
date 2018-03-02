@@ -158,17 +158,16 @@ findCenterGazebo() {
  * @param The pointcloud object_cloud
  * @return The pose of the object contained in object_cloud
  */
-std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRGBPtr> clouds_in) {
+geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string label) {
     std::vector<geometry_msgs::PoseStamped> result;
+    PointCloudRGBPtr aligned_cloud(new PointCloudRGB), icp_cloud(new PointCloudRGB);
 
-    for (int i = 0; i < clouds_in.size(); i++) {
         geometry_msgs::PoseStamped current_pose;
-        PointCloudRGBPtr current_cloud = clouds_in[i];
 
         ROS_INFO("CALCULATING CENTROID FOR OBJECT %d", i);
         // Calculate centroids
         Eigen::Vector4f centroid;
-        pcl::compute3DCentroid(*current_cloud, centroid);
+        pcl::compute3DCentroid(*input, centroid);
         current_pose.pose.position.x = centroid.x();
         current_pose.pose.position.y = centroid.y();
         current_pose.pose.position.z = centroid.z();
@@ -179,16 +178,18 @@ std::vector<geometry_msgs::PoseStamped> findPoses(const std::vector<PointCloudRG
         ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
 
         // Calculate quaternions
-        // TODO: QUATERNIONS!
+    PointCloudRGBPtr target (new PointCloudRGB);
+    target = getTargetByLabel(label);
+
+    aligned_cloud = SACInitialAlignment(input, target);
+        icp_cloud = iterativeClosestPoint(input, target);
 
         // Add header
         current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
 
         // Add this PoseStamped to result vector
-        result.push_back(current_pose);
-    }
 
-    return result;
+    return current_pose;
 }
 
 /**
@@ -496,66 +497,32 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
  * @param target PointCloud
  * @return Output PointCloud
  */
-PointCloudRGBPtr SACInitialAlignment(std::vector<PointCloudRGBPtr> objects,
-                                     std::vector<PointCloudVFHS308Ptr> features,
-                                     PointCloudRGBPtr target) {
+PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr target) {
 
     PointCloudRGBPtr result(new PointCloudRGB);
-    // preprocess cloud
-    // apply3DFilter(target, 1.0,1.0,1.0);
 
-    PointCloudRGBPtr temp(new PointCloudRGB);
-    temp = target;
-    target = voxelGridFilter(temp);
-
-    float fitness_scores[features.size()];
-    Eigen::Matrix4f transformation_matrices[features.size()];
-    int best_index;
-
-
-
-    // calculate inital alignment for every input cloud and save scores
-    for (size_t i = 0; i < features.size(); ++i) {
         pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
 
-        sac_ia.setInputSource(objects[i]);
-        sac_ia.setSourceFeatures(features[i]);
+        sac_ia.setInputSource(input);
+        sac_ia.setSourceFeatures(cvfhRecognition(input));
         sac_ia.setInputTarget(target);
         // sac_ia.setTargetFeatures(target_features);
         PointCloudRGB registration_output;
         sac_ia.align(registration_output);
 
         // get fitness score with max squared distance for correspondence
-        fitness_scores[i] = (float) sac_ia.getFitnessScore(0.01f * 0.01f);
-        transformation_matrices[i] = sac_ia.getFinalTransformation();
-    }
+        float fitness_score = (float) sac_ia.getFitnessScore(0.01f * 0.01f);
+        Eigen::Matrix4f transformation_matrix = sac_ia.getFinalTransformation();
 
 
-    // Find the best template alignment
-
-    // Find the template with the best (lowest) fitness score
-    float lowest_score = std::numeric_limits<float>::infinity();
-    int best_template = 0;
-    for (size_t i = 0; i < sizeof(fitness_scores); ++i) {
-        if (fitness_scores[i] < lowest_score) {
-            lowest_score = fitness_scores[i];
-            best_index = i;
-        }
-    }
-
-    // Print the alignment fitness score (values less than 0.00002 are good)
-    printf("Best fitness score: %f\n", fitness_scores[best_index]);
 
     // Print the rotation matrix and translation vector
-    Eigen::Matrix3f rotation = transformation_matrices[best_index].block<3, 3>(0, 0);
-    Eigen::Vector3f translation = transformation_matrices[best_index].block<3, 1>(0, 3);
+    Eigen::Matrix3f rotation = transformation_matrix.block<3, 3>(0, 0);
+    Eigen::Vector3f translation = transformation_matrix.block<3, 1>(0, 3);
 
     // transform with best Transformation
 
-    pcl::transformPointCloud(*objects[best_index], *result, transformation_matrices[best_index]);
-
-    best_ia_index = best_index;
-
+    pcl::transformPointCloud(*input, *result, transformation_matrix);
     return result;
 }
 
@@ -753,6 +720,33 @@ std::vector<uint64_t> result;
 
         }
 
+    }
+    return result;
+}
+
+PointCloudRGBPtr getTargetByLabel(std::string label){
+    PointCloudRGBPtr result(new PointCloudRGB);
+
+    if (label == "PringlesPaprika"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
+    } else if (label == "PringlesSalt"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
+    } else if (label == "SiggBottle"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/sigg_bottle.pcd", *result);
+    }else if (label == "JaMilch"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/ja_milch.pcd", *result);
+    }else if (label == "TomatoSauceOroDiParma"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/tomato_sauce_oro_di_parma.pcd", *result);
+    }else if (label == "KoellnMuesliKnusperHonigNuss"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/koelln_muesli_knusper_honig_nuss.pcd", *result);
+    }else if (label == "KelloggsToppasMini"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.pcd", *result);
+    }else if (label == "HelaCurryKetchup"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/hela_curry_ketchup.pcd", *result);
+    }else if (label == "CupEcoOrange"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/cup_eco_orange.pcd", *result);
+    }else if (label == "EdekaRedBowl"){
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *result);
     }
     return result;
 }
