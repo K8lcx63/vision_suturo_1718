@@ -8,8 +8,6 @@ const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/point
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
 
-gazebo_msgs::GetModelState getmodelstate;
-
 PointCloudRGBPtr scene(new PointCloudRGB);
 
 // ros::NodeHandle n_global;
@@ -32,7 +30,6 @@ ros::Publisher pub_visualization;
  */
 void sub_kinect_callback(PointCloudRGBPtr kinect) {
 
-    ROS_INFO("CALLBACK FUNCTION!");
     if (kinect->size() == 0) {
         ROS_ERROR("Kinect has no image");
         error_message += "No image from kinect. ";
@@ -55,29 +52,22 @@ void start_node(int argc, char **argv) {
     ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kinect_callback);
 
     /** services and clients **/
-    // ServiceClient for calling the object position through gazebo
-    ros::ServiceClient client = n.serviceClient<gazebo_msgs::GetModelState>("/gazebo/get_model_state");
-    getmodelstate.request.model_name = "eistee";  // Name des Objekts in Gazebo.
 
     ros::ServiceServer object_service = n.advertiseService("vision_suturo/objects_information", getObjects);
     ros::ServiceServer pose_service = n.advertiseService("vision_suturo/objects_poses", getPoses);
     ROS_INFO("%sSuturo-Vision: Services ready\n", "\x1B[32m");
 
     // Visualization Publisher for debugging purposes
-    ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
-    ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("visualization_cloud", 0);
+    ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/visualization_cloud", 0);
 
     ros::Rate r(2.0);
 
     while (n.ok()) {
-        pub_visualization_marker.publish(
-                publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
         sensor_msgs::PointCloud2 cloud_final_pub;
         ROS_INFO("%lu points", cloud_global->points.size());
         pcl::toROSMsg(*cloud_global, cloud_final_pub);
         cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
         pub_visualization_object.publish(cloud_final_pub);
-        ROS_INFO("Suturo Vision: Visualization marker published");
 
         ros::spinOnce();
         r.sleep();

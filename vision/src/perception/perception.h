@@ -4,33 +4,35 @@
 
 #ifndef VISION_PERCEPTION_H
 #define VISION_PERCEPTION_H
+#include <eigen_conversions/eigen_msg.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
-#include <sensor_msgs/PointCloud2.h>
-#include <ros/ros.h>
 #include <pcl_conversions/pcl_conversions.h>
-#include <pcl/segmentation/sac_segmentation.h>
-#include <pcl/search/kdtree.h>
-#include <pcl/filters/passthrough.h>
+#include <pcl/features/cvfh.h>
 #include <pcl/features/normal_3d.h>
-#include <pcl/surface/convex_hull.h>
-#include <pcl/filters/voxel_grid.h>
-#include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/extract_indices.h>
-#include <pcl/surface/mls.h>
+#include <pcl/filters/passthrough.h>
 #include <pcl/filters/statistical_outlier_removal.h>
+#include <pcl/filters/voxel_grid.h>
+#include <pcl/registration/icp.h>
+#include <pcl/registration/ia_ransac.h>
+#include <pcl/search/kdtree.h>
+#include <pcl/segmentation/extract_clusters.h>
+#include <pcl/segmentation/sac_segmentation.h>
+#include <pcl/surface/convex_hull.h>
+#include <pcl/surface/mls.h>
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
+
 #include "short_types.h"
 #include "transformer/CloudTransformer.h"
 #include "../saving/saving.h"
-#include <pcl/features/cvfh.h>
+
 #include <iterator>
 #include <vector>
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <pcl/registration/icp.h>
-#include <pcl/registration/ia_ransac.h>
-#include <eigen_conversions/eigen_msg.h>
 
 
 std::vector<PointCloudRGBPtr>           findCluster(const PointCloudRGBPtr kinect);
