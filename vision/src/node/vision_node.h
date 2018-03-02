@@ -12,6 +12,7 @@
 #include "../perception/perception.h"
 #include "../perception/short_types.h"
 bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::objects::Response &res);
+bool getPoses(vision_suturo_msgs::poses::Request &req, vision_suturo_msgs::poses::Response &res);
 void sub_kinect_callback(PointCloudRGBPtr kinect);
 void start_node(int argc, char **argv);
 

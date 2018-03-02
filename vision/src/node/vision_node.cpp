@@ -58,7 +58,8 @@ void start_node(int argc, char **argv) {
     getmodelstate.request.model_name = "eistee";  // Name des Objekts in Gazebo.
 
     ros::ServiceServer object_service = n.advertiseService("vision_suturo/objects_information", getObjects);
-    ROS_INFO("%sSuturo-Vision: service ready\n", "\x1B[32m");
+    ros::ServiceServer pose_service = n.advertiseService("vision_suturo/objects_poses", getPoses);
+    ROS_INFO("%sSuturo-Vision: Services ready\n", "\x1B[32m");
 
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
@@ -109,7 +110,6 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     res.clouds.normal_features = current_features_vector;
     res.clouds.color_features = color_features_vector;
     res.clouds.object_amount = all_clusters.size();
-    res.clouds.object_poses = all_poses;
 
     for (int j = 0; j < all_clusters.size(); j++) {
         savePointCloudRGBNamed(all_clusters[j], "object_" + j);
@@ -119,4 +119,14 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
 
     return true;
 
+}
+
+bool getPoses(vision_suturo_msgs::poses::Request &req, vision_suturo_msgs::poses::Response &res) {
+    // Get poses for the objects
+    // TODO: Use object information of the last object_information service call!
+    // TODO: Only return a single Pose, depending on the given index!
+    std::vector<geometry_msgs::PoseStamped> all_poses = findPoses(all_clusters);
+    res.object_poses = all_poses;
+
+    return true;
 }
