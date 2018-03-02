@@ -6,7 +6,6 @@
 #include "sensor_msgs/PointCloud2.h"
 #include <vision_suturo_msgs/objects.h>
 #include <vision_suturo_msgs/poses.h>
-#include <visualization_msgs/Marker.h>
 
 #include "../viewer/viewer.h"
 #include "../perception/perception.h"

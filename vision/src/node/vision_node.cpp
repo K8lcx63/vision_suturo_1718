@@ -58,14 +58,11 @@ void start_node(int argc, char **argv) {
     ROS_INFO("%sSuturo-Vision: Services ready\n", "\x1B[32m");
 
     // Visualization Publisher for debugging purposes
-    ros::Publisher pub_visualization_marker = n.advertise<visualization_msgs::Marker>("visualization_marker", 0);
     ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/visualization_cloud", 0);
 
     ros::Rate r(2.0);
 
     while (n.ok()) {
-        pub_visualization_marker.publish(
-                publishVisualizationMarker(centroid_stamped)); // Update point for debug visualization
         sensor_msgs::PointCloud2 cloud_final_pub;
         ROS_INFO("%lu points", cloud_global->points.size());
         pcl::toROSMsg(*cloud_global, cloud_final_pub);
