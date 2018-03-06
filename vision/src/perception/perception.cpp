@@ -188,7 +188,9 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 //
     // use tf::Matrix3x3. construct with rotatin matrix and convert fromRotation
     global_tf_rotation.getRotation(quat_tf);
+    quat_tf.normalize();
     geometry_msgs::Quaternion quat_msg;
+
     quat_msg.x = quat_tf.x();
     quat_msg.y = quat_tf.y();
     quat_msg.z = quat_tf.z();
