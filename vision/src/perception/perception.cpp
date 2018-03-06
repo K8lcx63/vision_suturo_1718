@@ -537,13 +537,13 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
     Eigen::Vector3f translation = transformation_matrix.block<3, 1>(0, 3);
 
     tf::Matrix3x3 tf_rotation(rotation(0,0),
-                              rotation(0,1),
-                              rotation(0,2),
                               rotation(1,0),
-                              rotation(1,1),
-                              rotation(1,2),
                               rotation(2,0),
+                              rotation(0,1),
+                              rotation(1,1),
                               rotation(2,1),
+                              rotation(0,2),
+                              rotation(1,2),
                               rotation(2,2));
     global_tf_rotation = tf_rotation;
 
