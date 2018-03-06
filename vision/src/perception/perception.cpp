@@ -709,6 +709,11 @@ std::vector<uint64_t> result;
     return result;
 }
 
+/**
+ * Load the correct PCD file for the label given.
+ * @param label
+ * @return Object PointCloud out of PCD file
+ */
 PointCloudRGBPtr getTargetByLabel(std::string label){
     PointCloudRGBPtr result(new PointCloudRGB);
 
