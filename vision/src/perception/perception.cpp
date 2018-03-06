@@ -166,8 +166,10 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     PointCloudRGBPtr target (new PointCloudRGB);
     target = getTargetByLabel(label);
 
+    /* CRASHES ON TEST SCENE!
     aligned_cloud = SACInitialAlignment(input, target);
-        icp_cloud = iterativeClosestPoint(input, target);
+    icp_cloud = iterativeClosestPoint(input, target);
+     */
 
         // Add header
         current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
