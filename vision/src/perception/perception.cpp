@@ -29,6 +29,7 @@ enum mesh_enum {
 std::string error_message_perc;
 
 PointCloudRGBPtr cloud_global(new PointCloudRGB);
+tf::Matrix3x3 global_tf_rotation;
 
 /**
  * Applies all the filters to a PointCloud.
@@ -55,7 +56,7 @@ PointCloudRGBPtr preprocessCloud(PointCloudRGBPtr kinect) {
  * Segment planes that aren't relevant to the objects.
  * @param cloud_cluster
  */
-void segmentPlanes(PointCloudRGBPtr cloud_cluster){
+void segmentPlanes(PointCloudRGBPtr cloud_cluster) {
     // While a segmented plane would be larger than plane_size_threshold points, segment it.
     bool loop_segmentations = true;
     int segmentations_amount = 0;
@@ -74,6 +75,7 @@ void segmentPlanes(PointCloudRGBPtr cloud_cluster){
     }
     ROS_INFO("Extracted %d planes!", segmentations_amount);
 }
+
 /**
  * Find the objects.
  * @param kinect
@@ -147,35 +149,57 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     std::vector<geometry_msgs::PoseStamped> result;
     PointCloudRGBPtr aligned_cloud(new PointCloudRGB), icp_cloud(new PointCloudRGB);
 
-        geometry_msgs::PoseStamped current_pose;
+    geometry_msgs::PoseStamped current_pose;
 
-        ROS_INFO("CALCULATING CENTROID FOR OBJECT");
-        // Calculate centroids
-        Eigen::Vector4f centroid;
-        pcl::compute3DCentroid(*input, centroid);
-        current_pose.pose.position.x = centroid.x();
-        current_pose.pose.position.y = centroid.y();
-        current_pose.pose.position.z = centroid.z();
+    ROS_INFO("CALCULATING CENTROID FOR OBJECT");
+    // Calculate centroids
+    Eigen::Vector4f centroid;
+    pcl::compute3DCentroid(*input, centroid);
+    current_pose.pose.position.x = centroid.x();
+    current_pose.pose.position.y = centroid.y();
+    current_pose.pose.position.z = centroid.z();
 
-        ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
-        ROS_INFO("\x1B[32mX: %f\n", current_pose.pose.position.x);
-        ROS_INFO("\x1B[32mY: %f\n", current_pose.pose.position.y);
-        ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
+    ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
+    ROS_INFO("\x1B[32mX: %f\n", current_pose.pose.position.x);
+    ROS_INFO("\x1B[32mY: %f\n", current_pose.pose.position.y);
+    ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
 
-        // Calculate quaternions
-    PointCloudRGBPtr target (new PointCloudRGB);
+    // Calculate quaternions
+    PointCloudRGBPtr target(new PointCloudRGB);
     target = getTargetByLabel(label);
 
     /* CRASHES ON TEST SCENE!
     aligned_cloud = SACInitialAlignment(input, target);
     icp_cloud = iterativeClosestPoint(input, target);
-     */
 
-        // Add header
-        current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
+    // Add header
+    current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
+//    Eigen::Quaternionf quat = icp_cloud->sensor_orientation_;
+//    //quat.FromTwoVectors(input->sensor_origin_, aligned_cloud->sensor_origin_);
+//    double quat_x, quat_y, quat_z, quat_w;
+//    quat_x = quat.x();
+//    quat_y = quat.y();
+//    quat_z = quat.z();
+//    quat_w = quat.w();
+//
 
-        // Add this PoseStamped to result vector
+//
+   tf::Quaternion quat_tf;
+//
+    // use tf::Matrix3x3. construct with rotatin matrix and convert fromRotation
+    global_tf_rotation.getRotation(quat_tf);
+    geometry_msgs::Quaternion quat_msg;
+    quat_msg.x = quat_tf.x();
+    quat_msg.y = quat_tf.y();
+    quat_msg.z = quat_tf.z();
+    quat_msg.w = 1.0; // has to be 1
 
+    std::cout << "Get Quaternion" << std::endl;
+    std::cout << quat_msg.x << std::endl;
+    std::cout << quat_msg.y << std::endl;
+    std::cout << quat_msg.z << std::endl;
+    std::cout << quat_msg.w << std::endl;
+    current_pose.pose.orientation = quat_msg;
     return current_pose;
 }
 
@@ -485,28 +509,48 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
 PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr target) {
 
     PointCloudRGBPtr result(new PointCloudRGB);
+    PointCloudNormalPtr input_feats(new PointCloudNormal), target_feats(new PointCloudNormal);
+    input_feats = estimateSurfaceNormals(input);
+    target_feats = estimateSurfaceNormals(target);
 
-        pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
+    std::cout << "size of input: "  << input->points.size() << std::endl;
+    std::cout << "size of input features: "  << input_feats->points.size() << std::endl;
 
-        sac_ia.setInputSource(input);
-        sac_ia.setSourceFeatures(cvfhRecognition(input));
-        sac_ia.setInputTarget(target);
-        // sac_ia.setTargetFeatures(target_features);
-        PointCloudRGB registration_output;
-        sac_ia.align(registration_output);
+    pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::Normal> sac_ia;
 
-        // get fitness score with max squared distance for correspondence
-        float fitness_score = (float) sac_ia.getFitnessScore(0.01f * 0.01f);
-        Eigen::Matrix4f transformation_matrix = sac_ia.getFinalTransformation();
+    sac_ia.setInputSource(input);
+    sac_ia.setSourceFeatures(input_feats);
+    sac_ia.setInputTarget(target);
+    sac_ia.setTargetFeatures(target_feats);
+    PointCloudRGB registration_output;
+    sac_ia.align(registration_output);
 
+    // get fitness score with max squared distance for correspondence
+    float fitness_score = (float) sac_ia.getFitnessScore(0.01f * 0.01f);
+    Eigen::Matrix4f transformation_matrix = sac_ia.getFinalTransformation();
 
 
     // Print the rotation matrix and translation vector
     Eigen::Matrix3f rotation = transformation_matrix.block<3, 3>(0, 0);
     Eigen::Vector3f translation = transformation_matrix.block<3, 1>(0, 3);
 
-    // transform with best Transformation
+    tf::Matrix3x3 tf_rotation(rotation(0,0),
+                              rotation(0,1),
+                              rotation(0,2),
+                              rotation(1,0),
+                              rotation(1,1),
+                              rotation(1,2),
+                              rotation(2,0),
+                              rotation(2,1),
+                              rotation(2,2));
+    global_tf_rotation = tf_rotation;
 
+// possible to create Eigen::affine3f from translation and rotation
+    // then to tf::transform
+    // ROS is right handed rotation (usually) look for ros rotation convention
+    // khan academy
+    // tf::Transform::setBasis(Rotation Matrix)
+    // be careful with configuration of objects
     pcl::transformPointCloud(*input, *result, transformation_matrix);
     return result;
 }
@@ -536,108 +580,108 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
  * @param Input PointCloud cloud
  * @return Concatenated floats (r,g,b) from PointCloud points
  */
-std::vector<uint64_t> produceColorHist(PointCloudRGBPtr cloud){
+std::vector<uint64_t> produceColorHist(PointCloudRGBPtr cloud) {
     int red[8];
     int green[8];
     int blue[8];
     std::vector<uint64_t> result;
 
-       // initialize all array-values with 0
-       for (int i = 0; i < 8;i++){
-           red[i] = 0;
-           green[i] = 0;
-           blue[i] = 0;
-       }
+    // initialize all array-values with 0
+    for (int i = 0; i < 8; i++) {
+        red[i] = 0;
+        green[i] = 0;
+        blue[i] = 0;
+    }
 
-       for (int i = 0; i <  cloud->size(); i++){
-           pcl::PointXYZRGB p = cloud->points[i];
-           // increase value in bin at given index
-           if (p.r < 32){
-               red[0]++;
+    for (int i = 0; i < cloud->size(); i++) {
+        pcl::PointXYZRGB p = cloud->points[i];
+        // increase value in bin at given index
+        if (p.r < 32) {
+            red[0]++;
 
-           } else if (p.r >= 32 && p.r < 64){
-               red[1]++;
+        } else if (p.r >= 32 && p.r < 64) {
+            red[1]++;
 
-           } else if (p.r >= 64 && p.r < 96){
-               red[2]++;
-           } else if (p.r >= 96 && p.r < 128){
-               red[3]++;
+        } else if (p.r >= 64 && p.r < 96) {
+            red[2]++;
+        } else if (p.r >= 96 && p.r < 128) {
+            red[3]++;
 
-           } else if (p.r >= 128 && p.r < 160){
-               red[4]++;
+        } else if (p.r >= 128 && p.r < 160) {
+            red[4]++;
 
-           } else if (p.r >= 160 && p.r < 192){
-               red[5]++;
+        } else if (p.r >= 160 && p.r < 192) {
+            red[5]++;
 
-           } else if (p.r >= 192 && p.r < 224){
-               red[6]++;
+        } else if (p.r >= 192 && p.r < 224) {
+            red[6]++;
 
-           } else if (p.r >= 224 && p.r < 256){
-               red[7]++;
+        } else if (p.r >= 224 && p.r < 256) {
+            red[7]++;
 
-           }
+        }
 
-           if (p.g < 32){
-               green[0]++;
+        if (p.g < 32) {
+            green[0]++;
 
-           } else if (p.g >= 32 && p.g < 64){
-               green[1]++;
+        } else if (p.g >= 32 && p.g < 64) {
+            green[1]++;
 
-           } else if (p.g >= 64 && p.g < 96){
-               green[2]++;
-           } else if (p.g >= 96 && p.g < 128){
-               green[3]++;
+        } else if (p.g >= 64 && p.g < 96) {
+            green[2]++;
+        } else if (p.g >= 96 && p.g < 128) {
+            green[3]++;
 
-           } else if (p.g >= 128 && p.g < 160){
-               green[4]++;
+        } else if (p.g >= 128 && p.g < 160) {
+            green[4]++;
 
-           } else if (p.g >= 160 && p.g < 192){
-               green[5]++;
+        } else if (p.g >= 160 && p.g < 192) {
+            green[5]++;
 
-           } else if (p.g >= 192 && p.g < 224){
-               green[6]++;
+        } else if (p.g >= 192 && p.g < 224) {
+            green[6]++;
 
-           } else if (p.g >= 224 && p.g < 256){
-               green[7]++;
+        } else if (p.g >= 224 && p.g < 256) {
+            green[7]++;
 
-           }
+        }
 
-           if (p.b < 32){
-               blue[0]++;
+        if (p.b < 32) {
+            blue[0]++;
 
-           } else if (p.b >= 32 && p.b < 64){
-               blue[1]++;
+        } else if (p.b >= 32 && p.b < 64) {
+            blue[1]++;
 
-           } else if (p.b >= 64 && p.b < 96){
-               blue[2]++;
-           } else if (p.b >= 96 && p.b < 128){
-               blue[3]++;
+        } else if (p.b >= 64 && p.b < 96) {
+            blue[2]++;
+        } else if (p.b >= 96 && p.b < 128) {
+            blue[3]++;
 
-           } else if (p.b >= 128 && p.b < 160){
-               blue[4]++;
+        } else if (p.b >= 128 && p.b < 160) {
+            blue[4]++;
 
-           } else if (p.b >= 160 && p.b < 192){
-               blue[5]++;
+        } else if (p.b >= 160 && p.b < 192) {
+            blue[5]++;
 
-           } else if (p.b >= 192 && p.b < 224){
-               blue[6]++;
+        } else if (p.b >= 192 && p.b < 224) {
+            blue[6]++;
 
-           } else if (p.b >= 224 && p.b < 256){
-               blue[7]++;
+        } else if (p.b >= 224 && p.b < 256) {
+            blue[7]++;
 
-           }
-       }
+        }
+    }
 
-       // concatenate red, green and blue entries
-       for (int r = 0; r < 8; r++){
-           result.push_back(red[r]);
-       }
-       for (int g = 0; g < 8; g++){
-           result.push_back(green[g]);
-       }
-       for (int b = 0; b < 8; b++){
-           result.push_back(blue[b]);
-       }
+    // concatenate red, green and blue entries
+    for (int r = 0; r < 8; r++) {
+        result.push_back(red[r]);
+    }
+    for (int g = 0; g < 8; g++) {
+        result.push_back(green[g]);
+    }
+    for (int b = 0; b < 8; b++) {
+        result.push_back(blue[b]);
+    }
 
 
     return result;
@@ -668,12 +712,12 @@ void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<floa
 std::vector<float> getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters) {
 
     PointCloudVFHS308Ptr vfhs(new pcl::PointCloud<pcl::VFHSignature308>);
-std::vector<float> result;
+    std::vector<float> result;
 
 
     for (int i = 0; i < all_clusters.size(); i++) {
 
-             vfhs = cvfhRecognition(all_clusters[i]);
+        vfhs = cvfhRecognition(all_clusters[i]);
 
         for (int x = 0; x < 308; x++) {
             //ROS_INFO("%f", current_features[x]);
@@ -693,7 +737,7 @@ std::vector<float> result;
 std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters) {
 
     std::vector<uint64_t> current_color_features;
-std::vector<uint64_t> result;
+    std::vector<uint64_t> result;
 
     for (int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
@@ -709,29 +753,31 @@ std::vector<uint64_t> result;
     return result;
 }
 
-PointCloudRGBPtr getTargetByLabel(std::string label){
+PointCloudRGBPtr getTargetByLabel(std::string label) {
     PointCloudRGBPtr result(new PointCloudRGB);
 
-    if (label == "PringlesPaprika"){
+    if (label == "PringlesPaprika") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
-    } else if (label == "PringlesSalt"){
+    } else if (label == "PringlesSalt") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
-    } else if (label == "SiggBottle"){
+    } else if (label == "SiggBottle") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/sigg_bottle.pcd", *result);
-    }else if (label == "JaMilch"){
+    } else if (label == "JaMilch") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/ja_milch.pcd", *result);
-    }else if (label == "TomatoSauceOroDiParma"){
+    } else if (label == "TomatoSauceOroDiParma") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/tomato_sauce_oro_di_parma.pcd", *result);
-    }else if (label == "KoellnMuesliKnusperHonigNuss"){
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/koelln_muesli_knusper_honig_nuss.pcd", *result);
-    }else if (label == "KelloggsToppasMini"){
+    } else if (label == "KoellnMuesliKnusperHonigNuss") {
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/koelln_muesli_knusper_honig_nuss.pcd",
+                             *result);
+    } else if (label == "KelloggsToppasMini") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.pcd", *result);
-    }else if (label == "HelaCurryKetchup"){
+    } else if (label == "HelaCurryKetchup") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/hela_curry_ketchup.pcd", *result);
-    }else if (label == "CupEcoOrange"){
+    } else if (label == "CupEcoOrange") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/cup_eco_orange.pcd", *result);
-    }else if (label == "EdekaRedBowl"){
+    } else if (label == "EdekaRedBowl") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *result);
     }
     return result;
 }
+
