@@ -189,7 +189,9 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 //
     // use tf::Matrix3x3. construct with rotatin matrix and convert fromRotation
     global_tf_rotation.getRotation(quat_tf);
+    quat_tf.normalize();
     geometry_msgs::Quaternion quat_msg;
+
     quat_msg.x = quat_tf.x();
     quat_msg.y = quat_tf.y();
     quat_msg.z = quat_tf.z();
@@ -536,13 +538,13 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
     Eigen::Vector3f translation = transformation_matrix.block<3, 1>(0, 3);
 
     tf::Matrix3x3 tf_rotation(rotation(0,0),
-                              rotation(0,1),
-                              rotation(0,2),
                               rotation(1,0),
-                              rotation(1,1),
-                              rotation(1,2),
                               rotation(2,0),
+                              rotation(0,1),
+                              rotation(1,1),
                               rotation(2,1),
+                              rotation(0,2),
+                              rotation(1,2),
                               rotation(2,2));
     global_tf_rotation = tf_rotation;
 
@@ -754,7 +756,12 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
     return result;
 }
 
-PointCloudRGBPtr getTargetByLabel(std::string label) {
+/**
+ * Load the correct PCD file for the label given.
+ * @param label
+ * @return Object PointCloud out of PCD file
+ */
+PointCloudRGBPtr getTargetByLabel(std::string label){
     PointCloudRGBPtr result(new PointCloudRGB);
 
     if (label == "PringlesPaprika") {
