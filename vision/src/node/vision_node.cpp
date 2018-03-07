@@ -24,6 +24,8 @@ std::vector<PointCloudRGBPtr> all_clusters;
 ros::Publisher pub_visualization;
 
 
+
+
 // Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
 /**
  * Callback-function saves the PointCloud received through the kinect
@@ -70,38 +72,7 @@ void start_node(int argc, char **argv) {
 
         pcl::toROSMsg(*cloud_global, cloud_final_pub);
         cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
-        PointCloudRGBPtr result(new PointCloudRGB);
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
-
-        result->header.frame_id = "base_link";
-//        PointCloudRGBPtr result_trans(new PointCloudRGB);
-//        Eigen::Matrix4f TransMat;
-//        TransMat <<       1,    0,   0,  0,
-//                0,    1,   0,  1,
-//                0,    0,   1,  0,
-//                0,    0,   0,  1;
-//        pcl::transformPointCloud(*result,*result_trans, TransMat);
-//        Eigen::Quaternionf quat_mesh(1.0,1.0,1.0,1.0);
-//        result->sensor_orientation_ = quat_mesh;
-//        Eigen::Vector4f origin_mesh(1.0,1.0,1.0,1.0);
-//        result->sensor_origin_ = origin_mesh;
-        pub_visualization_object.publish(result);
-//        std::cout << "cloud orientation" << std::endl;
-//
-//        std::cout << cloud_global->sensor_orientation_.x() << std::endl;
-//        std::cout << cloud_global->sensor_orientation_.y() << std::endl;
-//        std::cout << cloud_global->sensor_orientation_.z() << std::endl;
-//        std::cout << cloud_global->sensor_orientation_.w() << std::endl;
-//
-//        std::cout << "cloud origin" << std::endl;
-//
-//        std::cout << cloud_global->sensor_origin_ << std::endl;
-
-
-
-
-
-
+        pub_visualization_object.publish(cloud_final_pub);
         ros::spinOnce();
         r.sleep();
     }

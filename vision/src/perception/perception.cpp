@@ -538,15 +538,16 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
     Eigen::Vector3f translation = transformation_matrix.block<3, 1>(0, 3);
 
     tf::Matrix3x3 tf_rotation(rotation(0,0),
-                              rotation(1,0),
-                              rotation(2,0),
                               rotation(0,1),
-                              rotation(1,1),
-                              rotation(2,1),
                               rotation(0,2),
+                              rotation(1,0),
+                              rotation(1,1),
                               rotation(1,2),
+                              rotation(2,0),
+                              rotation(2,1),
                               rotation(2,2));
     global_tf_rotation = tf_rotation;
+
 
 // possible to create Eigen::affine3f from translation and rotation
     // then to tf::transform
@@ -762,31 +763,41 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
  * @return Object PointCloud out of PCD file
  */
 PointCloudRGBPtr getTargetByLabel(std::string label){
-    PointCloudRGBPtr result(new PointCloudRGB);
+    PointCloudRGBPtr mesh(new PointCloudRGB),
+                     result(new PointCloudRGB);
 
     if (label == "PringlesPaprika") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *mesh);
 
     } else if (label == "PringlesSalt") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *mesh);
     } else if (label == "SiggBottle") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/sigg_bottle.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/sigg_bottle.pcd", *mesh);
     } else if (label == "JaMilch") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/ja_milch.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/ja_milch.pcd", *mesh);
     } else if (label == "TomatoSauceOroDiParma") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/tomato_sauce_oro_di_parma.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/tomato_sauce_oro_di_parma.pcd", *mesh);
     } else if (label == "KoellnMuesliKnusperHonigNuss") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/koelln_muesli_knusper_honig_nuss.pcd",
-                             *result);
+                             *mesh);
     } else if (label == "KelloggsToppasMini") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.pcd", *mesh);
     } else if (label == "HelaCurryKetchup") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/hela_curry_ketchup.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/hela_curry_ketchup.pcd", *mesh);
     } else if (label == "CupEcoOrange") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/cup_eco_orange.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/cup_eco_orange.pcd", *mesh);
     } else if (label == "EdekaRedBowl") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *result);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
+
+    // reorientate the lying mesh upwards
+        Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
+        float theta = M_PI/2; // The angle of rotation in radians
+        Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
+        transform_2.translation() << 0.0, 0.0, 0.0;
+        transform_2.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
+        pcl::transformPointCloud (*mesh, *result, transform_2);
+
     return result;
 }
 
