@@ -96,6 +96,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
     {
         ROS_ERROR("Input from kinect is empty");
         error_message_perc = "Cloud empty. ";
+        return result;
     } else {
         ROS_INFO("Starting Cluster extraction");
 
@@ -168,9 +169,9 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     PointCloudRGBPtr target(new PointCloudRGB);
     target = getTargetByLabel(label);
 
-    /* CRASHES ON TEST SCENE!
+    
     aligned_cloud = SACInitialAlignment(input, target);
-    icp_cloud = iterativeClosestPoint(input, target);
+   // icp_cloud = iterativeClosestPoint(input, target);
 
     // Add header
     current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
@@ -758,6 +759,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label) {
 
     if (label == "PringlesPaprika") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
+
     } else if (label == "PringlesSalt") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *result);
     } else if (label == "SiggBottle") {
