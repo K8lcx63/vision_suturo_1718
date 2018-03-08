@@ -63,7 +63,7 @@ void                            getAllFeatures(std::vector<PointCloudRGBPtr> all
 
 std::vector<float>              getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters);
 std::vector<uint64_t>           getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters);
-PointCloudRGBPtr                getTargetByLabel(std::string label);
+PointCloudRGBPtr                getTargetByLabel(std::string label, Eigen::Vector4f centroid);
 
 
 extern PointCloudRGBPtr cloud_global;

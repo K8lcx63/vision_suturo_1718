@@ -167,7 +167,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
     // Calculate quaternions
     PointCloudRGBPtr target(new PointCloudRGB);
-    target = getTargetByLabel(label);
+    target = getTargetByLabel(label, centroid);
 
     
     aligned_cloud = SACInitialAlignment(input, target);
@@ -762,7 +762,7 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
  * @param label
  * @return Object PointCloud out of PCD file
  */
-PointCloudRGBPtr getTargetByLabel(std::string label){
+PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     PointCloudRGBPtr mesh(new PointCloudRGB),
                      result(new PointCloudRGB);
 
@@ -794,7 +794,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label){
         Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
         float theta = M_PI/2; // The angle of rotation in radians
         Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
-        transform_2.translation() << 0.0, 0.0, 0.0;
+        transform_2.translation() << centroid.x(), centroid.y(), centroid.z();
         transform_2.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
         pcl::transformPointCloud (*mesh, *result, transform_2);
 
