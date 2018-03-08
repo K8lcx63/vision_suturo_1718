@@ -188,7 +188,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
                               rot_mat(2,2));
     global_tf_rotation = tf_rotation;
 
-    / ** DEMO-SAVES
+    /** DEMO-SAVES
     savePointCloudRGBNamed(input, "pringles_original");
     savePointCloudRGBNamed(target, "pringles_mesh");
     savePointCloudRGBNamed(aligned_cloud, "pringles_aligned");
