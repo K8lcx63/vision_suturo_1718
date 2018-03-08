@@ -171,23 +171,35 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
     
     aligned_cloud = SACInitialAlignment(input, target);
-   // icp_cloud = iterativeClosestPoint(input, target);
+    icp_cloud = iterativeClosestPoint(aligned_cloud, target);
+
+    pcl::registration::TransformationEstimationSVD<pcl::PointXYZRGB, pcl::PointXYZRGB, float> reggi;
+    Eigen::Matrix<float,4,4> rot_mat;
+    reggi.estimateRigidTransformation(*input, *icp_cloud, rot_mat);
+
+    tf::Matrix3x3 tf_rotation(rot_mat(0,0),
+                              rot_mat(0,1),
+                              rot_mat(0,2),
+                              rot_mat(1,0),
+                              rot_mat(1,1),
+                              rot_mat(1,2),
+                              rot_mat(2,0),
+                              rot_mat(2,1),
+                              rot_mat(2,2));
+    global_tf_rotation = tf_rotation;
+
+    / ** DEMO-SAVES
+    savePointCloudRGBNamed(input, "pringles_original");
+    savePointCloudRGBNamed(target, "pringles_mesh");
+    savePointCloudRGBNamed(aligned_cloud, "pringles_aligned");
+    savePointCloudRGBNamed(icp_cloud, "pringles_icp");
+    **/
 
     // Add header
     current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
-//    Eigen::Quaternionf quat = icp_cloud->sensor_orientation_;
-//    //quat.FromTwoVectors(input->sensor_origin_, aligned_cloud->sensor_origin_);
-//    double quat_x, quat_y, quat_z, quat_w;
-//    quat_x = quat.x();
-//    quat_y = quat.y();
-//    quat_z = quat.z();
-//    quat_w = quat.w();
-//
 
-//
    tf::Quaternion quat_tf;
-//
-    // use tf::Matrix3x3. construct with rotatin matrix and convert fromRotation
+    // use tf::Matrix3x3. construct with rotati0n matrix and convert fromRotation
     global_tf_rotation.getRotation(quat_tf);
     quat_tf.normalize();
     geometry_msgs::Quaternion quat_msg;
@@ -525,6 +537,8 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
     sac_ia.setSourceFeatures(input_feats);
     sac_ia.setInputTarget(target);
     sac_ia.setTargetFeatures(target_feats);
+    //sac_ia.setMinSampleDistance(0.01);
+    sac_ia.setRANSACIterations(1500);
     PointCloudRGB registration_output;
     sac_ia.align(registration_output);
 
@@ -537,16 +551,7 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
     Eigen::Matrix3f rotation = transformation_matrix.block<3, 3>(0, 0);
     Eigen::Vector3f translation = transformation_matrix.block<3, 1>(0, 3);
 
-    tf::Matrix3x3 tf_rotation(rotation(0,0),
-                              rotation(0,1),
-                              rotation(0,2),
-                              rotation(1,0),
-                              rotation(1,1),
-                              rotation(1,2),
-                              rotation(2,0),
-                              rotation(2,1),
-                              rotation(2,2));
-    global_tf_rotation = tf_rotation;
+
 
 
 // possible to create Eigen::affine3f from translation and rotation
@@ -575,6 +580,8 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
               icp.getFitnessScore() << std::endl;
     std::cout << icp.getFinalTransformation() << std::endl;
+
+
 
     return final;
 }
