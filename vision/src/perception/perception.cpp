@@ -56,11 +56,11 @@ PointCloudRGBPtr preprocessCloud(PointCloudRGBPtr kinect) {
  * Segment planes that aren't relevant to the objects.
  * @param cloud_cluster
  */
-void segmentPlanes(PointCloudRGBPtr cloud_cluster) {
+PointCloudRGBPtr segmentPlanes(PointCloudRGBPtr cloud_cluster) {
     // While a segmented plane would be larger than plane_size_threshold points, segment it.
     bool loop_segmentations = true;
     int segmentations_amount = 0;
-    int plane_size_threshold = 12000;
+    int plane_size_threshold = 8000;
     PointIndices plane_indices(new pcl::PointIndices);
     for (int n = 0; loop_segmentations; n++) {
         plane_indices = estimatePlaneIndices(cloud_cluster);
@@ -74,6 +74,7 @@ void segmentPlanes(PointCloudRGBPtr cloud_cluster) {
         segmentations_amount = n;
     }
     ROS_INFO("Extracted %d planes!", segmentations_amount);
+    return cloud_cluster;
 }
 
 /**
@@ -105,7 +106,8 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         cloud_preprocessed = transform_cloud.extractAbovePlane(cloud_preprocessed);
         cloud_cluster = cloud_preprocessed;
 
-        segmentPlanes(cloud_cluster);
+        cloud_cluster = segmentPlanes(cloud_cluster);
+        ROS_INFO("Points after segmentation: %lu", cloud_cluster->points.size());
         cloud_global = cloud_cluster;
 
         /*
