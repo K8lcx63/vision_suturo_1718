@@ -111,8 +111,6 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
 
 bool getPoses(vision_suturo_msgs::poses::Request &req, vision_suturo_msgs::poses::Response &res) {
     // Get poses for the objects
-    // TODO: Use object information of the last object_information service call!
-    // TODO: Only return a single Pose, depending on the given index!
     // Currently computes all centroids, but only takes the relevant one.
 
     if(!all_clusters.empty()) { // If objects have been perceived
