@@ -67,5 +67,6 @@ PointCloudRGBPtr                getTargetByLabel(std::string label, Eigen::Vecto
 
 
 extern PointCloudRGBPtr cloud_global;
+extern std::string error_message;
 
 #endif //VISION_PERCEPTION_H

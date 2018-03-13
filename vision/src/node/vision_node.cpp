@@ -13,9 +13,6 @@ PointCloudRGBPtr scene(new PointCloudRGB);
 
 // ros::NodeHandle n_global;
 
-
-std::string error_message; // Wird durch den Object Position Service mit ausgegeben
-
 geometry_msgs::PointStamped centroid_stamped;
 
 std::vector<PointCloudRGBPtr> all_clusters;
@@ -87,8 +84,17 @@ void start_node(int argc, char **argv) {
  */
 bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::objects::Response &res) {
 
+    // If PR2 is not looking at anything.
+    // This causes the whole segmentation and filtering process to be skipped if the cloud is empty
+    // or too small to work on.
+    if (scene->points.size() < 500)
+    {
+        ROS_ERROR("Input from kinect is empty");
+        error_message = "Cloud empty. ";
+        res.clouds.object_errors = error_message;
+        return true;
+    }
     // Execute findCluster()
-    //std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
     all_clusters = findCluster(scene);
     ROS_INFO("Suturo Vision: findCluster completed!");
 
@@ -104,6 +110,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     res.clouds.normal_features = current_features_vector;
     res.clouds.color_features = color_features_vector;
     res.clouds.object_amount = all_clusters.size();
+    res.clouds.object_errors = error_message;
 
     return true;
 

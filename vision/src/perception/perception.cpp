@@ -26,9 +26,8 @@ enum mesh_enum {
     TOMATO_SAUCE_ORO_DI_PARMA
 };
 
-std::string error_message_perc;
-
 PointCloudRGBPtr cloud_global(new PointCloudRGB);
+std::string error_message; // Used by the objects_information service
 tf::Matrix3x3 global_tf_rotation;
 
 /**
@@ -93,54 +92,48 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
             plane_indices2(new pcl::PointIndices),
             prism_indices(new pcl::PointIndices);
 
-    if (kinect->points.size() < 500)                        // if PR2 is not looking at anything
-    {
-        ROS_ERROR("Input from kinect is empty");
-        error_message_perc = "Cloud empty. ";
-        return result;
+    ROS_INFO("Starting Cluster extraction");
+
+    cloud_preprocessed = preprocessCloud(kinect);
+
+    cloud_preprocessed = transform_cloud.extractAbovePlane(cloud_preprocessed);
+    cloud_cluster = cloud_preprocessed;
+
+    cloud_cluster = segmentPlanes(cloud_cluster);
+    ROS_INFO("Points after segmentation: %lu", cloud_cluster->points.size());
+    cloud_global = cloud_cluster;
+
+    /*
+     * We currently don't need outlierRemoval here, because euclideanClusterExtraction
+     * already has a set minimum point value, which causes smaller clusters / amounts of outliers  to be extracted
+     * anyway.
+     */
+
+    // Split cloud_final into one PointCloud per object
+    result = euclideanClusterExtraction(cloud_cluster);
+    ROS_INFO("CALCULATED RESULT!");
+
+
+    if (cloud_global->points.size() == 0) {
+        ROS_ERROR("Extracted Cluster is empty");
+        error_message = "Final extracted cluster was empty. ";
     } else {
-        ROS_INFO("Starting Cluster extraction");
-
-        cloud_preprocessed = preprocessCloud(kinect);
-
-        cloud_preprocessed = transform_cloud.extractAbovePlane(cloud_preprocessed);
-        cloud_cluster = cloud_preprocessed;
-
-        cloud_cluster = segmentPlanes(cloud_cluster);
-        ROS_INFO("Points after segmentation: %lu", cloud_cluster->points.size());
-        cloud_global = cloud_cluster;
-
-        /*
-         * We currently don't need outlierRemoval here, because euclideanClusterExtraction
-         * already has a set minimum point value, which causes smaller clusters / amounts of outliers  to be extracted
-         * anyway.
-        */
-
-        // Split cloud_final into one PointCloud per object
-        std::vector<PointCloudRGBPtr> result = euclideanClusterExtraction(cloud_cluster);
-        ROS_INFO("CALCULATED RESULT!");
-
-
-        if (cloud_global->points.size() == 0) {
-            ROS_ERROR("Extracted Cluster is empty");
-            error_message_perc = "Final extracted cluster was empty. ";
-        } else {
-            ROS_INFO("%sExtraction OK", "\x1B[32m");
-        }
-
-        error_message_perc = "";
-
-        /*
-        for (int i = 0; i < result.size(); i++){
-            std::stringstream obj_files;
-            obj_files << "object_" << i;
-            savePointCloudRGBNamed(result[i], obj_files.str());
-        }
-        */
-
-        return result;
-
+        ROS_INFO("%sExtraction OK", "\x1B[32m");
+        error_message = "";
     }
+
+
+
+    /*
+    for (int i = 0; i < result.size(); i++){
+        std::stringstream obj_files;
+        obj_files << "object_" << i;
+        savePointCloudRGBNamed(result[i], obj_files.str());
+    }
+    */
+
+    return result;
+
 }
 
 /**
@@ -294,7 +287,7 @@ PointCloudRGBPtr apply3DFilter(PointCloudRGBPtr input,
 
     if (input_after_xyz->points.size() == 0) {
         ROS_ERROR("Cloud empty after passthrough filtering");
-        error_message_perc = "Cloud was empty after filtering. ";
+        error_message = "Cloud was empty after filtering. ";
     }
 
 
@@ -323,7 +316,7 @@ PointIndices estimatePlaneIndices(PointCloudRGBPtr input) {
 
     if (planeIndices->indices.size() == 0) {
         ROS_ERROR("No plane (indices) found");
-        error_message_perc = "No plane found. ";
+        error_message = "No plane found. ";
     }
 
     return planeIndices;
