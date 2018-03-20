@@ -163,10 +163,13 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     // Calculate quaternions
     PointCloudRGBPtr target(new PointCloudRGB);
     target = getTargetByLabel(label, centroid);
-
     
     aligned_cloud = SACInitialAlignment(input, target);
     icp_cloud = iterativeClosestPoint(aligned_cloud, target);
+
+    savePointCloudRGBNamed(input, "2_AlignmentInput");
+    savePointCloudRGBNamed(aligned_cloud, "3_AlignedCloud");
+    savePointCloudRGBNamed(icp_cloud, "4_ICPCloud");
 
     pcl::registration::TransformationEstimationSVD<pcl::PointXYZRGB, pcl::PointXYZRGB, float> reggi;
     Eigen::Matrix<float,4,4> rot_mat;
@@ -765,8 +768,9 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
  * @return Object PointCloud out of PCD file
  */
 PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
-    PointCloudRGBPtr mesh(new PointCloudRGB),
-                     result(new PointCloudRGB);
+    PointCloudRGBPtr    result(new PointCloudRGB),
+                        mesh_rgb(new PointCloudRGB);
+    PointCloudXYZPtr mesh(new PointCloudXYZ);
 
     if (label == "PringlesPaprika") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *mesh);
@@ -777,6 +781,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/sigg_bottle.pcd", *mesh);
     } else if (label == "JaMilch") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/ja_milch.pcd", *mesh);
+        ROS_INFO("THIS IS A JA MILCH!");
     } else if (label == "TomatoSauceOroDiParma") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/tomato_sauce_oro_di_parma.pcd", *mesh);
     } else if (label == "KoellnMuesliKnusperHonigNuss") {
@@ -792,14 +797,23 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
 
+
+    pcl::copyPointCloud(*mesh, *mesh_rgb);
+    /* // Save Pointclouds
+    savePointCloudXYZNamed(mesh, "0_AlignmentTarget");
+    savePointCloudRGBNamed(mesh_rgb, "1_AlignmentTargetRGB");
+     */
+
+    /*
     // reorientate the lying mesh upwards
         Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
         float theta = M_PI/2; // The angle of rotation in radians
         Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
         transform_2.translation() << centroid.x(), centroid.y(), centroid.z();
         transform_2.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
-        pcl::transformPointCloud (*mesh, *result, transform_2);
+        pcl::transformPointCloud (*mesh_rgb, *result, transform_2);
+    */
 
-    return result;
+    return mesh_rgb;
 }
 

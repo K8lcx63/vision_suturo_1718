@@ -24,6 +24,10 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/common/io.h>
+
 #include "short_types.h"
 #include "transformer/CloudTransformer.h"
 #include "../saving/saving.h"
