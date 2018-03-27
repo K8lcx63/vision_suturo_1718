@@ -2,7 +2,10 @@
 // Created by Alex on 20.03.18.
 //
 
+
 #include "../perception/perception.h"
+#include <dirent.h>
+#include <boost/lexical_cast.hpp>
 
 #include <cv.h>       // opencv general include file
 #include <ml.h>		  // opencv machine learning include file
@@ -11,6 +14,6 @@
 using namespace cv; // OpenCV API is in the C++ "cv" namespace
 
 bool trainAll(std::string directory, bool update);
-bool train(PointCloudRGBPtr cloud, int label_index, bool update);
+bool train(std::string directory, int label_index, bool update);
 std::string classify(PointCloudRGBPtr cloud);
-void batchPCD2histograms(std::string input);
+int read_data_from_csv(const char* filename, Mat data, Mat classes, int n_samples);

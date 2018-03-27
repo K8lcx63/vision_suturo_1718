@@ -63,9 +63,10 @@ void start_node(int argc, char **argv) {
 
     ros::Rate r(2.0);
 
-    ROS_INFO("MAKING HISTOGRAMS...");
-    batchPCD2histograms("../../odu_iai/object_data/partial_views/JaMilch");
-    ROS_INFO("MADE HISTOGRAMS!");
+    ROS_INFO("STARTING TRAINING...");
+    std::string xd = "../../common_suturo1718/pcd_files/JaMilch";
+    train(xd.c_str(), 2, false);
+    ROS_INFO("TRAINING FINISHED!");
 
     while (n.ok()) {
         sensor_msgs::PointCloud2 cloud_final_pub;

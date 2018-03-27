@@ -6,6 +6,8 @@
 
 //ROS_INFO("Initializing classifier!");
 CvNormalBayesClassifier *bayes = new CvNormalBayesClassifier;
+int NUMBER_OF_TRAINING_SAMPLES = 217;
+int ATTRIBUTES_PER_SAMPLE = 768;
 
 
 /**
@@ -26,21 +28,46 @@ bool trainAll(std::string directory, bool update){
  * @return Whether the training was successful
  */
 
-bool train(PointCloudRGBPtr cloud, int label_index, bool update) {
+bool train(std::string directory, int label_index, bool update) {
     //ROS_INFO("Creating Mats!");
-    Mat training_data = Mat(3, 256, CV_32FC1);
-    Mat training_label = Mat(1, 1, CV_32FC1); // Just the reponse string in a matrix
+    Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+    Mat training_label = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32FC1); // Just the reponse string in a matrix
     training_label.at<int>(0, 0) = (int) label_index;
 
-    std::vector<uint64_t> histogram = produceColorHist(cloud);
+    // Find all .csv-files in the given directory
+    ROS_INFO("Finding the .csv files in the given directory...");
+    DIR *dir;
+    struct dirent *ent;
+    if ((dir = opendir(directory.c_str())) != NULL) {
+        while ((ent = readdir(dir)) != NULL) {
+            printf("%s\n", ent->d_name);
 
-    // Copy histogram contents to testing_data Mat
-    memcpy(training_data.data, histogram.data(), sizeof(Mat));
 
-    //ROS_INFO("Training now...");
-    bayes->train(training_data, training_label, Mat(), Mat(), update);
-    
-    return true;
+            // Parse .csv-file
+            ROS_INFO("Parsing .csv file");
+            std::ifstream data(ent->d_name);
+            std::string line;
+            std::vector<uint64_t> parsedCsv;
+            while (std::getline(data, line)) {
+                std::stringstream lineStream(line);
+                std::string cell;
+                while (std::getline(lineStream, cell, ',')) {
+                    //int cell_int = std::stoi(cell);
+                    int cell_int = boost::lexical_cast<int>( "123" );
+                    parsedCsv.push_back(cell_int); // Converts "cell" to int
+                }
+            }
+
+            ROS_INFO("Copying histogram contents to data Mat");
+            // Copy histogram contents to testing_data Mat
+            memcpy(training_data.data, parsedCsv.data(), sizeof(Mat));
+
+            ROS_INFO("Training now...");
+            //ROS_INFO("Training now...");
+            bayes->train(training_data, training_label, Mat(), Mat(), update);
+        }
+    }
+    closedir(dir);
 }
 
 /**
@@ -49,108 +76,76 @@ bool train(PointCloudRGBPtr cloud, int label_index, bool update) {
  * @return The label of the classified object
  */
 
-std::string classify(PointCloudRGB cloud){
+std::string classify(PointCloudRGB cloud) {
     return "xd";
 }
 
-/**
- * Generates .csv-files from .pcd-files
- * @param input: Directory of the .csv-files
- */
+int read_data_from_csv(const char* filename, Mat data, Mat classes, int n_samples )
+{
+    char tmpc;
+    float tmpf;
 
-void batchPCD2histograms(std::string input) {
-    std::ifstream is(input.c_str());
-    std::string line;
-    std::string line_trimmed;
-
-    while (getline(is, line)) {
-        pcl::PointCloud<pcl::PointXYZRGB>::Ptr input_cloud(new pcl::PointCloud<pcl::PointXYZRGB>), input_sampler (new pcl::PointCloud<pcl::PointXYZRGB>);
-        std::vector<float> input_cvfhs_features;
-        std::vector<uint64_t> input_color_features;
-
-        // load file
-        std::cout << "load file " << line << std::endl;
-        if (pcl::io::loadPCDFile<pcl::PointXYZRGB>(line, *input_sampler) != 0){
-            //downsample partial view
-            std::cout << "input before filtering size is: " << input_sampler->size() << std::endl;
-
-            pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-            sor.setInputCloud(input_sampler);
-            sor.setLeafSize(0.005f, 0.005f, 0.005f); //from 0.005 (perception) zu
-            sor.filter(*input_cloud);
-
-            //prepare files
-            line.erase(line.size() - 4, 4);
-            std::string normals = line + "_normals_histogram.csv";
-            std::string colors = line + "_colors_histogram.csv";
-            std::ofstream os_normals(normals.c_str());
-            std::ofstream os_colors(colors.c_str());
-            //std::string normals_list = line + "_normals_only.csv";
-            //std::ofstream os_normals_list(normals_list.c_str());
-
-            // save empty .csv
-
-            os_normals.close();
-            os_colors.close();
-            //os_normals_list;
-
-        } else {
-            //downsample partial view
-            std::cout << "input before filtering size is: " << input_sampler->size() << std::endl;
-
-            pcl::VoxelGrid<pcl::PointXYZRGB> sor;
-            sor.setInputCloud(input_sampler);
-            sor.setLeafSize(0.005f, 0.005f, 0.005f); //from 0.005 (perception) zu
-            sor.filter(*input_cloud);
-            // prepare files
-            std::cout << "cloud size is: " << input_cloud->size() << std::endl;
-            line.erase(line.size() - 4, 4);
-            std::string normals = line + "_normals_histogram.csv";
-            std::string colors = line + "_colors_histogram.csv";
-            std::ofstream os_normals(normals.c_str());
-            std::ofstream os_colors(colors.c_str());
-            //std::string normals_list = line + "_curvature.csv";
-            //std::ofstream os_normals_list(normals_list.c_str());
-
-
-            // estimate features
-
-            /*
-            std::cout << "estimating cvfh features..." << std::endl;
-            input_cvfhs_features = cvfhRecognition(input_cloud); // GetCVFHFeatures instead
-            */
-
-            input_color_features = produceColorHist(input_cloud);
-            std::cout << "creating color histogram..." << std::endl;
-
-            // save features to .csv
-            std::cout << "feature and color histogram size ok. saving file" << std::endl;
-
-            for (int i = 0; i < input_cvfhs_features.size(); i++) {
-                if (i == input_cvfhs_features.size() - 1) {
-                    os_normals << input_cvfhs_features[i];
-                } else {
-                    os_normals << input_cvfhs_features[i] << ", ";
-
-
-                }
-            }
-
-
-            for (int j = 0; j < input_color_features.size(); j++) {
-                if (j == input_color_features.size()-1){
-                    os_colors << input_color_features[j];
-
-                } else {
-                    os_colors << input_color_features[j] << ", ";
-
-
-                }
-            }
-            os_normals.close();
-            os_colors.close();
-
-        }
-
+    // if we can't read the input file then return 0
+    FILE* f = fopen( filename, "r" );
+    if( !f )
+    {
+        printf("ERROR: cannot read file %s\n",  filename);
+        return 0; // all not OK
     }
+
+    // for each sample in the file
+
+    for(int line = 0; line < n_samples; line++)
+    {
+
+        // for each attribute on the line in the file
+
+        for(int attribute = 0; attribute < (ATTRIBUTES_PER_SAMPLE + 2); attribute++)
+        {
+            if (attribute == 0)
+            {
+                fscanf(f, "%f,", &tmpf);
+
+                // ignore attribute 0 (as it's the patient ID)
+
+                continue;
+            }
+            else if (attribute == 1)
+            {
+
+                // attribute 2 (in the database) is the classification
+                // record 1 = M = malignant
+                // record 0 = B = benign
+
+                fscanf(f, "%c,", &tmpc);
+
+                switch(tmpc)
+                {
+                    case 'M':
+                        classes.at<float>(line, 0) = 1.0;
+                        break;
+                    case 'B':
+                        classes.at<float>(line, 0) = 0.0;
+                        break;
+                    default:
+                        printf("ERROR: unexpected class in file %s\n",  filename);
+                        return 0; // all not OK
+                }
+
+                // printf("%c,", tmpc);
+            }
+            else
+            {
+                fscanf(f, "%f,", &tmpf);
+                data.at<float>(line, (attribute - 2)) = tmpf;
+                //printf("%f,", tmpf);
+            }
+        }
+        fscanf(f, "\n");
+        //printf("\n");
+    }
+
+    fclose(f);
+
+    return 1; // all OK
 }
