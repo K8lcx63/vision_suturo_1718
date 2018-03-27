@@ -10,8 +10,7 @@
 
 using namespace cv; // OpenCV API is in the C++ "cv" namespace
 
-// #include "../perception/short_types.h"
-
-
-bool train(PointCloudRGBPtr cloud);
-//std::string classify();
+bool trainAll(std::string directory, bool update);
+bool train(PointCloudRGBPtr cloud, int label_index, bool update);
+std::string classify(PointCloudRGBPtr cloud);
+void batchPCD2histograms(std::string input);

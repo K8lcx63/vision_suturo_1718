@@ -63,6 +63,10 @@ void start_node(int argc, char **argv) {
 
     ros::Rate r(2.0);
 
+    ROS_INFO("MAKING HISTOGRAMS...");
+    batchPCD2histograms("../../odu_iai/object_data/partial_views/JaMilch");
+    ROS_INFO("MADE HISTOGRAMS!");
+
     while (n.ok()) {
         sensor_msgs::PointCloud2 cloud_final_pub;
         ROS_INFO("%lu points", cloud_global->points.size());
