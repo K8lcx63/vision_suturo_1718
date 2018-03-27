@@ -51,11 +51,18 @@ bool train(std::string directory, int label_index, bool update) {
 
                 // Parse .csv-file
                 ROS_INFO("Parsing .csv file");
-                std::ifstream data(ent->d_name);
+                std::string full_path = directory + "/" + ent->d_name;
+                std::ifstream data(full_path.c_str()); // Maybe this needs to be the full path, not just the file name?
                 std::string item;
                 int item_int;
                 std::vector <uint64_t> parsedCsv;
-                while (std::getline(data, item, ',')) {
+                while (data.good()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
+                    ROS_INFO("Next entry...");
+                    // Get a new line
+                    getline( data, item, ',');
+                    // Remove whitespaces
+                    for(int i=0; i < item.length(); i++)
+                        if(item[i] == ' ') item.erase(i,1);
                     // Convert string to int
                     int item_int = boost::lexical_cast<int>(item);
                     parsedCsv.push_back(item_int);
