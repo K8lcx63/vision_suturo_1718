@@ -22,6 +22,7 @@ catkin_package(CATKIN_DEPENDS
 )
 
 find_package(PCL 1.6 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 include_directories(
         ${PCL_INCLUDE_DIRS}
@@ -42,6 +43,7 @@ add_executable(
 		src/perception/short_types.h
 		src/perception/transformer/CloudTransformer.cpp
 		src/node/vision_node.cpp
+		src/recognition/classifier.cpp
 
 )
 
@@ -49,6 +51,7 @@ target_link_libraries(
         vision_node
         ${catkin_LIBRARIES}
         ${PCL_LIBRARIES}
+	${OpenCV_LIBS}
 
 )
 
