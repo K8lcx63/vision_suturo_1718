@@ -16,7 +16,7 @@ int ATTRIBUTES_PER_SAMPLE = 768;
  * @param directory: Where the .pcd files are saved
  * @param update: Whether old training data should be kept (true) or deleted (false).
  */
-bool trainAll(std::string directory, bool update){
+bool train_all(std::string directory, bool update){
     return true;
 }
 
@@ -30,41 +30,47 @@ bool trainAll(std::string directory, bool update){
 
 bool train(std::string directory, int label_index, bool update) {
     //ROS_INFO("Creating Mats!");
-    Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-    Mat training_label = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32FC1); // Just the reponse string in a matrix
-    training_label.at<int>(0, 0) = (int) label_index;
+    Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32SC1);
+    Mat training_label = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32SC1); // Just the reponse string in a matrix
+    //training_label.at<int>(0, 0) = (int) label_index;
 
     // Find all .csv-files in the given directory
     ROS_INFO("Finding the .csv files in the given directory...");
-    DIR *dir;
+    DIR *dir = opendir(directory.c_str());
     struct dirent *ent;
-    if ((dir = opendir(directory.c_str())) != NULL) {
+    if (dir) {
+        ROS_INFO("Directory found");
         while ((ent = readdir(dir)) != NULL) {
-            printf("%s\n", ent->d_name);
-
-
-            // Parse .csv-file
-            ROS_INFO("Parsing .csv file");
-            std::ifstream data(ent->d_name);
-            std::string line;
-            std::vector<uint64_t> parsedCsv;
-            while (std::getline(data, line)) {
-                std::stringstream lineStream(line);
-                std::string cell;
-                while (std::getline(lineStream, cell, ',')) {
-                    //int cell_int = std::stoi(cell);
-                    int cell_int = boost::lexical_cast<int>( "123" );
-                    parsedCsv.push_back(cell_int); // Converts "cell" to int
-                }
+            if (!has_suffix(ent->d_name, "colors_histogram.csv")){
+                ROS_WARN("This is not a .csv file");
             }
+            else {
+                ROS_INFO("This is a .csv file");
+                printf("%s\n", ent->d_name);
 
-            ROS_INFO("Copying histogram contents to data Mat");
-            // Copy histogram contents to testing_data Mat
-            memcpy(training_data.data, parsedCsv.data(), sizeof(Mat));
 
-            ROS_INFO("Training now...");
-            //ROS_INFO("Training now...");
-            bayes->train(training_data, training_label, Mat(), Mat(), update);
+                // Parse .csv-file
+                ROS_INFO("Parsing .csv file");
+                std::ifstream data(ent->d_name);
+                std::string item;
+                int item_int;
+                std::vector <uint64_t> parsedCsv;
+                while (std::getline(data, item, ',')) {
+                    // Convert string to int
+                    int item_int = boost::lexical_cast<int>(item);
+                    parsedCsv.push_back(item_int);
+                    ROS_INFO("Pushed back an int!");
+                }
+
+                ROS_INFO("Size of current histogram: %s", parsedCsv.size());
+                ROS_INFO("Copying histogram contents to data Mat");
+                // Copy histogram contents to testing_data Mat
+                memcpy(training_data.data, parsedCsv.data(), sizeof(Mat));
+
+                ROS_INFO("Training now...");
+                //ROS_INFO("Training now...");
+                bayes->train(training_data, training_label, Mat(), Mat(), update);
+            }
         }
     }
     closedir(dir);
@@ -148,4 +154,9 @@ int read_data_from_csv(const char* filename, Mat data, Mat classes, int n_sample
     fclose(f);
 
     return 1; // all OK
+}
+
+bool has_suffix(const string& s, const string& suffix)
+{
+    return (s.size() >= suffix.size()) && equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }

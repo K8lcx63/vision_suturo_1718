@@ -65,7 +65,7 @@ void start_node(int argc, char **argv) {
 
     ROS_INFO("STARTING TRAINING...");
     std::string xd = "../../common_suturo1718/pcd_files/JaMilch";
-    train(xd.c_str(), 2, false);
+    train(xd, 2, false);
     ROS_INFO("TRAINING FINISHED!");
 
     while (n.ok()) {
