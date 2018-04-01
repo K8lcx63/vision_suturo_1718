@@ -10,6 +10,7 @@
 #include <cv.h>       // opencv general include file
 #include <ml.h>		  // opencv machine learning include file
 #include <stdio.h>
+#include <stdlib.h>
 
 using namespace cv; // OpenCV API is in the C++ "cv" namespace
 

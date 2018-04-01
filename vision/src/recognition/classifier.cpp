@@ -56,17 +56,29 @@ bool train(std::string directory, int label_index, bool update) {
                 std::string item;
                 int item_int;
                 std::vector <uint64_t> parsedCsv;
-                while (data.good()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
+                while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
                     ROS_INFO("Next entry...");
                     // Get a new line
+                    ROS_INFO("Getting line");
                     getline( data, item, ',');
-                    // Remove whitespaces
-                    for(int i=0; i < item.length(); i++)
-                        if(item[i] == ' ') item.erase(i,1);
-                    // Convert string to int
-                    int item_int = boost::lexical_cast<int>(item);
-                    parsedCsv.push_back(item_int);
-                    ROS_INFO("Pushed back an int!");
+                    if(data.eof()) {
+                        // Remove whitespaces
+                        ROS_INFO("Removing commas");
+                        for(int i=0; i < item.length(); i++)
+                            if(item[i] == ' ') item.erase(i,1);
+                        ROS_INFO("Converting string to int");
+                        // Convert string to int
+                        int item_int;
+                        item_int = atoi(item.c_str());
+                        ROS_INFO("Item: %s\n", item.c_str());
+                        ROS_INFO("Item as int: %d\n", item_int);
+                        ROS_INFO("Pushing back an int");
+                        parsedCsv.push_back(item_int);
+                    }
+                    else {
+                        ROS_INFO("Finished a file!");
+                        data.close();
+                    }
                 }
 
                 ROS_INFO("Size of current histogram: %s", parsedCsv.size());
@@ -81,6 +93,7 @@ bool train(std::string directory, int label_index, bool update) {
         }
     }
     closedir(dir);
+    return true;
 }
 
 /**
