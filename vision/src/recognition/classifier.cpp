@@ -4,16 +4,16 @@
 
 #include "classifier.h"
 
-std::string labels[] = {"CupEcoOrange",
-                             "EdekaRedBowl",
-                             "HelaCurryKetchup",
-                             "JaMilch",
-                             "KellogsToppasMini",
-                             "KoellnMuesliKnusperHonigNuss",
-                             "PringlesPaprika",
-                             "PringlesSalt",
-                             "SiggBottle",
-                             "TomatoSauceOroDiParma"};
+std::string labels[10] = {  "CupEcoOrange",
+                            "EdekaRedBowl",
+                            "HelaCurryKetchup",
+                            "JaMilch",
+                            "KellogsToppasMini",
+                            "KoellnMuesliKnusperHonigNuss",
+                            "PringlesPaprika",
+                            "PringlesSalt",
+                            "SiggBottle",
+                            "TomatoSauceOroDiParma"};
 
 //ROS_INFO("Initializing classifier!");
 CvNormalBayesClassifier *bayes = new CvNormalBayesClassifier;
@@ -47,7 +47,7 @@ bool train(std::string directory, bool update) {
     Mat training_label = Mat(0, 1, CV_32SC1); // Output labels
 
     // Iterate through all directories, with one directory for each object
-    for(int label_index = 0; label_index < sizeof(labels); label_index++) {
+    for(int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
         std::string current_directory = directory + "/" + labels[label_index]; // Directory for this object
         ROS_INFO("Finding the .csv files in the given directory...");
         DIR *dir = opendir(current_directory.c_str());
@@ -70,7 +70,7 @@ bool train(std::string directory, bool update) {
                     if (!data) ROS_INFO("Couldn't open file!");
                     else {
                         std::string item;
-                        while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
+                        while (data.is_open()) {
                             // Get a new line
                             getline(data, item, ',');
                             if (!data.eof()) {
