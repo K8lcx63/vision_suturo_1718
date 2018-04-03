@@ -7,7 +7,10 @@
 //ROS_INFO("Initializing classifier!");
 CvNormalBayesClassifier *bayes = new CvNormalBayesClassifier;
 int NUMBER_OF_TRAINING_SAMPLES = 217;
-int ATTRIBUTES_PER_SAMPLE = 768;
+//int ATTRIBUTES_PER_SAMPLE = 768;
+//int NUMBER_OF_TRAINING_SAMPLES = 1;
+int ATTRIBUTES_PER_SAMPLE = 24; // Should be this, but throws error
+//int ATTRIBUTES_PER_SAMPLE = 300; // Doesn't make sense, but trains properly, taking very long
 
 
 /**
@@ -30,7 +33,7 @@ bool train_all(std::string directory, bool update) {
 
 bool train(std::string directory, int label_index, bool update) {
     //ROS_INFO("Creating Mats!");
-    Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32SC1);
+    Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
     Mat training_label = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32SC1); // Just the reponse string in a matrix
     //training_label.at<int>(0, 0) = (int) label_index;
 
@@ -88,13 +91,14 @@ bool train(std::string directory, int label_index, bool update) {
                 ROS_INFO("Size of current histogram: %d", parsedCsv.size());
                 ROS_INFO("Copying histogram contents to data Mat");
                 // Copy histogram contents to testing_data Mat
-                memcpy(training_data.data, parsedCsv.data(), sizeof(Mat));
-
-                ROS_INFO("Training now...");
-                //ROS_INFO("Training now...");
-                bayes->train(training_data, training_label, Mat(), Mat(), update);
+                training_data.push_back(parsedCsv);
+                // memcpy(training_data.data, parsedCsv.data(), sizeof(Mat));
             }
         }
+
+        ROS_INFO("Training now...");
+        //ROS_INFO("Training now...");
+        bayes->train(training_data, training_label, Mat(), Mat(), update);
     }
     closedir(dir);
     return true;
