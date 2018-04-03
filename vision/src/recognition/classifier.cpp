@@ -16,7 +16,7 @@ int ATTRIBUTES_PER_SAMPLE = 768;
  * @param directory: Where the .pcd files are saved
  * @param update: Whether old training data should be kept (true) or deleted (false).
  */
-bool train_all(std::string directory, bool update){
+bool train_all(std::string directory, bool update) {
     return true;
 }
 
@@ -41,10 +41,9 @@ bool train(std::string directory, int label_index, bool update) {
     if (dir) {
         ROS_INFO("Directory found");
         while ((ent = readdir(dir)) != NULL) {
-            if (!has_suffix(ent->d_name, "colors_histogram.csv")){
+            if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
                 ROS_WARN("This is not a .csv file");
-            }
-            else {
+            } else {
                 ROS_INFO("This is a .csv file");
                 printf("%s\n", ent->d_name);
 
@@ -53,35 +52,40 @@ bool train(std::string directory, int label_index, bool update) {
                 ROS_INFO("Parsing .csv file");
                 std::string full_path = directory + "/" + ent->d_name;
                 std::ifstream data(full_path.c_str()); // Maybe this needs to be the full path, not just the file name?
-                std::string item;
-                int item_int;
-                std::vector <uint64_t> parsedCsv;
-                while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
-                    ROS_INFO("Next entry...");
-                    // Get a new line
-                    ROS_INFO("Getting line");
-                    getline( data, item, ',');
-                    if(data.eof()) {
-                        // Remove whitespaces
-                        ROS_INFO("Removing commas");
-                        for(int i=0; i < item.length(); i++)
-                            if(item[i] == ' ') item.erase(i,1);
-                        ROS_INFO("Converting string to int");
-                        // Convert string to int
-                        int item_int;
-                        item_int = atoi(item.c_str());
-                        ROS_INFO("Item: %s\n", item.c_str());
-                        ROS_INFO("Item as int: %d\n", item_int);
-                        ROS_INFO("Pushing back an int");
-                        parsedCsv.push_back(item_int);
-                    }
-                    else {
-                        ROS_INFO("Finished a file!");
-                        data.close();
+                std::vector <int> parsedCsv;
+                if (!data) ROS_INFO("Couldn't open file!");
+                else {
+                    std::string item;
+                    int item_int;
+                    while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
+                        ROS_INFO("Next entry...");
+                        // Get a new line
+                        ROS_INFO("Getting line");
+                        getline(data, item, ',');
+                        if (!data.eof()) {
+                            // Remove whitespaces
+                            ROS_INFO("Removing commas");
+                            for (int i = 0; i < item.length(); i++)
+                                if (item[i] == ' ') item.erase(i, 1);
+                            ROS_INFO("Converting string to int");
+                            // Convert string to int
+                            int item_int;
+                            item_int = atoi(item.c_str());
+                            ROS_INFO("Item: %s\n", item.c_str());
+                            ROS_INFO("Item as int: %d\n", item_int);
+                            ROS_INFO("Pushing back an int");
+                            ROS_INFO("Size of current histogram: %d", parsedCsv.size());
+                            parsedCsv.push_back(item_int);
+                        } else {
+                            ROS_INFO("Finished a file!");
+                            data.close();
+                            ROS_INFO("Closed file.");
+                        }
                     }
                 }
 
-                ROS_INFO("Size of current histogram: %s", parsedCsv.size());
+                ROS_INFO("XD");
+                ROS_INFO("Size of current histogram: %d", parsedCsv.size());
                 ROS_INFO("Copying histogram contents to data Mat");
                 // Copy histogram contents to testing_data Mat
                 memcpy(training_data.data, parsedCsv.data(), sizeof(Mat));
@@ -106,38 +110,31 @@ std::string classify(PointCloudRGB cloud) {
     return "xd";
 }
 
-int read_data_from_csv(const char* filename, Mat data, Mat classes, int n_samples )
-{
+int read_data_from_csv(const char *filename, Mat data, Mat classes, int n_samples) {
     char tmpc;
     float tmpf;
 
     // if we can't read the input file then return 0
-    FILE* f = fopen( filename, "r" );
-    if( !f )
-    {
-        printf("ERROR: cannot read file %s\n",  filename);
+    FILE *f = fopen(filename, "r");
+    if (!f) {
+        printf("ERROR: cannot read file %s\n", filename);
         return 0; // all not OK
     }
 
     // for each sample in the file
 
-    for(int line = 0; line < n_samples; line++)
-    {
+    for (int line = 0; line < n_samples; line++) {
 
         // for each attribute on the line in the file
 
-        for(int attribute = 0; attribute < (ATTRIBUTES_PER_SAMPLE + 2); attribute++)
-        {
-            if (attribute == 0)
-            {
+        for (int attribute = 0; attribute < (ATTRIBUTES_PER_SAMPLE + 2); attribute++) {
+            if (attribute == 0) {
                 fscanf(f, "%f,", &tmpf);
 
                 // ignore attribute 0 (as it's the patient ID)
 
                 continue;
-            }
-            else if (attribute == 1)
-            {
+            } else if (attribute == 1) {
 
                 // attribute 2 (in the database) is the classification
                 // record 1 = M = malignant
@@ -145,8 +142,7 @@ int read_data_from_csv(const char* filename, Mat data, Mat classes, int n_sample
 
                 fscanf(f, "%c,", &tmpc);
 
-                switch(tmpc)
-                {
+                switch (tmpc) {
                     case 'M':
                         classes.at<float>(line, 0) = 1.0;
                         break;
@@ -154,14 +150,12 @@ int read_data_from_csv(const char* filename, Mat data, Mat classes, int n_sample
                         classes.at<float>(line, 0) = 0.0;
                         break;
                     default:
-                        printf("ERROR: unexpected class in file %s\n",  filename);
+                        printf("ERROR: unexpected class in file %s\n", filename);
                         return 0; // all not OK
                 }
 
                 // printf("%c,", tmpc);
-            }
-            else
-            {
+            } else {
                 fscanf(f, "%f,", &tmpf);
                 data.at<float>(line, (attribute - 2)) = tmpf;
                 //printf("%f,", tmpf);
@@ -176,7 +170,6 @@ int read_data_from_csv(const char* filename, Mat data, Mat classes, int n_sample
     return 1; // all OK
 }
 
-bool has_suffix(const string& s, const string& suffix)
-{
+bool has_suffix(const string &s, const string &suffix) {
     return (s.size() >= suffix.size()) && equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }
