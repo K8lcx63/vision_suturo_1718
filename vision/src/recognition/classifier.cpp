@@ -52,7 +52,6 @@ bool train(std::string directory, std::string labels[], bool update) {
 
 
                     // Parse .csv-file
-                    ROS_INFO("Parsing .csv file");
                     std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
                     std::ifstream data(full_path.c_str());
                     std::vector<float> parsedCsv;
@@ -61,24 +60,17 @@ bool train(std::string directory, std::string labels[], bool update) {
                     else {
                         std::string item;
                         while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
-                            ROS_INFO("Next entry...");
                             // Get a new line
-                            ROS_INFO("Getting line");
                             getline(data, item, ',');
                             if (!data.eof()) {
                                 // Remove whitespaces
-                                ROS_INFO("Removing commas");
                                 for (int i = 0; i < item.length(); i++)
                                     if (item[i] == ' ') item.erase(i, 1);
-                                ROS_INFO("Converting string to int");
                                 // Convert string to float
                                 float item_float = std::strtof(item.c_str(), NULL);
-                                ROS_INFO("Item: %s\n", item.c_str());
-                                ROS_INFO("Item as float: %f\n", item_float);
-                                ROS_INFO("Pushing back a float");
+                                ROS_INFO("Item as float: %f", item_float);
                                 //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
                                 parsedCsv.push_back(item_float);
-                                ROS_INFO("Pushed back a float");
                             } else {
                                 ROS_INFO("Finished a file!");
                                 data.close();
@@ -95,19 +87,22 @@ bool train(std::string directory, std::string labels[], bool update) {
                     training_label.push_back(label_index); // Correctly label this histogram according to input
                 }
             }
-
-            // TODO: INFO ROWS (AND COLUMNS) TO MAKE SURE INPUT/OUTPUT MAT SIZES MATCH
-            ROS_INFO("Training now...");
-            cv::Size data_size = training_data.size();
-            cv::Size label_size = training_label.size();
-            ROS_INFO("data rows: %d", data_size.height);
-            ROS_INFO("data columns: %d", data_size.width);
-            ROS_INFO("label rows: %d", label_size.height);
-            ROS_INFO("label columns: %d", label_size.width);
-            bayes->train(training_data, training_label, Mat(), Mat(), update);
         }
+
         closedir(dir);
+
     }
+
+    ROS_INFO("Training now...");
+    cv::Size data_size = training_data.size();
+    cv::Size label_size = training_label.size();
+    ROS_INFO("data rows: %d", data_size.height);
+    ROS_INFO("data columns: %d", data_size.width);
+    ROS_INFO("label rows: %d", label_size.height);
+    ROS_INFO("label columns: %d", label_size.width);
+    ROS_INFO("amount of labels: %d", sizeof(labels));
+    bayes->train(training_data, training_label, Mat(), Mat(), update);
+
     return true;
 }
 
