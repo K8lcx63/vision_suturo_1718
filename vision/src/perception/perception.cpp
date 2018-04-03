@@ -156,12 +156,10 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     geometry_msgs::PoseStamped current_pose;
 
     ROS_INFO("CALCULATING CENTROID FOR OBJECT");
-    // Calculate centroids
+    // Calculate centroids of objects
     Eigen::Vector4f centroid;
     pcl::compute3DCentroid(*input, centroid);
-    current_pose.pose.position.x = centroid.x();
-    current_pose.pose.position.y = centroid.y();
-    current_pose.pose.position.z = centroid.z();
+
 
     ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
     ROS_INFO("\x1B[32mX: %f\n", current_pose.pose.position.x);
@@ -169,12 +167,11 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
 
     // Calculate quaternions
-    PointCloudRGBPtr target(new PointCloudRGB);
-    target = getTargetByLabel(label, centroid);
+    PointCloudRGBPtr mesh(new PointCloudRGB), mesh_transformed(new PointCloudRGB);
+    mesh = getTargetByLabel(label, centroid);
 
-    cloud_mesh = target;
-    aligned_cloud = SACInitialAlignment(input, target);
-    icp_cloud = iterativeClosestPoint(aligned_cloud, target);
+    aligned_cloud = SACInitialAlignment(input, mesh);
+    icp_cloud = iterativeClosestPoint(aligned_cloud, mesh);
 
     pcl::registration::TransformationEstimationSVD<pcl::PointXYZRGB, pcl::PointXYZRGB, float> reggi;
     Eigen::Matrix<float,4,4> rot_mat;
@@ -200,8 +197,10 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
     // Add header
     current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
+// pcl::transformPointCloud(*mesh, *mesh_transformed, rot_mat );
+    cloud_mesh = mesh;
 
-   tf::Quaternion quat_tf;
+    tf::Quaternion quat_tf;
     // use tf::Matrix3x3. construct with rotati0n matrix and convert fromRotation
     global_tf_rotation.getRotation(quat_tf);
     quat_tf.normalize();
@@ -218,6 +217,13 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     std::cout << quat_msg.z << std::endl;
     std::cout << quat_msg.w << std::endl;
     current_pose.pose.orientation = quat_msg;
+
+    // calculate and set centroid from mesh
+    pcl::compute3DCentroid(*mesh, centroid);
+
+    current_pose.pose.position.x = centroid.x();
+    current_pose.pose.position.y = centroid.y();
+    current_pose.pose.position.z = centroid.z();
     return current_pose;
 }
 
@@ -578,6 +584,8 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
     icp.setInputSource(input);
     icp.setInputTarget(target);
+    icp.setMaximumIterations(2000);
+    icp.setMaxCorrespondenceDistance(0.005);
     PointCloudRGBPtr final(new PointCloudRGB);
     icp.align(*final);
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
