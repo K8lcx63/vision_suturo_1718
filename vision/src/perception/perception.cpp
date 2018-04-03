@@ -27,6 +27,11 @@ enum mesh_enum {
 };
 
 PointCloudRGBPtr cloud_global(new PointCloudRGB);
+PointCloudRGBPtr cloud_perceived(new PointCloudRGB);
+PointCloudRGBPtr cloud_aligned(new PointCloudRGB);
+PointCloudRGBPtr cloud_mesh(new PointCloudRGB);
+
+
 std::string error_message; // Used by the objects_information service
 tf::Matrix3x3 global_tf_rotation;
 
@@ -110,7 +115,9 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
      */
 
     // Split cloud_final into one PointCloud per object
+
     result = euclideanClusterExtraction(cloud_cluster);
+
     ROS_INFO("CALCULATED RESULT!");
 
 
@@ -131,6 +138,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         savePointCloudRGBNamed(result[i], obj_files.str());
     }
     */
+
 
     return result;
 
@@ -164,7 +172,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     PointCloudRGBPtr target(new PointCloudRGB);
     target = getTargetByLabel(label, centroid);
 
-    
+    cloud_mesh = target;
     aligned_cloud = SACInitialAlignment(input, target);
     icp_cloud = iterativeClosestPoint(aligned_cloud, target);
 
@@ -532,8 +540,8 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
     sac_ia.setSourceFeatures(input_feats);
     sac_ia.setInputTarget(target);
     sac_ia.setTargetFeatures(target_feats);
-    //sac_ia.setMinSampleDistance(0.01);
-    sac_ia.setRANSACIterations(1500);
+    sac_ia.setMinSampleDistance(0.01);
+    sac_ia.setRANSACIterations(2000);
     PointCloudRGB registration_output;
     sac_ia.align(registration_output);
 
@@ -576,7 +584,7 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
               icp.getFitnessScore() << std::endl;
     std::cout << icp.getFinalTransformation() << std::endl;
 
-
+    cloud_aligned = final;
 
     return final;
 }
@@ -794,7 +802,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
 
     // reorientate the lying mesh upwards
         Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
-        float theta = M_PI/2; // The angle of rotation in radians
+        float theta = M_PI/4.5; // The angle of rotation in radians
         Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
         transform_2.translation() << centroid.x(), centroid.y(), centroid.z();
         transform_2.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
