@@ -42,8 +42,6 @@ bool train_all(std::string directory, bool update) {
 bool train(std::string directory, bool update) {
     Mat training_data = Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
     Mat training_label = Mat(0, 1, CV_32SC1); // Output labels
-    bool color_or_cvfh = false;
-    std::vector<float> parsedCsv;
 
     // Iterate through all directories, with one directory for each object
     for(int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
@@ -54,43 +52,19 @@ bool train(std::string directory, bool update) {
         if (dir) {
             ROS_INFO("Directory found");
             while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
-                if (!has_suffix(ent->d_name, "colors_histogram.csv") && !has_suffix(ent->d_name, "normals_histogram.csv")) {
-                    ROS_WARN("This is not a .csv file");
+                if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
+                    ROS_WARN("This is not a color .csv file");
                 } else {
-                    ROS_INFO("This is a .csv file");
-                    // TODO: These don't seem to go one after another 100% of the time. Check for specific names instead?
-                    color_or_cvfh = !color_or_cvfh; // If last one was color, this is cvfh. As well as other way around.
+                    ROS_INFO("This is a color .csv file");
                     printf("%s\n", ent->d_name);
 
-
+                    std::vector<float> parsedCsv;
                     // Parse .csv-file
                     std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
-                    std::ifstream data(full_path.c_str());
-                    if(color_or_cvfh){
-                        parsedCsv.clear(); // If this is a color .csv, clear parsedCsv, since this is a new object.
-                    }
-                    if (!data) ROS_INFO("Couldn't open file!");
-                    else {
-                        std::string item;
-                        while (data.is_open()) {
-                            // Get a new line
-                            getline(data, item, ',');
-                            if (!data.eof()) {
-                                // Remove whitespaces
-                                for (int i = 0; i < item.length(); i++)
-                                    if (item[i] == ' ') item.erase(i, 1);
-                                // Convert string to float
-                                float item_float = std::strtof(item.c_str(), NULL);
-                                //ROS_INFO("Item as float: %f", item_float);
-                                //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
-                                parsedCsv.push_back(item_float);
-                            } else {
-                                ROS_INFO("Finished a file!");
-                                data.close();
-                                ROS_INFO("Closed file.");
-                            }
-                        }
-                    }
+
+                    // TODO: HERE: ALSO GET NAME OF THE ACCORDING COLOR CSV
+                    // TODO: CODE FROM HERE IS NOW IN read_from_file
+
                     if(!color_or_cvfh) { // Only do this if this is the second file for this object
                         ROS_INFO("Copying histogram contents to data Mat");
                         // Copy histogram contents to testing_data Mat
@@ -150,4 +124,30 @@ std::string classify(std::vector<uint64_t> color_features, std::vector<float> cv
 
 bool has_suffix(const string &s, const string &suffix) {
     return (s.size() >= suffix.size()) && equal(suffix.rbegin(), suffix.rend(), s.rbegin());
+}
+
+std::vector<float> read_from_file(std::string path){
+    std::ifstream data(full_path.c_str());
+    if (!data) ROS_INFO("Couldn't open file!");
+    else {
+        std::string item;
+        while (data.is_open()) {
+            // Get a new line
+            getline(data, item, ',');
+            if (!data.eof()) {
+                // Remove whitespaces
+                for (int i = 0; i < item.length(); i++)
+                    if (item[i] == ' ') item.erase(i, 1);
+                // Convert string to float
+                float item_float = std::strtof(item.c_str(), NULL);
+                //ROS_INFO("Item as float: %f", item_float);
+                //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
+                parsedCsv.push_back(item_float);
+            } else {
+                ROS_INFO("Finished a file!");
+                data.close();
+                ROS_INFO("Closed file.");
+            }
+        }
+    }
 }

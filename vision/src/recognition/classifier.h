@@ -17,3 +17,4 @@ bool train_all(std::string directory, bool update);
 bool train(std::string directory, bool update);
 std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features);
 bool has_suffix(const string& s, const string& suffix);
+std::vector<float> read_from_file(std::string path);
