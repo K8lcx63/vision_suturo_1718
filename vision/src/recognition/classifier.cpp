@@ -43,7 +43,7 @@ bool train(std::string directory, int label_index, bool update) {
     struct dirent *ent;
     if (dir) {
         ROS_INFO("Directory found");
-        while ((ent = readdir(dir)) != NULL) {
+        while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
             if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
                 ROS_WARN("This is not a .csv file");
             } else {
@@ -56,10 +56,10 @@ bool train(std::string directory, int label_index, bool update) {
                 std::string full_path = directory + "/" + ent->d_name;
                 std::ifstream data(full_path.c_str()); // Maybe this needs to be the full path, not just the file name?
                 std::vector <float> parsedCsv;
+                //Mat parsedCsv = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
                 if (!data) ROS_INFO("Couldn't open file!");
                 else {
                     std::string item;
-                    float item_int;
                     while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
                         ROS_INFO("Next entry...");
                         // Get a new line
@@ -71,14 +71,14 @@ bool train(std::string directory, int label_index, bool update) {
                             for (int i = 0; i < item.length(); i++)
                                 if (item[i] == ' ') item.erase(i, 1);
                             ROS_INFO("Converting string to int");
-                            // Convert string to int
-                            //char** pEnd;
+                            // Convert string to float
                             float item_float = std::strtof(item.c_str(), NULL);
                             ROS_INFO("Item: %s\n", item.c_str());
                             ROS_INFO("Item as float: %f\n", item_float);
-                            ROS_INFO("Pushing back an int");
-                            ROS_INFO("Size of current histogram: %d", parsedCsv.size());
-                            parsedCsv.push_back(item_int);
+                            ROS_INFO("Pushing back a float");
+                            //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
+                            parsedCsv.push_back(item_float);
+                            ROS_INFO("Pushed back a float");
                         } else {
                             ROS_INFO("Finished a file!");
                             data.close();
@@ -87,17 +87,16 @@ bool train(std::string directory, int label_index, bool update) {
                     }
                 }
 
-                ROS_INFO("XD");
-                ROS_INFO("Size of current histogram: %d", parsedCsv.size());
                 ROS_INFO("Copying histogram contents to data Mat");
                 // Copy histogram contents to testing_data Mat
-                training_data.push_back(parsedCsv);
-                // memcpy(training_data.data, parsedCsv.data(), sizeof(Mat));
+                Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
+                training_data.push_back(training_data_line); // Push single row Mat into big Mat
             }
         }
 
+        // TODO: INFO ROWS (AND COLUMNS) TO MAKE SURE INPUT/OUTPUT MAT SIZES MATCH
         ROS_INFO("Training now...");
-        //ROS_INFO("Training now...");
         bayes->train(training_data, training_label, Mat(), Mat(), update);
     }
     closedir(dir);
