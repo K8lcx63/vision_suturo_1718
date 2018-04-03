@@ -5,7 +5,6 @@
 
 #include "../perception/perception.h"
 #include <dirent.h>
-#include <boost/lexical_cast.hpp>
 
 #include <cv.h>       // opencv general include file
 #include <ml.h>		  // opencv machine learning include file

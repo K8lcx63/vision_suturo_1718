@@ -52,11 +52,11 @@ bool train(std::string directory, int label_index, bool update) {
                 ROS_INFO("Parsing .csv file");
                 std::string full_path = directory + "/" + ent->d_name;
                 std::ifstream data(full_path.c_str()); // Maybe this needs to be the full path, not just the file name?
-                std::vector <int> parsedCsv;
+                std::vector <float> parsedCsv;
                 if (!data) ROS_INFO("Couldn't open file!");
                 else {
                     std::string item;
-                    int item_int;
+                    float item_int;
                     while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
                         ROS_INFO("Next entry...");
                         // Get a new line
@@ -69,10 +69,10 @@ bool train(std::string directory, int label_index, bool update) {
                                 if (item[i] == ' ') item.erase(i, 1);
                             ROS_INFO("Converting string to int");
                             // Convert string to int
-                            int item_int;
-                            item_int = atoi(item.c_str());
+                            //char** pEnd;
+                            float item_float = std::strtof(item.c_str(), NULL);
                             ROS_INFO("Item: %s\n", item.c_str());
-                            ROS_INFO("Item as int: %d\n", item_int);
+                            ROS_INFO("Item as float: %f\n", item_float);
                             ROS_INFO("Pushing back an int");
                             ROS_INFO("Size of current histogram: %d", parsedCsv.size());
                             parsedCsv.push_back(item_int);
