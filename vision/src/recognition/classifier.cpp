@@ -125,74 +125,18 @@ bool train(std::string directory, bool update) {
 
 std::string classify(std::vector<uint64_t> histogram) {
     ROS_INFO("Classifying...");
-    Mat m = Mat();
-    m.push_back(histogram);
-    Mat result = Mat();
-    float result_float = bayes->predict(m);
-    ROS_INFO("This is a %f", result_float);
+    std::vector<float> histogram_float;
+    for(int x = 0; x < histogram.size(); x++){ // Make histogram_float from histogram
+        histogram_float.push_back(histogram[x]);
+    }
+    Mat object_features_mat = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+    memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
+    ROS_INFO("PREDICTING");
+    float result_float = bayes->predict(object_features_mat);
 
     std::string result_string = labels[static_cast<int>(result_float)]; // Make label string from float
+    ROS_INFO("This is a %s", result_string.c_str());
     return result_string;
-}
-
-int read_data_from_csv(const char *filename, Mat data, Mat classes, int n_samples) {
-    char tmpc;
-    float tmpf;
-
-    // if we can't read the input file then return 0
-    FILE *f = fopen(filename, "r");
-    if (!f) {
-        printf("ERROR: cannot read file %s\n", filename);
-        return 0; // all not OK
-    }
-
-    // for each sample in the file
-
-    for (int line = 0; line < n_samples; line++) {
-
-        // for each attribute on the line in the file
-
-        for (int attribute = 0; attribute < (ATTRIBUTES_PER_SAMPLE + 2); attribute++) {
-            if (attribute == 0) {
-                fscanf(f, "%f,", &tmpf);
-
-                // ignore attribute 0 (as it's the patient ID)
-
-                continue;
-            } else if (attribute == 1) {
-
-                // attribute 2 (in the database) is the classification
-                // record 1 = M = malignant
-                // record 0 = B = benign
-
-                fscanf(f, "%c,", &tmpc);
-
-                switch (tmpc) {
-                    case 'M':
-                        classes.at<float>(line, 0) = 1.0;
-                        break;
-                    case 'B':
-                        classes.at<float>(line, 0) = 0.0;
-                        break;
-                    default:
-                        printf("ERROR: unexpected class in file %s\n", filename);
-                        return 0; // all not OK
-                }
-
-                // printf("%c,", tmpc);
-            } else {
-                fscanf(f, "%f,", &tmpf);
-                data.at<float>(line, (attribute - 2)) = tmpf;
-                //printf("%f,", tmpf);
-            }
-        }
-        fscanf(f, "\n");
-        //printf("\n");
-    }
-
-    fclose(f);
-
-    return 1; // all OK
 }
 
 bool has_suffix(const string &s, const string &suffix) {
