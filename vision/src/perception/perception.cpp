@@ -198,7 +198,6 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     // Add header
     current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
 // pcl::transformPointCloud(*mesh, *mesh_transformed, rot_mat );
-    cloud_mesh = mesh;
 
     tf::Quaternion quat_tf;
     // use tf::Matrix3x3. construct with rotati0n matrix and convert fromRotation
@@ -218,8 +217,19 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     std::cout << quat_msg.w << std::endl;
     current_pose.pose.orientation = quat_msg;
 
+    // transform reverse
+
+    Eigen::Matrix<float,4,4> rot_mat_reverse;
+
+    reggi.estimateRigidTransformation(*icp_cloud, *input, rot_mat_reverse);
+
+    pcl::transformPointCloud(*mesh, *mesh_transformed, rot_mat_reverse);
+
+    cloud_mesh = mesh_transformed;
+
+
     // calculate and set centroid from mesh
-    pcl::compute3DCentroid(*mesh, centroid);
+    pcl::compute3DCentroid(*mesh_transformed, centroid);
 
     current_pose.pose.position.x = centroid.x();
     current_pose.pose.position.y = centroid.y();
