@@ -751,7 +751,6 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
     for (int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
 
-
         for (int x = 0; x < 24; x++) {
             //ROS_INFO("%f", current_color_features[x]);
             result.push_back(current_color_features[x]);

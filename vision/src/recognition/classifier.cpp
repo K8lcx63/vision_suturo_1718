@@ -4,6 +4,17 @@
 
 #include "classifier.h"
 
+std::string labels[] = {"CupEcoOrange",
+                             "EdekaRedBowl",
+                             "HelaCurryKetchup",
+                             "JaMilch",
+                             "KellogsToppasMini",
+                             "KoellnMuesliKnusperHonigNuss",
+                             "PringlesPaprika",
+                             "PringlesSalt",
+                             "SiggBottle",
+                             "TomatoSauceOroDiParma"};
+
 //ROS_INFO("Initializing classifier!");
 CvNormalBayesClassifier *bayes = new CvNormalBayesClassifier;
 int NUMBER_OF_TRAINING_SAMPLES = 217;
@@ -31,7 +42,7 @@ bool train_all(std::string directory, bool update) {
  * @return Whether the training was successful
  */
 
-bool train(std::string directory, std::string labels[], bool update) {
+bool train(std::string directory, bool update) {
     Mat training_data = Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
     Mat training_label = Mat(0, 1, CV_32SC1); // Output labels
 
@@ -112,8 +123,16 @@ bool train(std::string directory, std::string labels[], bool update) {
  * @return The label of the classified object
  */
 
-std::string classify(PointCloudRGB cloud) {
-    return "xd";
+std::string classify(std::vector<uint64_t> histogram) {
+    ROS_INFO("Classifying...");
+    Mat m = Mat();
+    m.push_back(histogram);
+    Mat result = Mat();
+    float result_float = bayes->predict(m);
+    ROS_INFO("This is a %f", result_float);
+
+    std::string result_string = labels[static_cast<int>(result_float)]; // Make label string from float
+    return result_string;
 }
 
 int read_data_from_csv(const char *filename, Mat data, Mat classes, int n_samples) {

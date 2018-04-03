@@ -8,17 +8,6 @@ const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/point
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
 
-std::string label_array[] = {"CupEcoOrange",
-                            "EdekaRedBowl",
-                            "HelaCurryKetchup",
-                            "JaMilch",
-                            "KellogsToppasMini",
-                            "KoellnMuesliKnusperHonigNuss",
-                            "PringlesPaprika",
-                            "PringlesSalt",
-                            "SiggBottle",
-                            "TomatoSauceOroDiParma"};
-
 
 PointCloudRGBPtr scene(new PointCloudRGB);
 
@@ -76,7 +65,7 @@ void start_node(int argc, char **argv) {
 
     ROS_INFO("STARTING TRAINING...");
     std::string xd = "../../common_suturo1718/pcd_files";
-    train(xd, label_array, false);
+    train(xd, false);
     ROS_INFO("TRAINING FINISHED!");
 
     while (n.ok()) {
@@ -117,6 +106,9 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     // Calculate features and put them into the message response
     std::vector<float> current_features_vector = getCVFHFeatures(all_clusters);
     std::vector<uint64_t> color_features_vector = getColorFeatures(all_clusters);
+    for(int xd = 0; xd < all_clusters.size(); xd++){
+        classify(produceColorHist(all_clusters[xd]));
+    }
     //getAllFeatures(all_clusters, current_features_vector, color_features_vector);
 
     // estimate poses (quaternions)
