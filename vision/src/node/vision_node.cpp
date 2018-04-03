@@ -106,8 +106,17 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     // Calculate features and put them into the message response
     std::vector<float> current_features_vector = getCVFHFeatures(all_clusters);
     std::vector<uint64_t> color_features_vector = getColorFeatures(all_clusters);
-    for(int xd = 0; xd < all_clusters.size(); xd++){
-        classify(produceColorHist(all_clusters[xd]));
+
+    std::vector<float> single_cvfh_features;
+    std::vector<uint64_t> single_color_features;
+    for(int a = 0; a < all_clusters.size(); a++){ // Get histograms of each object and classify
+        for(int b = 0; b < 24; b++){
+            single_color_features.push_back(color_features_vector[b+(a*24)]);
+        }
+        for(int c = 0; c < 308; c++){
+            single_cvfh_features.push_back(current_features_vector[c+(a*308)]);
+        }
+        classify(single_color_features, single_cvfh_features);
     }
     //getAllFeatures(all_clusters, current_features_vector, color_features_vector);
 

@@ -18,10 +18,7 @@ std::string labels[10] = {  "CupEcoOrange",
 //ROS_INFO("Initializing classifier!");
 CvNormalBayesClassifier *bayes = new CvNormalBayesClassifier;
 int NUMBER_OF_TRAINING_SAMPLES = 217;
-//int ATTRIBUTES_PER_SAMPLE = 768;
-//int NUMBER_OF_TRAINING_SAMPLES = 1;
-int ATTRIBUTES_PER_SAMPLE = 24; // Should be this, but throws error
-//int ATTRIBUTES_PER_SAMPLE = 300; // Doesn't make sense, but trains properly, taking very long
+int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
 
 
 /**
@@ -45,6 +42,8 @@ bool train_all(std::string directory, bool update) {
 bool train(std::string directory, bool update) {
     Mat training_data = Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
     Mat training_label = Mat(0, 1, CV_32SC1); // Output labels
+    bool color_or_cvfh = false;
+    std::vector<float> parsedCsv;
 
     // Iterate through all directories, with one directory for each object
     for(int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
@@ -55,18 +54,21 @@ bool train(std::string directory, bool update) {
         if (dir) {
             ROS_INFO("Directory found");
             while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
-                if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
+                if (!has_suffix(ent->d_name, "colors_histogram.csv") && !has_suffix(ent->d_name, "normals_histogram.csv")) {
                     ROS_WARN("This is not a .csv file");
                 } else {
                     ROS_INFO("This is a .csv file");
+                    // TODO: These don't seem to go one after another 100% of the time. Check for specific names instead?
+                    color_or_cvfh = !color_or_cvfh; // If last one was color, this is cvfh. As well as other way around.
                     printf("%s\n", ent->d_name);
 
 
                     // Parse .csv-file
                     std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
                     std::ifstream data(full_path.c_str());
-                    std::vector<float> parsedCsv;
-                    //Mat parsedCsv = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                    if(color_or_cvfh){
+                        parsedCsv.clear(); // If this is a color .csv, clear parsedCsv, since this is a new object.
+                    }
                     if (!data) ROS_INFO("Couldn't open file!");
                     else {
                         std::string item;
@@ -79,7 +81,7 @@ bool train(std::string directory, bool update) {
                                     if (item[i] == ' ') item.erase(i, 1);
                                 // Convert string to float
                                 float item_float = std::strtof(item.c_str(), NULL);
-                                ROS_INFO("Item as float: %f", item_float);
+                                //ROS_INFO("Item as float: %f", item_float);
                                 //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
                                 parsedCsv.push_back(item_float);
                             } else {
@@ -89,13 +91,14 @@ bool train(std::string directory, bool update) {
                             }
                         }
                     }
-
-                    ROS_INFO("Copying histogram contents to data Mat");
-                    // Copy histogram contents to testing_data Mat
-                    Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-                    memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
-                    training_data.push_back(training_data_line); // Push single row Mat into big Mat
-                    training_label.push_back(label_index); // Correctly label this histogram according to input
+                    if(!color_or_cvfh) { // Only do this if this is the second file for this object
+                        ROS_INFO("Copying histogram contents to data Mat");
+                        // Copy histogram contents to testing_data Mat
+                        Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                        memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
+                        training_data.push_back(training_data_line); // Push single row Mat into big Mat
+                        training_label.push_back(label_index); // Correctly label this histogram according to input
+                    }
                 }
             }
         }
@@ -123,12 +126,18 @@ bool train(std::string directory, bool update) {
  * @return The label of the classified object
  */
 
-std::string classify(std::vector<uint64_t> histogram) {
+std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
     ROS_INFO("Classifying...");
     std::vector<float> histogram_float;
-    for(int x = 0; x < histogram.size(); x++){ // Make histogram_float from histogram
-        histogram_float.push_back(histogram[x]);
+    for(int f1 = 0; f1 < color_features.size(); f1++){ // Make histogram_float from color features
+        ROS_INFO("%d", color_features[f1]);
+        histogram_float.push_back(color_features[f1]);
     }
+    for(int f2 = 0; f2 < cvfh_features.size(); f2++){ // Add cvfh features to same histogram_float
+        ROS_INFO("%f", cvfh_features[f2]);
+        histogram_float.push_back(cvfh_features[f2]);
+    }
+
     Mat object_features_mat = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
     memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
     ROS_INFO("PREDICTING");
