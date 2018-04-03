@@ -8,8 +8,8 @@ const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/point
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
 
-
 PointCloudRGBPtr scene(new PointCloudRGB);
+
 
 // ros::NodeHandle n_global;
 
@@ -28,13 +28,13 @@ ros::Publisher pub_visualization;
  * Callback-function saves the PointCloud received through the kinect
  * @param kinect PointCloud
  */
-void sub_kinect_callback(PointCloudRGBPtr kinect) {
-
-    if (kinect->size() == 0) {
+void sub_kinect_callback(sensor_msgs::PointCloud2 kinect) {
+    pcl::fromROSMsg(kinect, *scene);
+    cloud_perceived = scene;
+    if (scene->size() == 0) {
         ROS_ERROR("Kinect has no image");
         error_message += "No image from kinect. ";
     }
-    scene = kinect;
 
 }
 
@@ -61,6 +61,12 @@ void start_node(int argc, char **argv) {
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/visualization_cloud", 0);
 
+
+    ros::Publisher pub_perceived_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/perceived_object", 0);
+    ros::Publisher pub_mesh_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/mesh_object", 0);
+
+    ros::Publisher pub_aligned_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/aligned_object", 0);
+
     ros::Rate r(2.0);
 
     while (n.ok()) {
@@ -68,8 +74,33 @@ void start_node(int argc, char **argv) {
         ROS_INFO("%lu points", cloud_global->points.size());
 
         pcl::toROSMsg(*cloud_global, cloud_final_pub);
-        cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
+        cloud_final_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
         pub_visualization_object.publish(cloud_final_pub);
+
+
+        sensor_msgs::PointCloud2 cloud_perceived_pub;
+        ROS_INFO("%lu points", cloud_perceived->points.size());
+
+        pcl::toROSMsg(*cloud_perceived, cloud_perceived_pub);
+        cloud_perceived_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+        pub_perceived_object.publish(cloud_perceived_pub);
+
+        sensor_msgs::PointCloud2 cloud_mesh_pub;
+        ROS_INFO("%lu points", cloud_aligned->points.size());
+
+        pcl::toROSMsg(*cloud_mesh, cloud_mesh_pub);
+        cloud_mesh_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+        pub_mesh_object.publish(cloud_mesh_pub);
+
+        sensor_msgs::PointCloud2 cloud_aligned_pub;
+        ROS_INFO("%lu points", cloud_aligned->points.size());
+
+        pcl::toROSMsg(*cloud_aligned, cloud_aligned_pub);
+        cloud_aligned_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+        pub_aligned_object.publish(cloud_aligned_pub);
+
+
+
         ros::spinOnce();
         r.sleep();
     }
@@ -91,7 +122,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     {
         ROS_ERROR("Input from kinect is empty");
         error_message = "Cloud empty. ";
-        res.clouds.object_errors = error_message;
+        // res.clouds.object_error = error_message;
         return true;
     }
     // Execute findCluster()
@@ -110,7 +141,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     res.clouds.normal_features = current_features_vector;
     res.clouds.color_features = color_features_vector;
     res.clouds.object_amount = all_clusters.size();
-    res.clouds.object_errors = error_message;
+    //res.clouds.object_errors = error_message;
 
     return true;
 
