@@ -31,75 +31,83 @@ bool train_all(std::string directory, bool update) {
  * @return Whether the training was successful
  */
 
-bool train(std::string directory, int label_index, bool update) {
-    //ROS_INFO("Creating Mats!");
-    Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-    Mat training_label = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32SC1); // Just the reponse string in a matrix
-    //training_label.at<int>(0, 0) = (int) label_index;
+bool train(std::string directory, std::string labels[], bool update) {
+    Mat training_data = Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
+    Mat training_label = Mat(0, 1, CV_32SC1); // Output labels
 
-    // Find all .csv-files in the given directory
-    ROS_INFO("Finding the .csv files in the given directory...");
-    DIR *dir = opendir(directory.c_str());
-    struct dirent *ent;
-    if (dir) {
-        ROS_INFO("Directory found");
-        while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
-            if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
-                ROS_WARN("This is not a .csv file");
-            } else {
-                ROS_INFO("This is a .csv file");
-                printf("%s\n", ent->d_name);
+    // Iterate through all directories, with one directory for each object
+    for(int label_index = 0; label_index < sizeof(labels); label_index++) {
+        std::string current_directory = directory + "/" + labels[label_index]; // Directory for this object
+        ROS_INFO("Finding the .csv files in the given directory...");
+        DIR *dir = opendir(current_directory.c_str());
+        struct dirent *ent;
+        if (dir) {
+            ROS_INFO("Directory found");
+            while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
+                if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
+                    ROS_WARN("This is not a .csv file");
+                } else {
+                    ROS_INFO("This is a .csv file");
+                    printf("%s\n", ent->d_name);
 
 
-                // Parse .csv-file
-                ROS_INFO("Parsing .csv file");
-                std::string full_path = directory + "/" + ent->d_name;
-                std::ifstream data(full_path.c_str()); // Maybe this needs to be the full path, not just the file name?
-                std::vector <float> parsedCsv;
-                //Mat parsedCsv = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-                if (!data) ROS_INFO("Couldn't open file!");
-                else {
-                    std::string item;
-                    while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
-                        ROS_INFO("Next entry...");
-                        // Get a new line
-                        ROS_INFO("Getting line");
-                        getline(data, item, ',');
-                        if (!data.eof()) {
-                            // Remove whitespaces
-                            ROS_INFO("Removing commas");
-                            for (int i = 0; i < item.length(); i++)
-                                if (item[i] == ' ') item.erase(i, 1);
-                            ROS_INFO("Converting string to int");
-                            // Convert string to float
-                            float item_float = std::strtof(item.c_str(), NULL);
-                            ROS_INFO("Item: %s\n", item.c_str());
-                            ROS_INFO("Item as float: %f\n", item_float);
-                            ROS_INFO("Pushing back a float");
-                            //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
-                            parsedCsv.push_back(item_float);
-                            ROS_INFO("Pushed back a float");
-                        } else {
-                            ROS_INFO("Finished a file!");
-                            data.close();
-                            ROS_INFO("Closed file.");
+                    // Parse .csv-file
+                    ROS_INFO("Parsing .csv file");
+                    std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
+                    std::ifstream data(full_path.c_str());
+                    std::vector<float> parsedCsv;
+                    //Mat parsedCsv = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                    if (!data) ROS_INFO("Couldn't open file!");
+                    else {
+                        std::string item;
+                        while (data.is_open()) { // TODO: SEGMENTATION FAULT HERE! CHECK IF STREAM IS EMPTY INSTEAD?
+                            ROS_INFO("Next entry...");
+                            // Get a new line
+                            ROS_INFO("Getting line");
+                            getline(data, item, ',');
+                            if (!data.eof()) {
+                                // Remove whitespaces
+                                ROS_INFO("Removing commas");
+                                for (int i = 0; i < item.length(); i++)
+                                    if (item[i] == ' ') item.erase(i, 1);
+                                ROS_INFO("Converting string to int");
+                                // Convert string to float
+                                float item_float = std::strtof(item.c_str(), NULL);
+                                ROS_INFO("Item: %s\n", item.c_str());
+                                ROS_INFO("Item as float: %f\n", item_float);
+                                ROS_INFO("Pushing back a float");
+                                //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
+                                parsedCsv.push_back(item_float);
+                                ROS_INFO("Pushed back a float");
+                            } else {
+                                ROS_INFO("Finished a file!");
+                                data.close();
+                                ROS_INFO("Closed file.");
+                            }
                         }
                     }
+
+                    ROS_INFO("Copying histogram contents to data Mat");
+                    // Copy histogram contents to testing_data Mat
+                    Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                    memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
+                    training_data.push_back(training_data_line); // Push single row Mat into big Mat
+                    training_label.push_back(label_index); // Correctly label this histogram according to input
                 }
-
-                ROS_INFO("Copying histogram contents to data Mat");
-                // Copy histogram contents to testing_data Mat
-                Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-                memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
-                training_data.push_back(training_data_line); // Push single row Mat into big Mat
             }
-        }
 
-        // TODO: INFO ROWS (AND COLUMNS) TO MAKE SURE INPUT/OUTPUT MAT SIZES MATCH
-        ROS_INFO("Training now...");
-        bayes->train(training_data, training_label, Mat(), Mat(), update);
+            // TODO: INFO ROWS (AND COLUMNS) TO MAKE SURE INPUT/OUTPUT MAT SIZES MATCH
+            ROS_INFO("Training now...");
+            cv::Size data_size = training_data.size();
+            cv::Size label_size = training_label.size();
+            ROS_INFO("data rows: %d", data_size.height);
+            ROS_INFO("data columns: %d", data_size.width);
+            ROS_INFO("label rows: %d", label_size.height);
+            ROS_INFO("label columns: %d", label_size.width);
+            bayes->train(training_data, training_label, Mat(), Mat(), update);
+        }
+        closedir(dir);
     }
-    closedir(dir);
     return true;
 }
 

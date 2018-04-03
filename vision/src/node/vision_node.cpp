@@ -8,6 +8,17 @@ const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/point
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
 
+std::string label_array[] = {"CupEcoOrange",
+                            "EdekaRedBowl",
+                            "HelaCurryKetchup",
+                            "JaMilch",
+                            "KellogsToppasMini",
+                            "KoellnMuesliKnusperHonigNuss",
+                            "PringlesPaprika",
+                            "PringlesSalt",
+                            "SiggBottle",
+                            "TomatoSauceOroDiParma"};
+
 
 PointCloudRGBPtr scene(new PointCloudRGB);
 
@@ -64,8 +75,8 @@ void start_node(int argc, char **argv) {
     ros::Rate r(2.0);
 
     ROS_INFO("STARTING TRAINING...");
-    std::string xd = "../../common_suturo1718/pcd_files/JaMilch";
-    train(xd, 2, false);
+    std::string xd = "../../common_suturo1718/pcd_files";
+    train(xd, label_array, false);
     ROS_INFO("TRAINING FINISHED!");
 
     while (n.ok()) {
