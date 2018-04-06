@@ -4,7 +4,7 @@
 
 #include "classifier.h"
 
-std::string labels[10] = {  "CupEcoOrange",
+/** std::string labels[10] = {  "CupEcoOrange",
                             "EdekaRedBowl",
                             "HelaCurryKetchup",
                             "JaMilch",
@@ -13,11 +13,14 @@ std::string labels[10] = {  "CupEcoOrange",
                             "PringlesPaprika",
                             "PringlesSalt",
                             "SiggBottle",
-                            "TomatoSauceOroDiParma"};
+                            "TomatoSauceOroDiParma"}; **/
+
+std::string labels[2] = {  "CupEcoOrange",
+                            "EdekaRedBowl",};
 
 //ROS_INFO("Initializing classifier!");
 CvNormalBayesClassifier *bayes = new CvNormalBayesClassifier;
-int NUMBER_OF_TRAINING_SAMPLES = 217;
+int NUMBER_OF_TRAINING_SAMPLES = 434; // 2165, einzelnd 217
 int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
 
 
@@ -62,17 +65,21 @@ bool train(std::string directory, bool update) {
                     // Parse .csv-file
                     std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
 
-                    // TODO: HERE: ALSO GET NAME OF THE ACCORDING COLOR CSV
-                    // TODO: CODE FROM HERE IS NOW IN read_from_file
+                    parsedCsv = read_from_file(full_path, parsedCsv);
 
-                    if(!color_or_cvfh) { // Only do this if this is the second file for this object
-                        ROS_INFO("Copying histogram contents to data Mat");
-                        // Copy histogram contents to testing_data Mat
-                        Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-                        memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
-                        training_data.push_back(training_data_line); // Push single row Mat into big Mat
-                        training_label.push_back(label_index); // Correctly label this histogram according to input
-                    }
+                    // Now find the correct CVFH-feature .csv
+                    const std::string ext("colors_histogram.csv");
+                    full_path = full_path.substr(0, full_path.size() - ext.size()); // Remove "colors_histogram.csv"
+                    full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
+
+                    parsedCsv = read_from_file(full_path, parsedCsv);
+
+                    ROS_INFO("Copying histogram contents to data Mat");
+                    // Copy histogram contents to testing_data Mat
+                    Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                    memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
+                    training_data.push_back(training_data_line); // Push single row Mat into big Mat
+                    training_label.push_back(label_index); // Correctly label this histogram according to input
                 }
             }
         }
@@ -88,7 +95,7 @@ bool train(std::string directory, bool update) {
     ROS_INFO("data columns: %d", data_size.width);
     ROS_INFO("label rows: %d", label_size.height);
     ROS_INFO("label columns: %d", label_size.width);
-    ROS_INFO("amount of labels: %d", sizeof(labels));
+    ROS_INFO("amount of labels: %d", sizeof(labels) / 8);
     bayes->train(training_data, training_label, Mat(), Mat(), update);
 
     return true;
@@ -104,8 +111,9 @@ std::string classify(std::vector<uint64_t> color_features, std::vector<float> cv
     ROS_INFO("Classifying...");
     std::vector<float> histogram_float;
     for(int f1 = 0; f1 < color_features.size(); f1++){ // Make histogram_float from color features
-        ROS_INFO("%d", color_features[f1]);
-        histogram_float.push_back(color_features[f1]);
+        float feature_float = color_features[f1]; // Convert int to float
+        ROS_INFO("%f", color_features[f1]);
+        histogram_float.push_back(feature_float);
     }
     for(int f2 = 0; f2 < cvfh_features.size(); f2++){ // Add cvfh features to same histogram_float
         ROS_INFO("%f", cvfh_features[f2]);
@@ -116,7 +124,9 @@ std::string classify(std::vector<uint64_t> color_features, std::vector<float> cv
     memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
     ROS_INFO("PREDICTING");
     float result_float = bayes->predict(object_features_mat);
-
+    ROS_INFO("PREDICTED!");
+    ROS_INFO("This is a %f", result_float);
+    // TODO: SEGMENTATION FAULT IN NEXT LINE. Float suddenly way too big.
     std::string result_string = labels[static_cast<int>(result_float)]; // Make label string from float
     ROS_INFO("This is a %s", result_string.c_str());
     return result_string;
@@ -126,7 +136,7 @@ bool has_suffix(const string &s, const string &suffix) {
     return (s.size() >= suffix.size()) && equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }
 
-std::vector<float> read_from_file(std::string path){
+std::vector<float> read_from_file(std::string full_path, std::vector<float> parsedCsv){
     std::ifstream data(full_path.c_str());
     if (!data) ROS_INFO("Couldn't open file!");
     else {
@@ -150,4 +160,5 @@ std::vector<float> read_from_file(std::string path){
             }
         }
     }
+    return parsedCsv;
 }
