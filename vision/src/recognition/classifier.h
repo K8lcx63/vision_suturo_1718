@@ -16,5 +16,5 @@ using namespace cv; // OpenCV API is in the C++ "cv" namespace
 bool train_all(std::string directory, bool update);
 bool train(std::string directory, bool update);
 std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features);
-bool has_suffix(const string& s, const string& suffix);
+bool has_suffix(std::string s, std::string suffix);
 std::vector<float> read_from_file(std::string full_path, std::vector<float> parsedCsv);

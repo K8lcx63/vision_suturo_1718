@@ -19,7 +19,7 @@ std::string labels[2] = {  "CupEcoOrange",
                             "EdekaRedBowl",};
 
 //ROS_INFO("Initializing classifier!");
-CvNormalBayesClassifier *bayes = new CvNormalBayesClassifier;
+cv::ml::NormalBayesClassifier *bayes = cv::ml::NormalBayesClassifier::create();
 int NUMBER_OF_TRAINING_SAMPLES = 434; // 2165, einzelnd 217
 int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
 
@@ -96,7 +96,8 @@ bool train(std::string directory, bool update) {
     ROS_INFO("label rows: %d", label_size.height);
     ROS_INFO("label columns: %d", label_size.width);
     ROS_INFO("amount of labels: %d", sizeof(labels) / 8);
-    bayes->train(training_data, training_label, Mat(), Mat(), update);
+    //bayes->train(training_data, training_label, Mat(), Mat(), update);
+    //bayes->train(training_data, ROW_SAMPLE, training_label);
 
     return true;
 }
@@ -132,7 +133,7 @@ std::string classify(std::vector<uint64_t> color_features, std::vector<float> cv
     return result_string;
 }
 
-bool has_suffix(const string &s, const string &suffix) {
+bool has_suffix(std::string s, std::string suffix) {
     return (s.size() >= suffix.size()) && equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }
 
