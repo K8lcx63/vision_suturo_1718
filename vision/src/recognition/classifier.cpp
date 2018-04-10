@@ -4,7 +4,7 @@
 
 #include "classifier.h"
 
-/** std::string labels[10] = {  "CupEcoOrange",
+std::string labels[10] = {  "CupEcoOrange",
                             "EdekaRedBowl",
                             "HelaCurryKetchup",
                             "JaMilch",
@@ -13,10 +13,10 @@
                             "PringlesPaprika",
                             "PringlesSalt",
                             "SiggBottle",
-                            "TomatoSauceOroDiParma"}; **/
+                            "TomatoSauceOroDiParma"};
 
-std::string labels[2] = {  "CupEcoOrange",
-                            "EdekaRedBowl",};
+/** std::string labels[2] = {  "CupEcoOrange",
+                            "EdekaRedBowl",}; **/
 
 //ROS_INFO("Initializing classifier!");
 cv::ml::NormalBayesClassifier *bayes = cv::ml::NormalBayesClassifier::create();
@@ -48,6 +48,7 @@ bool train(std::string directory, bool update) {
 
     // Iterate through all directories, with one directory for each object
     for(int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
+        // ../../common_suturo1718/pcd_files / CupEcoOrange
         std::string current_directory = directory + "/" + labels[label_index]; // Directory for this object
         ROS_INFO("Finding the .csv files in the given directory...");
         DIR *dir = opendir(current_directory.c_str());
@@ -97,8 +98,9 @@ bool train(std::string directory, bool update) {
     ROS_INFO("label columns: %d", label_size.width);
     ROS_INFO("amount of labels: %d", sizeof(labels) / 8);
     //bayes->train(training_data, training_label, Mat(), Mat(), update);
-    //bayes->train(training_data, ROW_SAMPLE, training_label);
-
+    bayes->train(training_data, 0, training_label);
+    //cv::ml::StatModel::train(training_data, 0, training_label);
+    ROS_INFO("Finished training!");
     return true;
 }
 
@@ -111,11 +113,13 @@ bool train(std::string directory, bool update) {
 std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
     ROS_INFO("Classifying...");
     std::vector<float> histogram_float;
+    ROS_INFO("COLOR HISTOGRAM");
     for(int f1 = 0; f1 < color_features.size(); f1++){ // Make histogram_float from color features
         float feature_float = color_features[f1]; // Convert int to float
-        ROS_INFO("%f", color_features[f1]);
+        ROS_INFO("%f", feature_float);
         histogram_float.push_back(feature_float);
     }
+    ROS_INFO("CVFH HISTOGRAM");
     for(int f2 = 0; f2 < cvfh_features.size(); f2++){ // Add cvfh features to same histogram_float
         ROS_INFO("%f", cvfh_features[f2]);
         histogram_float.push_back(cvfh_features[f2]);
@@ -124,7 +128,8 @@ std::string classify(std::vector<uint64_t> color_features, std::vector<float> cv
     Mat object_features_mat = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
     memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
     ROS_INFO("PREDICTING");
-    float result_float = bayes->predict(object_features_mat);
+    float result_float;
+    result_float = bayes->predict(object_features_mat);
     ROS_INFO("PREDICTED!");
     ROS_INFO("This is a %f", result_float);
     // TODO: SEGMENTATION FAULT IN NEXT LINE. Float suddenly way too big.

@@ -22,11 +22,18 @@ catkin_package(CATKIN_DEPENDS
 )
 
 find_package(PCL 1.6 REQUIRED)
-find_package(OpenCV REQUIRED)
+find_package(OpenCV 3.3.0 REQUIRED)
+
+# Print some messages for OpenCV info
+message(STATUS "OpenCV library status:")
+message(STATUS "    version: ${OpenCV_VERSION}")
+message(STATUS "    libraries: ${OpenCV_LIBS}")
+message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 
 include_directories(
         ${PCL_INCLUDE_DIRS}
         ${catkin_INCLUDE_DIRS}
+	${OpenCV_INCLUDE_DIRS}
 )
 
 
