@@ -17,6 +17,7 @@ geometry_msgs::PointStamped centroid_stamped;
 
 std::vector<PointCloudRGBPtr> all_clusters;
 
+classifier my_classifier;
 
 ros::Publisher pub_visualization;
 
@@ -65,7 +66,7 @@ void start_node(int argc, char **argv) {
 
     ROS_INFO("STARTING TRAINING...");
     std::string xd = "../../common_suturo1718/pcd_files";
-    train(xd, false);
+    my_classifier.train(xd, false);
     ROS_INFO("TRAINING FINISHED!");
 
     while (n.ok()) {
@@ -116,7 +117,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
         for(int c = 0; c < 308; c++){
             single_cvfh_features.push_back(current_features_vector[c+(a*308)]);
         }
-        classify(single_color_features, single_cvfh_features);
+        my_classifier.classify(single_color_features, single_cvfh_features);
     }
     //getAllFeatures(all_clusters, current_features_vector, color_features_vector);
 

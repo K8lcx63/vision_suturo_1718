@@ -4,25 +4,13 @@
 
 #include "classifier.h"
 
-std::string labels[10] = {  "CupEcoOrange",
-                            "EdekaRedBowl",
-                            "HelaCurryKetchup",
-                            "JaMilch",
-                            "KellogsToppasMini",
-                            "KoellnMuesliKnusperHonigNuss",
-                            "PringlesPaprika",
-                            "PringlesSalt",
-                            "SiggBottle",
-                            "TomatoSauceOroDiParma"};
-
 /** std::string labels[2] = {  "CupEcoOrange",
                             "EdekaRedBowl",}; **/
 
-//ROS_INFO("Initializing classifier!");
-cv::ml::NormalBayesClassifier *bayes = cv::ml::NormalBayesClassifier::create();
-int NUMBER_OF_TRAINING_SAMPLES = 434; // 2165, einzelnd 217
-int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
 
+classifier::classifier(){
+    bayes = cv::ml::NormalBayesClassifier::create();
+}
 
 /**
  * Trains all .pcd-files in a directory.
@@ -30,7 +18,7 @@ int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
  * @param directory: Where the .pcd files are saved
  * @param update: Whether old training data should be kept (true) or deleted (false).
  */
-bool train_all(std::string directory, bool update) {
+bool classifier::train_all(std::string directory, bool update) {
     return true;
 }
 
@@ -42,7 +30,7 @@ bool train_all(std::string directory, bool update) {
  * @return Whether the training was successful
  */
 
-bool train(std::string directory, bool update) {
+bool classifier::train(std::string directory, bool update) {
     Mat training_data = Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
     Mat training_label = Mat(0, 1, CV_32SC1); // Output labels
 
@@ -97,10 +85,20 @@ bool train(std::string directory, bool update) {
     ROS_INFO("label rows: %d", label_size.height);
     ROS_INFO("label columns: %d", label_size.width);
     ROS_INFO("amount of labels: %d", sizeof(labels) / 8);
-    //bayes->train(training_data, training_label, Mat(), Mat(), update);
-    bayes->train(training_data, 0, training_label);
-    //cv::ml::StatModel::train(training_data, 0, training_label);
-    ROS_INFO("Finished training!");
+    if (training_data.data == NULL || training_label.data == NULL){
+        ROS_ERROR("AT LEAST ONE MAT IS NULL! CAN'T TRAIN!");
+    } else {
+        if(bayes == NULL) {
+            ROS_ERROR("CLASSIFIER IS NULL! CAN'T TRAIN!");
+        }
+        else{
+            ROS_INFO("Classifier and inputs are fine.");
+            //bayes->train(training_data, training_label, Mat(), Mat(), update);
+            bayes->train(training_data, ml::ROW_SAMPLE, training_label);
+            //bayes->cv::ml::StatModel::train(training_data, 0, training_label);
+            ROS_INFO("Finished training!");
+        }
+    }
     return true;
 }
 
@@ -110,7 +108,7 @@ bool train(std::string directory, bool update) {
  * @return The label of the classified object
  */
 
-std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
+std::string classifier::classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
     ROS_INFO("Classifying...");
     std::vector<float> histogram_float;
     ROS_INFO("COLOR HISTOGRAM");
@@ -138,11 +136,11 @@ std::string classify(std::vector<uint64_t> color_features, std::vector<float> cv
     return result_string;
 }
 
-bool has_suffix(std::string s, std::string suffix) {
+bool classifier::has_suffix(std::string s, std::string suffix) {
     return (s.size() >= suffix.size()) && equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }
 
-std::vector<float> read_from_file(std::string full_path, std::vector<float> parsedCsv){
+std::vector<float> classifier::read_from_file(std::string full_path, std::vector<float> parsedCsv){
     std::ifstream data(full_path.c_str());
     if (!data) ROS_INFO("Couldn't open file!");
     else {

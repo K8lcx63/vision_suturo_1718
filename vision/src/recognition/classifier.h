@@ -13,8 +13,28 @@
 
 using namespace cv; // OpenCV API is in the C++ "cv" namespace
 
-bool train_all(std::string directory, bool update);
-bool train(std::string directory, bool update);
-std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features);
-bool has_suffix(std::string s, std::string suffix);
-std::vector<float> read_from_file(std::string full_path, std::vector<float> parsedCsv);
+class classifier {
+private:
+    cv::ml::NormalBayesClassifier *bayes; // = cv::ml::NormalBayesClassifier::create();
+    int NUMBER_OF_TRAINING_SAMPLES = 2165; // 2165, einzelnd 217
+    int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
+    std::string labels[10] = {  "CupEcoOrange",
+                                "EdekaRedBowl",
+                                "HelaCurryKetchup",
+                                "JaMilch",
+                                "KellogsToppasMini",
+                                "KoellnMuesliKnusperHonigNuss",
+                                "PringlesPaprika",
+                                "PringlesSalt",
+                                "SiggBottle",
+                                "TomatoSauceOroDiParma"};
+public:
+    classifier();
+    bool train_all(std::string directory, bool update);
+    bool train(std::string directory, bool update);
+    std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features);
+    bool has_suffix(std::string s, std::string suffix);
+    std::vector<float> read_from_file(std::string full_path, std::vector<float> parsedCsv);
+
+};
+
