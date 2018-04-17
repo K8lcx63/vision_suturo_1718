@@ -32,7 +32,7 @@ bool classifier::train_all(std::string directory, bool update) {
 
 bool classifier::train(std::string directory, bool update) {
     Mat training_data = Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
-    Mat training_label = Mat(0, 1, CV_32SC1); // Output labels
+    Mat training_label = Mat(0, 1, CV_32FC1); // Output labels
 
     // Iterate through all directories, with one directory for each object
     for(int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
@@ -62,13 +62,17 @@ bool classifier::train(std::string directory, bool update) {
                     full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
                     parsedCsv = read_from_file(full_path, parsedCsv);
-
+                    /*
+                    for(int xd = 0; xd < parsedCsv.size(); xd++){
+                        ROS_INFO("parsedCsv %f", parsedCsv[xd]);
+                    }
+                     */
                     ROS_INFO("Copying histogram contents to data Mat");
                     // Copy histogram contents to testing_data Mat
                     Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
                     memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
                     training_data.push_back(training_data_line); // Push single row Mat into big Mat
-                    training_label.push_back(label_index); // Correctly label this histogram according to input
+                    training_label.push_back((float) label_index); // Correctly label this histogram according to input
                 }
             }
         }
