@@ -31,9 +31,6 @@ bool classifier::train_all(std::string directory, bool update) {
  */
 
 bool classifier::train(std::string directory, bool update) {
-    Mat training_data = Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
-    Mat training_label = Mat(0, 1, CV_32FC1); // Output labels
-
     // Iterate through all directories, with one directory for each object
     for(int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
         // ../../common_suturo1718/pcd_files / CupEcoOrange
@@ -45,9 +42,9 @@ bool classifier::train(std::string directory, bool update) {
             ROS_INFO("Directory found");
             while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
                 if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
-                    ROS_WARN("This is not a color .csv file");
+                    //ROS_WARN("This is not a color .csv file");
                 } else {
-                    ROS_INFO("This is a color .csv file");
+                    //ROS_INFO("This is a color .csv file");
                     printf("%s\n", ent->d_name);
 
                     std::vector<float> parsedCsv;
@@ -62,15 +59,20 @@ bool classifier::train(std::string directory, bool update) {
                     full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
                     parsedCsv = read_from_file(full_path, parsedCsv);
+
                     /*
                     for(int xd = 0; xd < parsedCsv.size(); xd++){
                         ROS_INFO("parsedCsv %f", parsedCsv[xd]);
                     }
                      */
+
                     ROS_INFO("Copying histogram contents to data Mat");
                     // Copy histogram contents to testing_data Mat
                     Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-                    memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
+                    //memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
+                    for(int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++){
+                        training_data_line.at<float>(copy_counter) = parsedCsv[copy_counter];
+                    }
                     training_data.push_back(training_data_line); // Push single row Mat into big Mat
                     training_label.push_back((float) label_index); // Correctly label this histogram according to input
                 }
@@ -96,9 +98,27 @@ bool classifier::train(std::string directory, bool update) {
             ROS_ERROR("CLASSIFIER IS NULL! CAN'T TRAIN!");
         }
         else{
-            ROS_INFO("Classifier and inputs are fine.");
+          ROS_INFO("Classifier and inputs are fine.");
             //bayes->train(training_data, training_label, Mat(), Mat(), update);
+            //Ptr<cv::ml::TrainData> train_data = cv::ml::TrainData::create(training_data, ml::ROW_SAMPLE, training_label);
+
+            /*
+            for(int xD = 0; xD < data_size.height; xD++){
+                for(int xDD = 0; xDD < data_size.width; xDD++){
+                    ROS_INFO("%f", training_data.at<float>(xD, xDD));
+                }
+            }
+             */
+
+            /*
+            for(int xDDD = 0; xDDD < label_size.height; xDDD++){
+                ROS_INFO("%f", training_label.at<float>(xDDD));
+            }
+             */
+
+
             bayes->train(training_data, ml::ROW_SAMPLE, training_label);
+            //bayes->train(train_data);
             //bayes->cv::ml::StatModel::train(training_data, 0, training_label);
             ROS_INFO("Finished training!");
         }
