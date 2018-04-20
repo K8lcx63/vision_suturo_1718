@@ -3,6 +3,9 @@
 //
 
 #include "classifier.h"
+#include "../../../../opencv-3.3.0/modules/core/include/opencv2/core/hal/interface.h"
+#include "../../../../opencv-3.3.0/modules/core/include/opencv2/core/mat.hpp"
+#include "../../../../opencv-3.3.0/modules/ml/include/opencv2/ml.hpp"
 
 /** std::string labels[2] = {  "CupEcoOrange",
                             "EdekaRedBowl",}; **/
@@ -74,7 +77,7 @@ bool classifier::train(std::string directory, bool update) {
                         training_data_line.at<float>(copy_counter) = parsedCsv[copy_counter];
                     }
                     training_data.push_back(training_data_line); // Push single row Mat into big Mat
-                    training_label.push_back((float) label_index); // Correctly label this histogram according to input
+                    training_label.push_back((int) label_index); // Correctly label this histogram according to input
                 }
             }
         }
@@ -99,11 +102,10 @@ bool classifier::train(std::string directory, bool update) {
         }
         else{
           ROS_INFO("Classifier and inputs are fine.");
-            //bayes->train(training_data, training_label, Mat(), Mat(), update);
-            //Ptr<cv::ml::TrainData> train_data = cv::ml::TrainData::create(training_data, ml::ROW_SAMPLE, training_label);
 
             /*
             for(int xD = 0; xD < data_size.height; xD++){
+                ROS_INFO("--------------------");
                 for(int xDD = 0; xDD < data_size.width; xDD++){
                     ROS_INFO("%f", training_data.at<float>(xD, xDD));
                 }
@@ -116,9 +118,10 @@ bool classifier::train(std::string directory, bool update) {
             }
              */
 
-
-            bayes->train(training_data, ml::ROW_SAMPLE, training_label);
-            //bayes->train(train_data);
+            //bayes->train(training_data, training_label, Mat(), Mat(), update);
+            Ptr<cv::ml::TrainData> train_data = cv::ml::TrainData::create(training_data, ml::ROW_SAMPLE, training_label);
+            //bayes->train(training_data, ml::ROW_SAMPLE, training_label);
+            bayes->train(train_data);
             //bayes->cv::ml::StatModel::train(training_data, 0, training_label);
             ROS_INFO("Finished training!");
         }
