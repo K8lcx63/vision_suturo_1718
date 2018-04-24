@@ -2,6 +2,7 @@
 // Created by Alex on 20.03.18.
 //
 
+#include <iostream>
 
 #include "../perception/perception.h"
 #include "../../../../opencv-3.3.0/modules/ml/include/opencv2/ml.hpp"
@@ -33,7 +34,6 @@ private:
                                 "TomatoSauceOroDiParma"};
 public:
     classifier();
-    bool train_all(std::string directory, bool update);
     bool train(std::string directory, bool update);
     std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features);
     bool has_suffix(std::string s, std::string suffix);

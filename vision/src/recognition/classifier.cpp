@@ -16,16 +16,6 @@ classifier::classifier(){
 }
 
 /**
- * Trains all .pcd-files in a directory.
- * @return
- * @param directory: Where the .pcd files are saved
- * @param update: Whether old training data should be kept (true) or deleted (false).
- */
-bool classifier::train_all(std::string directory, bool update) {
-    return true;
-}
-
-/**
  * Trains a single PointCloud.
  * @param cloud: A partial view PointCloud of an object
  * @param label_index: The label of this object as an index from mesh_enum in perception.cpp
@@ -59,20 +49,14 @@ bool classifier::train(std::string directory, bool update) {
                         // Parse .csv-file
                         std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
 
-                        parsedCsv = read_from_file(full_path, parsedCsv);
+                        parsedCsv = read_from_file(full_path, parsedCsv); // Put color features into parsedCsv
 
                         // Now find the correct CVFH-feature .csv
                         const std::string ext("colors_histogram.csv");
                         full_path = full_path.substr(0, full_path.size() - ext.size()); // Remove "colors_histogram.csv"
                         full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
-                        parsedCsv = read_from_file(full_path, parsedCsv);
-
-                        /*
-                        for(int xd = 0; xd < parsedCsv.size(); xd++){
-                            ROS_INFO("parsedCsv %f", parsedCsv[xd]);
-                        }
-                         */
+                        parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
 
                         ROS_INFO("Copying histogram contents to data Mat");
                         // Copy histogram contents to testing_data Mat
@@ -81,7 +65,18 @@ bool classifier::train(std::string directory, bool update) {
                         for (int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++) {
                             training_data_line.at<float>(copy_counter) = parsedCsv[copy_counter];
                         }
-                        training_data.push_back(training_data_line); // Push single row Mat into big Mat
+                        Mat training_data_line_normalized = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                        normalize(training_data_line, training_data_line_normalized); // Normalize training data
+
+                        /*
+                        cv::Size s = training_data_line_normalized.size();
+                        ROS_INFO("<----- ----->");
+                        for(int xd = 0; xd < s.width; xd++){
+                            ROS_INFO("%f", training_data_line_normalized.at<float>(xd));
+                        }
+                        */
+
+                        training_data.push_back(training_data_line_normalized); // Push single row Mat into big Mat
                         training_label.push_back(
                                 (int) label_index); // Correctly label this histogram according to input
                     }
@@ -130,9 +125,9 @@ bool classifier::train(std::string directory, bool update) {
                 bayes->train(train_data);
                 //bayes->cv::ml::StatModel::train(training_data, 0, training_label);
                 ROS_INFO("Finished training!");
-                bayes->save("normal_bayes_classifier_save"); // Save the trained classifier
             }
         }
+        bayes->save("normal_bayes_classifier_save"); // Save the trained classifier
     }
     return true;
 }
@@ -160,23 +155,55 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
 
     Mat object_features_mat = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
     //memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
-    for(int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++){
+    for(int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++){ // Copy data into Mat
         object_features_mat.at<float>(copy_counter) = histogram_float[copy_counter];
     }
+    Mat object_features_mat_normalized = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+    normalize(object_features_mat, object_features_mat_normalized); // Normalize input Mat
+
+    ROS_INFO("----- ----- ----- -----");
+    ROS_INFO("%f", object_features_mat.at<float>(0));
+    ROS_INFO("%f", object_features_mat.at<float>(1));
+    ROS_INFO("%f", object_features_mat.at<float>(2));
+    ROS_INFO("-----");
+    ROS_INFO("%f", object_features_mat_normalized.at<float>(0));
+    ROS_INFO("%f", object_features_mat_normalized.at<float>(1));
+    ROS_INFO("%f", object_features_mat_normalized.at<float>(2));
+
     ROS_INFO("PREDICTING");
     float result_float;
-    result_float = bayes->predict(object_features_mat);
+    float result_float_old;
+    result_float_old = bayes->predict(object_features_mat);
+    Mat predictprob_result;
+    Mat predictprob_result_probabilities;
+    result_float = bayes->predictProb(object_features_mat, predictprob_result, predictprob_result_probabilities);
+    cv::Size s = predictprob_result_probabilities.size();
+    std::cout << predictprob_result << std::endl;
+    std::cout << predictprob_result_probabilities << std::endl;
     ROS_INFO("PREDICTED!");
     ROS_INFO("This is a %f", result_float);
+    ROS_INFO("Or could this be a %f", result_float_old);
     std::string result_string = labels[static_cast<int>(result_float)]; // Make label string from float
     ROS_INFO("This is a %s", result_string.c_str());
     return result_string;
 }
 
+/**
+ * Returns if given suffix applies to string s
+ * @param s
+ * @param suffix
+ * @return true if suffix is contained, otherwise false
+ */
 bool classifier::has_suffix(std::string s, std::string suffix) {
     return (s.size() >= suffix.size()) && equal(suffix.rbegin(), suffix.rend(), s.rbegin());
 }
 
+/**
+ * Returns features from a .csv file
+ * @param full_path: Path to the file
+ * @param parsedCsv: Vector of floats to push back to
+ * @return parsedCsv + new floats from file
+ */
 std::vector<float> classifier::read_from_file(std::string full_path, std::vector<float> parsedCsv){
     std::ifstream data(full_path.c_str());
     if (!data) ROS_INFO("Couldn't open file!");
