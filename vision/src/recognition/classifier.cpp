@@ -76,10 +76,14 @@ bool classifier::train(std::string directory, bool update) {
                         }
                          */
 
+                        float label_index_float = (float) label_index;
+                        ROS_INFO("%f", label_index_float);
+                        ROS_INFO("%d", (int) label_index); // TODO: Labels are still correct here, with values from 0-9
+
                         training_data.push_back(training_data_line_normalized); // Push single row Mat into big Mat
-                        training_label.push_back(
-                                (int) label_index); // Correctly label this histogram according to input
-                        ROS_INFO("%d", (int) label_index);
+                        // training_label.push_back((int) label_index); // Correctly label this histogram according to input
+                        training_label_vector.push_back(label_index);
+
                     }
                 }
             }
@@ -98,14 +102,15 @@ bool classifier::train(std::string directory, bool update) {
 
         ROS_INFO("Training now...");
         cv::Size data_size = training_data.size();
-        cv::Size label_size = training_label.size();
+        //cv::Size label_size = training_label.size();
         ROS_INFO("data rows: %d", data_size.height);
         ROS_INFO("data columns: %d", data_size.width);
-        ROS_INFO("label rows: %d", label_size.height);
-        ROS_INFO("label columns: %d", label_size.width);
+        //ROS_INFO("label rows: %d", label_size.height);
+        //ROS_INFO("label columns: %d", label_size.width);
+        ROS_INFO("label columns: %d", training_label_vector.size());
         ROS_INFO("amount of labels: %d", sizeof(labels) / 8);
-        if (training_data.data == NULL || training_label.data == NULL) {
-            ROS_ERROR("AT LEAST ONE MAT IS NULL! CAN'T TRAIN!");
+        if (training_data.data == NULL) {
+            ROS_ERROR("TRAINING DATA IS NULL! CAN'T TRAIN!");
         } else {
             if (bayes == NULL) {
                 ROS_ERROR("CLASSIFIER IS NULL! CAN'T TRAIN!");
@@ -121,15 +126,20 @@ bool classifier::train(std::string directory, bool update) {
                 }
                  */
 
-
-                for(int xDDD = 0; xDDD < label_size.height; xDDD++){
-                    ROS_INFO("%d", training_label.at<int>(xDDD));
+                // TODO: All labels are 0 here as floats, while being correct as ints!
+                Mat test_label_mat = Mat(training_label_vector);
+                for(int xDDD = 0; xDDD < training_label_vector.size(); xDDD++) {
+                    //ROS_INFO("%f", training_label.at<float>(xDDD));
+                    std::cout << training_label_vector[xDDD] << std::endl;
+                    std::cout << test_label_mat.at<int>(xDDD) << std::endl;
+                    std::cout << test_label_mat.at<float>(xDDD) << std::endl;
                 }
+
 
 
                 //bayes->train(training_data, training_label, Mat(), Mat(), update);
                 Ptr <cv::ml::TrainData> train_data = cv::ml::TrainData::create(training_data, ml::ROW_SAMPLE,
-                                                                               training_label);
+                                                                               Mat(training_label_vector));
                 //bayes->train(training_data, ml::ROW_SAMPLE, training_label);
                 bayes->train(train_data);
                 //bayes->cv::ml::StatModel::train(training_data, 0, training_label);
@@ -173,6 +183,7 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         Mat object_features_mat_normalized = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
         normalize(object_features_mat, object_features_mat_normalized); // Normalize input Mat
 
+        /*
         ROS_INFO("----- ----- ----- -----");
         ROS_INFO("%f", object_features_mat.at<float>(0));
         ROS_INFO("%f", object_features_mat.at<float>(1));
@@ -181,23 +192,23 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         ROS_INFO("%f", object_features_mat_normalized.at<float>(0));
         ROS_INFO("%f", object_features_mat_normalized.at<float>(1));
         ROS_INFO("%f", object_features_mat_normalized.at<float>(2));
+         */
 
         ROS_INFO("PREDICTING");
 
-        float result_float;
-        float result_float_old;
-        result_float_old = bayes->predict(object_features_mat);
+
 
         Mat predictprob_result;
         Mat predictprob_result_probabilities;
-        result_float = bayes->predictProb(object_features_mat, predictprob_result, predictprob_result_probabilities);
+        int result_int = (int)bayes->predictProb(object_features_mat, predictprob_result, predictprob_result_probabilities);
+        ROS_INFO("Training var count: %d", bayes->getVarCount());
         std::cout << predictprob_result << std::endl;
         std::cout << predictprob_result_probabilities << std::endl;
 
         ROS_INFO("PREDICTED!");
-        ROS_INFO("This is a %d", (int) result_float);
-        ROS_INFO("Or could this be a %f", result_float_old);
-        std::string result_string = labels[static_cast<int>(result_float)]; // Make label string from float
+        ROS_INFO("This is a %d", result_int);
+        ROS_INFO("Or could this be a %d", predictprob_result.at<int>(0));
+        std::string result_string = labels[result_int]; // Make label string from float
         ROS_INFO("This is a %s", result_string.c_str());
         return result_string;
     }

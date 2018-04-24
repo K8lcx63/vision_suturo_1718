@@ -21,7 +21,7 @@ private:
     int NUMBER_OF_TRAINING_SAMPLES = 2165; // 2165, einzelnd 217
     int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
     cv::Mat training_data = cv::Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
-    cv::Mat training_label = cv::Mat(0, 1, CV_32FC1); // Output labels
+    std::vector<int> training_label_vector;
     std::string labels[10] = {  "CupEcoOrange",
                                 "EdekaRedBowl",
                                 "HelaCurryKetchup",
