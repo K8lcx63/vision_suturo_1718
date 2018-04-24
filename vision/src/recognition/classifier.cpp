@@ -74,11 +74,12 @@ bool classifier::train(std::string directory, bool update) {
                         for(int xd = 0; xd < s.width; xd++){
                             ROS_INFO("%f", training_data_line_normalized.at<float>(xd));
                         }
-                        */
+                         */
 
                         training_data.push_back(training_data_line_normalized); // Push single row Mat into big Mat
                         training_label.push_back(
                                 (int) label_index); // Correctly label this histogram according to input
+                        ROS_INFO("%d", (int) label_index);
                     }
                 }
             }
@@ -86,6 +87,14 @@ bool classifier::train(std::string directory, bool update) {
             closedir(dir);
 
         }
+
+        /* // DEBUG: Show error percentage with training set (was 0% last time tested, 24.04.2018)
+        bayes = cv::ml::NormalBayesClassifier::load("normal_bayes_classifier_save");
+        Mat response;
+        Ptr<cv::ml::TrainData> traindata_test = cv::ml::TrainData::create(training_data, cv::ml::ROW_SAMPLE, training_label);
+        float error_percentage = bayes->cv::ml::StatModel::calcError(traindata_test, false, response);
+        ROS_INFO("Error percentage with training set: %f", error_percentage);
+         */
 
         ROS_INFO("Training now...");
         cv::Size data_size = training_data.size();
@@ -112,11 +121,11 @@ bool classifier::train(std::string directory, bool update) {
                 }
                  */
 
-                /*
+
                 for(int xDDD = 0; xDDD < label_size.height; xDDD++){
-                    ROS_INFO("%f", training_label.at<float>(xDDD));
+                    ROS_INFO("%d", training_label.at<int>(xDDD));
                 }
-                 */
+
 
                 //bayes->train(training_data, training_label, Mat(), Mat(), update);
                 Ptr <cv::ml::TrainData> train_data = cv::ml::TrainData::create(training_data, ml::ROW_SAMPLE,
@@ -127,7 +136,9 @@ bool classifier::train(std::string directory, bool update) {
                 ROS_INFO("Finished training!");
             }
         }
+        ROS_INFO("Saving...");
         bayes->save("normal_bayes_classifier_save"); // Save the trained classifier
+        ROS_INFO("Saved new classifier data!");
     }
     return true;
 }
@@ -139,53 +150,60 @@ bool classifier::train(std::string directory, bool update) {
  */
 
 std::string classifier::classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
-    ROS_INFO("Classifying...");
-    std::vector<float> histogram_float;
-    ROS_INFO("COLOR HISTOGRAM");
-    for(int f1 = 0; f1 < color_features.size(); f1++){ // Make histogram_float from color features
-        float feature_float = color_features[f1]; // Convert int to float
-        //ROS_INFO("%f", feature_float);
-        histogram_float.push_back(feature_float);
-    }
-    ROS_INFO("CVFH HISTOGRAM");
-    for(int f2 = 0; f2 < cvfh_features.size(); f2++){ // Add cvfh features to same histogram_float
-        //ROS_INFO("%f", cvfh_features[f2]);
-        histogram_float.push_back(cvfh_features[f2]);
-    }
+    if(bayes->isTrained()) {
+        ROS_INFO("Classifying...");
+        std::vector<float> histogram_float;
+        ROS_INFO("COLOR HISTOGRAM");
+        for (int f1 = 0; f1 < color_features.size(); f1++) { // Make histogram_float from color features
+            float feature_float = color_features[f1]; // Convert int to float
+            //ROS_INFO("%f", feature_float);
+            histogram_float.push_back(feature_float);
+        }
+        ROS_INFO("CVFH HISTOGRAM");
+        for (int f2 = 0; f2 < cvfh_features.size(); f2++) { // Add cvfh features to same histogram_float
+            //ROS_INFO("%f", cvfh_features[f2]);
+            histogram_float.push_back(cvfh_features[f2]);
+        }
 
-    Mat object_features_mat = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-    //memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
-    for(int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++){ // Copy data into Mat
-        object_features_mat.at<float>(copy_counter) = histogram_float[copy_counter];
+        Mat object_features_mat = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+        //memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
+        for (int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++) { // Copy data into Mat
+            object_features_mat.at<float>(copy_counter) = histogram_float[copy_counter];
+        }
+        Mat object_features_mat_normalized = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+        normalize(object_features_mat, object_features_mat_normalized); // Normalize input Mat
+
+        ROS_INFO("----- ----- ----- -----");
+        ROS_INFO("%f", object_features_mat.at<float>(0));
+        ROS_INFO("%f", object_features_mat.at<float>(1));
+        ROS_INFO("%f", object_features_mat.at<float>(2));
+        ROS_INFO("-----");
+        ROS_INFO("%f", object_features_mat_normalized.at<float>(0));
+        ROS_INFO("%f", object_features_mat_normalized.at<float>(1));
+        ROS_INFO("%f", object_features_mat_normalized.at<float>(2));
+
+        ROS_INFO("PREDICTING");
+
+        float result_float;
+        float result_float_old;
+        result_float_old = bayes->predict(object_features_mat);
+
+        Mat predictprob_result;
+        Mat predictprob_result_probabilities;
+        result_float = bayes->predictProb(object_features_mat, predictprob_result, predictprob_result_probabilities);
+        std::cout << predictprob_result << std::endl;
+        std::cout << predictprob_result_probabilities << std::endl;
+
+        ROS_INFO("PREDICTED!");
+        ROS_INFO("This is a %d", (int) result_float);
+        ROS_INFO("Or could this be a %f", result_float_old);
+        std::string result_string = labels[static_cast<int>(result_float)]; // Make label string from float
+        ROS_INFO("This is a %s", result_string.c_str());
+        return result_string;
     }
-    Mat object_features_mat_normalized = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
-    normalize(object_features_mat, object_features_mat_normalized); // Normalize input Mat
-
-    ROS_INFO("----- ----- ----- -----");
-    ROS_INFO("%f", object_features_mat.at<float>(0));
-    ROS_INFO("%f", object_features_mat.at<float>(1));
-    ROS_INFO("%f", object_features_mat.at<float>(2));
-    ROS_INFO("-----");
-    ROS_INFO("%f", object_features_mat_normalized.at<float>(0));
-    ROS_INFO("%f", object_features_mat_normalized.at<float>(1));
-    ROS_INFO("%f", object_features_mat_normalized.at<float>(2));
-
-    ROS_INFO("PREDICTING");
-    float result_float;
-    float result_float_old;
-    result_float_old = bayes->predict(object_features_mat);
-    Mat predictprob_result;
-    Mat predictprob_result_probabilities;
-    result_float = bayes->predictProb(object_features_mat, predictprob_result, predictprob_result_probabilities);
-    cv::Size s = predictprob_result_probabilities.size();
-    std::cout << predictprob_result << std::endl;
-    std::cout << predictprob_result_probabilities << std::endl;
-    ROS_INFO("PREDICTED!");
-    ROS_INFO("This is a %f", result_float);
-    ROS_INFO("Or could this be a %f", result_float_old);
-    std::string result_string = labels[static_cast<int>(result_float)]; // Make label string from float
-    ROS_INFO("This is a %s", result_string.c_str());
-    return result_string;
+    else{
+        ROS_ERROR("ERROR: Classifier hasn't been trained, or something went wrong while training!");
+    }
 }
 
 /**
