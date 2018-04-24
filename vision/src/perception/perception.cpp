@@ -855,8 +855,8 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     }
 // reorientate the lying mesh upwards
     Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-    float theta = M_PI; // The angle of rotation in radians
-    //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
+    float theta = M_PI/2; // The angle of rotation in radians
+    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
     //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitZ()));
 
 
