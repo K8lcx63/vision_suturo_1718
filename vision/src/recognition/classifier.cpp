@@ -58,7 +58,6 @@ bool classifier::train(std::string directory, bool update) {
 
                         parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
 
-                        ROS_INFO("Copying histogram contents to data Mat");
                         // Copy histogram contents to testing_data Mat
                         Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
                         //memcpy(training_data_line.data, parsedCsv.data(), sizeof(Mat)); // vector to single row Mat
@@ -78,7 +77,7 @@ bool classifier::train(std::string directory, bool update) {
 
                         float label_index_float = (float) label_index;
                         ROS_INFO("%f", label_index_float);
-                        ROS_INFO("%d", (int) label_index); // TODO: Labels are still correct here, with values from 0-9
+                        ROS_INFO("%d", label_index); // TODO: Labels are still correct here, with values from 0-9
 
                         training_data.push_back(training_data_line_normalized); // Push single row Mat into big Mat
                         // training_label.push_back((int) label_index); // Correctly label this histogram according to input
@@ -132,7 +131,6 @@ bool classifier::train(std::string directory, bool update) {
                     //ROS_INFO("%f", training_label.at<float>(xDDD));
                     std::cout << training_label_vector[xDDD] << std::endl;
                     std::cout << test_label_mat.at<int>(xDDD) << std::endl;
-                    std::cout << test_label_mat.at<float>(xDDD) << std::endl;
                 }
 
 
