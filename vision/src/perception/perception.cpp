@@ -620,6 +620,7 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     icp.setMaximumIterations(20000);
     icp.setMaxCorrespondenceDistance(0.20); // set Max distance btw source <-> target to include into estimation
     PointCloudRGBPtr final(new PointCloudRGB);
+    final->header.frame_id="head_mount_kinect_rgb_optical_frame";
     icp.align(*final);
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
               icp.getFitnessScore() << std::endl;
@@ -627,20 +628,16 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
 
     Eigen::Matrix4f transformation = icp.getFinalTransformation();
 
-    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-    float theta = M_PI/2; // The angle of rotation in radians
-    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
-    pcl::transformPointCloud (*final, *cloud_perceived, transform);
 
-    tf::Matrix3x3 tf_rotation(transformation(0,0)* transform(0,0),
-                              transformation(0,1)* transform(0,1),
-                              transformation(0,2)* transform(0,2),
-                              transformation(1,0)* transform(1,0),
-                              transformation(1,1)* transform(1,1),
-                              transformation(1,2)* transform(1,2),
-                              transformation(2,0)* transform(2,0),
-                              transformation(2,1)* transform(2,1),
-                              transformation(2,2)* transform(2,2));
+    tf::Matrix3x3 tf_rotation(transformation(0,0),
+                              transformation(0,1),
+                              transformation(0,2),
+                              transformation(1,0),
+                              transformation(1,1),
+                              transformation(1,2),
+                              transformation(2,0),
+                              transformation(2,1),
+                              transformation(2,2));
 
 
     global_tf_rotation = tf_rotation;
@@ -836,6 +833,8 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
 PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     PointCloudRGBPtr mesh(new PointCloudRGB),
                      result(new PointCloudRGB);
+
+    mesh->header.frame_id="head_mount_kinect_rgb_optical_frame";
 
     if (label == "PringlesPaprika") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *mesh);
