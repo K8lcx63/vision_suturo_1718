@@ -36,6 +36,14 @@ void sub_kinect_callback(sensor_msgs::PointCloud2 kinect) {
         error_message += "No image from kinect. ";
     }
 
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(pose_global.pose.position.x, pose_global.pose.position.y, 0.0) );
+    tf::Quaternion q;
+    q.setRPY(0, 0, pose_global.pose.orientation.z);
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "base_link", "object/pose"));
+
 }
 
 /**
@@ -51,6 +59,7 @@ void start_node(int argc, char **argv) {
 
     // Subscriber for the kinect points. Also calls findCluster.
     ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kinect_callback);
+    ros::Subscriber sub = n.subscribe("object/pose", 10, &sub_kinect_callback);
 
     /** services and clients **/
 
@@ -66,6 +75,10 @@ void start_node(int argc, char **argv) {
     ros::Publisher pub_mesh_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/mesh_object", 0);
 
     ros::Publisher pub_aligned_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/aligned_object", 0);
+
+    ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseStamped>("vision_suturo/pose", 0);
+
+
 
     ros::Rate r(2.0);
 
@@ -98,6 +111,8 @@ void start_node(int argc, char **argv) {
         pcl::toROSMsg(*cloud_aligned, cloud_aligned_pub);
         cloud_aligned_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
         pub_aligned_object.publish(cloud_aligned_pub);
+
+        pub_pose.publish(pose_global);
 
 
 

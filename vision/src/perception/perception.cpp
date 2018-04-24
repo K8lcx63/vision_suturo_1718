@@ -26,10 +26,16 @@ enum mesh_enum {
     TOMATO_SAUCE_ORO_DI_PARMA
 };
 
+Eigen::Matrix<float,4,4> rot_mat;
+
 PointCloudRGBPtr cloud_global(new PointCloudRGB);
 PointCloudRGBPtr cloud_perceived(new PointCloudRGB);
 PointCloudRGBPtr cloud_aligned(new PointCloudRGB);
 PointCloudRGBPtr cloud_mesh(new PointCloudRGB);
+geometry_msgs::PoseStamped pose_global;
+
+Eigen::Matrix4f global_first_transformation;
+
 
 
 std::string error_message; // Used by the objects_information service
@@ -150,90 +156,84 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
  * @return The pose of the object contained in object_cloud
  */
 geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string label) {
-    std::vector<geometry_msgs::PoseStamped> result;
+    // instantiate objects for results
     PointCloudRGBPtr aligned_cloud(new PointCloudRGB), icp_cloud(new PointCloudRGB);
 
     geometry_msgs::PoseStamped current_pose;
 
+    // add header
+
+    current_pose.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+
+    tf::Quaternion quat_tf;
+    geometry_msgs::Quaternion quat_msg;
+
+
     ROS_INFO("CALCULATING CENTROID FOR OBJECT");
-    // Calculate centroids of objects
+    // Calculate centroid of current cluster
     Eigen::Vector4f centroid;
     pcl::compute3DCentroid(*input, centroid);
 
-
     ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
-    ROS_INFO("\x1B[32mX: %f\n", current_pose.pose.position.x);
-    ROS_INFO("\x1B[32mY: %f\n", current_pose.pose.position.y);
-    ROS_INFO("\x1B[32mZ: %f\n", current_pose.pose.position.z);
+    ROS_INFO("\x1B[32mX: %f\n", centroid.x());
+    ROS_INFO("\x1B[32mY: %f\n", centroid.y());
+    ROS_INFO("\x1B[32mZ: %f\n", centroid.z());
 
+    ROS_INFO("Get PCD of needed Mesh");
     // Calculate quaternions
-    PointCloudRGBPtr mesh(new PointCloudRGB), mesh_transformed(new PointCloudRGB);
+    PointCloudRGBPtr mesh(new PointCloudRGB);
     mesh = getTargetByLabel(label, centroid);
 
-    aligned_cloud = SACInitialAlignment(input, mesh);
-    icp_cloud = iterativeClosestPoint(aligned_cloud, mesh);
+    cloud_mesh = mesh;
+    ROS_INFO("Alignment: mesh to cluster");
 
-    pcl::registration::TransformationEstimationSVD<pcl::PointXYZRGB, pcl::PointXYZRGB, float> reggi;
-    Eigen::Matrix<float,4,4> rot_mat;
-    reggi.estimateRigidTransformation(*input, *icp_cloud, rot_mat);
+    // initial alignment
+    aligned_cloud = iterativeClosestPoint(mesh, input);
 
-    tf::Matrix3x3 tf_rotation(rot_mat(0,0),
-                              rot_mat(0,1),
-                              rot_mat(0,2),
-                              rot_mat(1,0),
-                              rot_mat(1,1),
-                              rot_mat(1,2),
-                              rot_mat(2,0),
-                              rot_mat(2,1),
-                              rot_mat(2,2));
-    global_tf_rotation = tf_rotation;
+    //aligned_cloud = rigidPoseEstimation(mesh, input);
+    // icp alignment
+    //icp_cloud = iterativeClosestPoint(aligned_cloud, input);
 
-    /** DEMO-SAVES
-    savePointCloudRGBNamed(input, "pringles_original");
-    savePointCloudRGBNamed(target, "pringles_mesh");
-    savePointCloudRGBNamed(aligned_cloud, "pringles_aligned");
-    savePointCloudRGBNamed(icp_cloud, "pringles_icp");
-    **/
 
-    // Add header
-    current_pose.header.frame_id = "/head_mount_kinect_rgb_optical_frame";
-// pcl::transformPointCloud(*mesh, *mesh_transformed, rot_mat );
+    cloud_aligned = aligned_cloud;
 
-    tf::Quaternion quat_tf;
-    // use tf::Matrix3x3. construct with rotati0n matrix and convert fromRotation
+
+    ROS_INFO("Calculate Quaternion from Transformation (rotation)");
     global_tf_rotation.getRotation(quat_tf);
     quat_tf.normalize();
-    geometry_msgs::Quaternion quat_msg;
 
+    // create message quaternion
     quat_msg.x = quat_tf.x();
     quat_msg.y = quat_tf.y();
     quat_msg.z = quat_tf.z();
     quat_msg.w = 1.0; // has to be 1
 
-    std::cout << "Get Quaternion" << std::endl;
+    std::cout << "Quaternion Message" << std::endl;
     std::cout << quat_msg.x << std::endl;
     std::cout << quat_msg.y << std::endl;
     std::cout << quat_msg.z << std::endl;
     std::cout << quat_msg.w << std::endl;
+
     current_pose.pose.orientation = quat_msg;
-
-    // transform reverse
-
-    Eigen::Matrix<float,4,4> rot_mat_reverse;
-
-    reggi.estimateRigidTransformation(*icp_cloud, *input, rot_mat_reverse);
-
-    pcl::transformPointCloud(*mesh, *mesh_transformed, rot_mat_reverse);
-
-    cloud_mesh = mesh_transformed;
 
 
     // calculate and set centroid from mesh
-    pcl::compute3DCentroid(*mesh_transformed, centroid);
+    pcl::compute3DCentroid(*aligned_cloud, centroid);
+
 
     current_pose.pose.position.x = centroid.x();
     current_pose.pose.position.y = centroid.y();
     current_pose.pose.position.z = centroid.z();
+
+/*
+
+    current_pose.pose.position.x = rot_mat_reverse(0,3);
+    current_pose.pose.position.y = rot_mat_reverse(1,3);
+    current_pose.pose.position.z = rot_mat_reverse(2,3);
+*/
+
+    pose_global = current_pose;
+
     return current_pose;
 }
 
@@ -543,21 +543,21 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
 PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr target) {
 
     PointCloudRGBPtr result(new PointCloudRGB);
-    PointCloudNormalPtr input_feats(new PointCloudNormal), target_feats(new PointCloudNormal);
-    input_feats = estimateSurfaceNormals(input);
-    target_feats = estimateSurfaceNormals(target);
+    PointCloudVFHS308Ptr input_feats(new pcl::PointCloud<pcl::VFHSignature308>), target_feats(new pcl::PointCloud<pcl::VFHSignature308>);
+    input_feats = cvfhRecognition(input);
+    target_feats = cvfhRecognition(target);
 
     std::cout << "size of input: "  << input->points.size() << std::endl;
     std::cout << "size of input features: "  << input_feats->points.size() << std::endl;
 
-    pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::Normal> sac_ia;
+    pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
 
     sac_ia.setInputSource(input);
     sac_ia.setSourceFeatures(input_feats);
     sac_ia.setInputTarget(target);
     sac_ia.setTargetFeatures(target_feats);
     sac_ia.setMinSampleDistance(0.01);
-    sac_ia.setRANSACIterations(2000);
+    sac_ia.setRANSACIterations(50000);
     PointCloudRGB registration_output;
     sac_ia.align(registration_output);
 
@@ -579,7 +579,26 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
     // khan academy
     // tf::Transform::setBasis(Rotation Matrix)
     // be careful with configuration of objects
-    pcl::transformPointCloud(*input, *result, transformation_matrix);
+    // pcl::transformPointCloud(*input, registration_output, transformation_matrix);
+
+
+    //ROS_INFO("Estimate transformation");
+    // estimate rigid transformation from input (object cluster) to mesh (object mesh pcd)
+    tf::Matrix3x3 tf_rotation(transformation_matrix(0,0),
+                              transformation_matrix(0,1),
+                              transformation_matrix(0,2),
+                              transformation_matrix(1,0),
+                              transformation_matrix(1,1),
+                              transformation_matrix(1,2),
+                              transformation_matrix(2,0),
+                              transformation_matrix(2,1),
+                              transformation_matrix(2,2));
+
+    global_tf_rotation = tf_rotation;
+
+    *result = registration_output;
+
+
     return result;
 }
 
@@ -594,15 +613,32 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
     icp.setInputSource(input);
     icp.setInputTarget(target);
-    icp.setMaximumIterations(2000);
-    icp.setMaxCorrespondenceDistance(0.005);
+    icp.setRANSACIterations(20000);
+    icp.setMaximumIterations(20000);
+    icp.setMaxCorrespondenceDistance(0.20); // set Max distance btw source <-> target to include into estimation
     PointCloudRGBPtr final(new PointCloudRGB);
     icp.align(*final);
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
               icp.getFitnessScore() << std::endl;
     std::cout << icp.getFinalTransformation() << std::endl;
 
-    cloud_aligned = final;
+    Eigen::Matrix4f transformation = icp.getFinalTransformation();
+
+
+    tf::Matrix3x3 tf_rotation(transformation(0,0),
+                              transformation(0,1),
+                              transformation(0,2),
+                              transformation(1,0),
+                              transformation(1,1),
+                              transformation(1,2),
+                              transformation(2,0),
+                              transformation(2,1),
+                              transformation(2,2));
+
+
+    global_tf_rotation = tf_rotation;
+
+
 
     return final;
 }
@@ -817,15 +853,92 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     } else if (label == "EdekaRedBowl") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
+// reorientate the lying mesh upwards
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+    float theta = M_PI; // The angle of rotation in radians
+    //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
+    //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitZ()));
 
-    // reorientate the lying mesh upwards
-        Eigen::Matrix4f transform_1 = Eigen::Matrix4f::Identity();
-        float theta = M_PI/4.5; // The angle of rotation in radians
-        Eigen::Affine3f transform_2 = Eigen::Affine3f::Identity();
-        transform_2.translation() << centroid.x(), centroid.y(), centroid.z();
-        transform_2.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
-        pcl::transformPointCloud (*mesh, *result, transform_2);
+
+
+    transform.translation() << centroid.x(), centroid.y(), centroid.z();
+
+    pcl::transformPointCloud (*mesh, *result, transform);
+
+
 
     return result;
+}
+
+
+PointCloudRGBPtr rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr target){
+
+
+    PointCloudRGBPtr result(new PointCloudRGB);
+    PointCloudVFHS308Ptr input_feats(new pcl::PointCloud<pcl::VFHSignature308>), target_feats(new pcl::PointCloud<pcl::VFHSignature308>);
+    input_feats = cvfhRecognition(input);
+    target_feats = cvfhRecognition(target);
+    const float leaf = 0.005f;
+
+
+    // Perform alignment
+    pcl::console::print_highlight ("Starting alignment...\n");
+    pcl::SampleConsensusPrerejective<pcl::PointXYZRGB,pcl::PointXYZRGB,pcl::VFHSignature308> align;
+    align.setInputSource (input);
+    align.setSourceFeatures (input_feats);
+    align.setInputTarget (target);
+    align.setTargetFeatures (target_feats);
+    align.setMaximumIterations (50000); // Number of RANSAC iterations
+    align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
+    align.setCorrespondenceRandomness (5); // Number of nearest features to use
+    align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
+    align.setMaxCorrespondenceDistance (2.5f * leaf); // Inlier threshold
+    align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+    {
+        pcl::ScopeTime t("Alignment");
+        align.align (*result);
+    }
+
+    if (align.hasConverged ())
+    {
+        // Print results
+        printf ("\n");
+        Eigen::Matrix4f transformation = align.getFinalTransformation ();
+        pcl::console::print_info ("    | %6.3f %6.3f %6.3f | \n", transformation (0,0), transformation (0,1), transformation (0,2));
+        pcl::console::print_info ("R = | %6.3f %6.3f %6.3f | \n", transformation (1,0), transformation (1,1), transformation (1,2));
+        pcl::console::print_info ("    | %6.3f %6.3f %6.3f | \n", transformation (2,0), transformation (2,1), transformation (2,2));
+        pcl::console::print_info ("\n");
+        pcl::console::print_info ("t = < %0.3f, %0.3f, %0.3f >\n", transformation (0,3), transformation (1,3), transformation (2,3));
+        pcl::console::print_info ("\n");
+        pcl::console::print_info ("Inliers: %i/%i\n", align.getInliers ().size (), input->size ());
+
+        global_first_transformation = transformation;
+        tf::Matrix3x3 tf_rotation(transformation(0,0),
+                                  transformation(0,1),
+                                  transformation(0,2),
+                                  transformation(1,0),
+                                  transformation(1,1),
+                                  transformation(1,2),
+                                  transformation(2,0),
+                                  transformation(2,1),
+                                  transformation(2,2));
+
+        global_tf_rotation = tf_rotation;
+
+
+
+        return result;
+
+
+    }
+
+
+    else
+    {
+        pcl::console::print_error ("Alignment failed!\n");
+        return result;
+    }
+
+
 }
 
