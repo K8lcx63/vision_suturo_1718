@@ -632,15 +632,15 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
     pcl::transformPointCloud (*final, *cloud_perceived, transform);
 
-    tf::Matrix3x3 tf_rotation(transformation(0,0)+ transform(0,0),
-                              transformation(0,1)+ transform(0,1),
-                              transformation(0,2)+ transform(0,2),
-                              transformation(1,0)+ transform(1,0),
-                              transformation(1,1)+ transform(1,1),
-                              transformation(1,2)+ transform(1,2),
-                              transformation(2,0)+ transform(2,0),
-                              transformation(2,1)+ transform(2,1),
-                              transformation(2,2)+ transform(2,2));
+    tf::Matrix3x3 tf_rotation(transformation(0,0)* transform(0,0),
+                              transformation(0,1)* transform(0,1),
+                              transformation(0,2)* transform(0,2),
+                              transformation(1,0)* transform(1,0),
+                              transformation(1,1)* transform(1,1),
+                              transformation(1,2)* transform(1,2),
+                              transformation(2,0)* transform(2,0),
+                              transformation(2,1)* transform(2,1),
+                              transformation(2,2)* transform(2,2));
 
 
     global_tf_rotation = tf_rotation;
