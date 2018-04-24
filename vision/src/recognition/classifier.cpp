@@ -200,7 +200,7 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
 
         Mat predictprob_result;
         Mat predictprob_result_probabilities;
-        int result_int = (int)bayes->predictProb(object_features_mat, predictprob_result, predictprob_result_probabilities);
+        int result_int = (int)bayes->predictProb(object_features_mat_normalized, predictprob_result, predictprob_result_probabilities);
         ROS_INFO("Training var count: %d", bayes->getVarCount());
         std::cout << predictprob_result << std::endl;
         std::cout << predictprob_result_probabilities << std::endl;
