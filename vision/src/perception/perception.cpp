@@ -35,6 +35,7 @@ PointCloudRGBPtr cloud_mesh(new PointCloudRGB);
 geometry_msgs::PoseStamped pose_global;
 
 Eigen::Matrix4f global_first_transformation;
+Eigen::Vector4f global_centroid;
 
 
 
@@ -174,6 +175,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     Eigen::Vector4f centroid;
     pcl::compute3DCentroid(*input, centroid);
 
+global_centroid = centroid;
     ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
     ROS_INFO("\x1B[32mX: %f\n", centroid.x());
     ROS_INFO("\x1B[32mY: %f\n", centroid.y());
@@ -613,14 +615,30 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
  */
 PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
                                        PointCloudRGBPtr target) {
+
+
+    PointCloudRGBPtr intermediate(new PointCloudRGB), new_input(new PointCloudRGB),new_new_input(new PointCloudRGB);
+    intermediate = input;
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+    float theta = M_PI/2; // The angle of rotation in radians
+    float yotta = M_PI;
+    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
+    transform.translation() << global_centroid.x(), global_centroid.y(), global_centroid.z();
+/*
+
+    pcl::transformPointCloud (*intermediate, *new_input, transform);
+    Eigen::Affine3f transform2 = Eigen::Affine3f::Identity();
+    transform2.rotate (Eigen::AngleAxisf (yotta, Eigen::Vector3f::UnitY()));
+    transform2.translation() << 2*global_centroid.x(), 2*global_centroid.y(), 2*global_centroid.z();
+
+    pcl::transformPointCloud(*new_input, *new_new_input, transform2);*/
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
-    icp.setInputSource(input);
+    icp.setInputSource(new_input);
     icp.setInputTarget(target);
     icp.setRANSACIterations(20000);
     icp.setMaximumIterations(20000);
     icp.setMaxCorrespondenceDistance(0.20); // set Max distance btw source <-> target to include into estimation
     PointCloudRGBPtr final(new PointCloudRGB);
-    final->header.frame_id="head_mount_kinect_rgb_optical_frame";
     icp.align(*final);
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
               icp.getFitnessScore() << std::endl;
@@ -834,7 +852,6 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     PointCloudRGBPtr mesh(new PointCloudRGB),
                      result(new PointCloudRGB);
 
-    mesh->header.frame_id="head_mount_kinect_rgb_optical_frame";
 
     if (label == "PringlesPaprika") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *mesh);
@@ -859,20 +876,9 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     } else if (label == "EdekaRedBowl") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
-// reorientate the lying mesh upwards
-    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-    float theta = M_PI/2; // The angle of rotation in radians
-    //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
-    //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitZ()));
 
 
-    transform.translation() << centroid.x(), centroid.y(), centroid.z();
-
-    pcl::transformPointCloud (*mesh, *result, transform);
-
-
-
-    return result;
+    return mesh;
 }
 
 
