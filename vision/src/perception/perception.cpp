@@ -207,8 +207,8 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
     // create message quaternion
     quat_msg.x = quat_tf.x();
-    quat_msg.y = quat_tf.y();
-    quat_msg.z = quat_tf.z();
+    quat_msg.y = quat_tf.z();
+    quat_msg.z = quat_tf.y();
     quat_msg.w = 1.0; // has to be 1
 
     std::cout << "Quaternion Message" << std::endl;
@@ -864,7 +864,6 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     float theta = M_PI/2; // The angle of rotation in radians
     //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
     //transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitZ()));
-
 
 
     transform.translation() << centroid.x(), centroid.y(), centroid.z();
