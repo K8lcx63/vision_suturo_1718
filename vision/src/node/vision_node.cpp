@@ -65,8 +65,8 @@ void start_node(int argc, char **argv) {
     ros::Rate r(2.0);
 
     ROS_INFO("STARTING TRAINING...");
-    std::string xd = "../../common_suturo1718/pcd_files";
-    my_classifier.train(xd, false);
+    std::string train_directory = "../../common_suturo1718/pcd_files";
+    my_classifier.train(train_directory, true);
     ROS_INFO("TRAINING FINISHED!");
 
     while (n.ok()) {
@@ -113,9 +113,11 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     for(int a = 0; a < all_clusters.size(); a++){ // Get histograms of each object and classify
         for(int b = 0; b < 24; b++){
             single_color_features.push_back(color_features_vector[b+(a*24)]);
+            //ROS_INFO("Color features: %d", color_features_vector[b+(a*24)]);
         }
         for(int c = 0; c < 308; c++){
             single_cvfh_features.push_back(current_features_vector[c+(a*308)]);
+            //ROS_INFO("CVFH features: %f", current_features_vector[c+(a*308)]);
         }
         my_classifier.classify(single_color_features, single_cvfh_features);
     }

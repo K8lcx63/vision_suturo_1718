@@ -56,7 +56,7 @@ bool classifier::train(std::string directory, bool update) {
                         full_path = full_path.substr(0, full_path.size() - ext.size()); // Remove "colors_histogram.csv"
                         full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
-                        parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
+                        //parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
 
                         // Copy histogram contents to testing_data Mat
                         Mat training_data_line = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
@@ -64,16 +64,16 @@ bool classifier::train(std::string directory, bool update) {
                         for (int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++) {
                             training_data_line.at<float>(copy_counter) = parsedCsv[copy_counter];
                         }
-                        Mat training_data_line_normalized = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+                        Mat training_data_line_normalized = Mat();
                         normalize(training_data_line, training_data_line_normalized); // Normalize training data
 
-                        /*
+
                         cv::Size s = training_data_line_normalized.size();
                         ROS_INFO("<----- ----->");
                         for(int xd = 0; xd < s.width; xd++){
                             ROS_INFO("%f", training_data_line_normalized.at<float>(xd));
                         }
-                         */
+
 
                         float label_index_float = (float) label_index;
                         ROS_INFO("%f", label_index_float);
@@ -125,6 +125,7 @@ bool classifier::train(std::string directory, bool update) {
                 }
                  */
 
+                /*
                 // TODO: All labels are 0 here as floats, while being correct as ints!
                 Mat test_label_mat = Mat(training_label_vector);
                 for(int xDDD = 0; xDDD < training_label_vector.size(); xDDD++) {
@@ -132,7 +133,7 @@ bool classifier::train(std::string directory, bool update) {
                     std::cout << training_label_vector[xDDD] << std::endl;
                     std::cout << test_label_mat.at<int>(xDDD) << std::endl;
                 }
-
+                 */
 
 
                 //bayes->train(training_data, training_label, Mat(), Mat(), update);
@@ -166,21 +167,30 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
             float feature_float = color_features[f1]; // Convert int to float
             //ROS_INFO("%f", feature_float);
             histogram_float.push_back(feature_float);
+            ROS_INFO("feature 0: %d", color_features[f1]);
+            ROS_INFO("feature 0: %f", histogram_float[f1]);
         }
+
+
+        /*
         ROS_INFO("CVFH HISTOGRAM");
         for (int f2 = 0; f2 < cvfh_features.size(); f2++) { // Add cvfh features to same histogram_float
             //ROS_INFO("%f", cvfh_features[f2]);
             histogram_float.push_back(cvfh_features[f2]);
         }
+         */
 
         Mat object_features_mat = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
         //memcpy(object_features_mat.data, histogram_float.data(), sizeof(Mat)); // vector to single row Mat
         for (int copy_counter = 0; copy_counter < ATTRIBUTES_PER_SAMPLE; copy_counter++) { // Copy data into Mat
             object_features_mat.at<float>(copy_counter) = histogram_float[copy_counter];
         }
-        Mat object_features_mat_normalized = Mat(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+        Mat object_features_mat_normalized = Mat();
         normalize(object_features_mat, object_features_mat_normalized); // Normalize input Mat
 
+        for(int normalized_counter = 0; normalized_counter < ATTRIBUTES_PER_SAMPLE; normalized_counter++){
+            ROS_INFO("%f", object_features_mat_normalized.at<float>(normalized_counter));
+        }
         /*
         ROS_INFO("----- ----- ----- -----");
         ROS_INFO("%f", object_features_mat.at<float>(0));
@@ -247,6 +257,7 @@ std::vector<float> classifier::read_from_file(std::string full_path, std::vector
                 float item_float = std::strtof(item.c_str(), NULL);
                 //ROS_INFO("Item as float: %f", item_float);
                 //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
+                ROS_INFO("%f", item_float);
                 parsedCsv.push_back(item_float);
             } else {
                 ROS_INFO("Finished a file!");
