@@ -19,9 +19,10 @@ class classifier {
 private:
     Ptr<cv::ml::NormalBayesClassifier> bayes = cv::ml::NormalBayesClassifier::create(); // = cv::ml::NormalBayesClassifier::create();
     int NUMBER_OF_TRAINING_SAMPLES = 2165; // 2165, einzelnd 217
-    int ATTRIBUTES_PER_SAMPLE = 308; // 24 + 308
-    cv::Mat training_data = cv::Mat(0, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
-    std::vector<int> training_label_vector;
+    int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
+    int sample_counter = 0;
+    cv::Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
+    cv::Mat responses = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32SC1);
     std::string labels[10] = {  "CupEcoOrange",
                                 "EdekaRedBowl",
                                 "HelaCurryKetchup",
@@ -38,6 +39,7 @@ public:
     std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features);
     bool has_suffix(std::string s, std::string suffix);
     std::vector<float> read_from_file(std::string full_path, std::vector<float> parsedCsv);
+    std::vector<float> normalize_properly(std::vector<float> input);
 
 };
 
