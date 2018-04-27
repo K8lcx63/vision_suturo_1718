@@ -55,15 +55,20 @@ bool classifier::train(std::string directory, bool update) {
 
                             parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
 
-                            //Mat training_data_line_normalized = Mat();
-                            //parsedCsv = normalize_properly(parsedCsv);
+
                             std::vector<float> parsedCsv_normalized;
                             normalize(parsedCsv, parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
+                            int parsedCsv_total_value_normalized;
+                            for(int c = 0; c < parsedCsv_normalized.size(); c++){
+                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + parsedCsv_normalized[c];
+                            }
+                            ROS_INFO("Total value after normalizing: %f", parsedCsv_total_value_normalized);
+
 
                             for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
                                 // Fill in sample
                                 training_data.at<float>(parsedCsv_index, sample_counter) = parsedCsv_normalized[parsedCsv_index];
-                                //ROS_INFO("%f", training_data.at<float>(parsedCsv_index, sample_counter));
+                                ROS_INFO("%f", training_data.at<float>(parsedCsv_index, sample_counter));
                             }
                             responses.at<int>(sample_counter) = label_index; // Set label of this sample
                             sample_counter++;
@@ -165,21 +170,4 @@ std::vector<float> classifier::read_from_file(std::string full_path, std::vector
         }
     }
     return parsedCsv;
-}
-
-std::vector<float> classifier::normalize_properly(std::vector<float> input){
-    float total_value;
-    float total_value_normalized;
-    for(int a = 0; a < input.size(); a++){
-        total_value = total_value + input[a];
-    }
-    ROS_INFO("Total value before normalizing: %f", total_value);
-    for(int b = 0; b < input.size(); b++){
-        input[b] = input[b] / total_value;
-    }
-    for(int c = 0; c < input.size(); c++){
-        total_value_normalized = total_value_normalized + input[c];
-    }
-    ROS_INFO("Total value after normalizing: %f", total_value_normalized);
-    return input;
 }

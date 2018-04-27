@@ -39,7 +39,6 @@ public:
     std::string classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features);
     bool has_suffix(std::string s, std::string suffix);
     std::vector<float> read_from_file(std::string full_path, std::vector<float> parsedCsv);
-    std::vector<float> normalize_properly(std::vector<float> input);
 
 };
 
