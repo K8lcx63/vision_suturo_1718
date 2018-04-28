@@ -71,11 +71,11 @@
    <include file="$(find pr2_controller_configuration_gazebo)/launch/pr2_default_controllers.launch" />
 
    <!-- spawn the icetea -->
-   <node name="spawn_eistee"
+   <!--node name="spawn_eistee"
      pkg="gazebo_ros"
      type="spawn_model"
      args="$(arg ICETEA_POSE_KITCHEN) -file $(find vision_suturo)/models/pfanner_grune_icetea/model.sdf -sdf -model eistee"
      respawn="false"
-     output="screen"/>
+     output="screen"/-->
 
 </launch>
