@@ -3,17 +3,15 @@
 //
 
 #include "vision_node.h"
-
+#include <tf/transform_broadcaster.h>
 const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/points";
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
 
 PointCloudRGBPtr scene(new PointCloudRGB);
 
+
 // ros::NodeHandle n_global;
-
-
-std::string error_message; // Wird durch den Object Position Service mit ausgegeben
 
 geometry_msgs::PointStamped centroid_stamped;
 
@@ -23,18 +21,29 @@ std::vector<PointCloudRGBPtr> all_clusters;
 ros::Publisher pub_visualization;
 
 
+
+
 // Use a callback function for the kinect subscriber to pass the NodeHandle to use in perception.h
 /**
  * Callback-function saves the PointCloud received through the kinect
  * @param kinect PointCloud
  */
-void sub_kinect_callback(PointCloudRGBPtr kinect) {
-
-    if (kinect->size() == 0) {
+void sub_kinect_callback(sensor_msgs::PointCloud2 kinect) {
+    pcl::fromROSMsg(kinect, *scene);
+    cloud_perceived = scene;
+    if (scene->size() == 0) {
         ROS_ERROR("Kinect has no image");
         error_message += "No image from kinect. ";
     }
-    scene = kinect;
+
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(pose_global.pose.position.x, pose_global.pose.position.y, 0.0) );
+    tf::Quaternion q;
+    q.setRPY(0, 0, pose_global.pose.orientation.z);
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "base_link", "object/pose"));
+
 }
 
 /**
@@ -50,6 +59,7 @@ void start_node(int argc, char **argv) {
 
     // Subscriber for the kinect points. Also calls findCluster.
     ros::Subscriber sub_kinect = n.subscribe(REAL_KINECT_POINTS_FRAME, 10, &sub_kinect_callback);
+    ros::Subscriber sub = n.subscribe("object/pose", 10, &sub_kinect_callback);
 
     /** services and clients **/
 
@@ -60,14 +70,51 @@ void start_node(int argc, char **argv) {
     // Visualization Publisher for debugging purposes
     ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/visualization_cloud", 0);
 
+
+    ros::Publisher pub_perceived_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/perceived_object", 0);
+    ros::Publisher pub_mesh_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/mesh_object", 0);
+
+    ros::Publisher pub_aligned_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/aligned_object", 0);
+
+    ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseStamped>("vision_suturo/pose", 0);
+
+
+
     ros::Rate r(2.0);
 
     while (n.ok()) {
         sensor_msgs::PointCloud2 cloud_final_pub;
         ROS_INFO("%lu points", cloud_global->points.size());
+
         pcl::toROSMsg(*cloud_global, cloud_final_pub);
-        cloud_final_pub.header.frame_id = "head_mount_kinect_ir_optical_frame";
+        cloud_final_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
         pub_visualization_object.publish(cloud_final_pub);
+
+
+        sensor_msgs::PointCloud2 cloud_perceived_pub;
+        ROS_INFO("%lu points", cloud_perceived->points.size());
+
+        pcl::toROSMsg(*cloud_perceived, cloud_perceived_pub);
+        cloud_perceived_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+        pub_perceived_object.publish(cloud_perceived_pub);
+
+        sensor_msgs::PointCloud2 cloud_mesh_pub;
+        ROS_INFO("%lu points", cloud_aligned->points.size());
+
+        pcl::toROSMsg(*cloud_mesh, cloud_mesh_pub);
+        cloud_mesh_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+        pub_mesh_object.publish(cloud_mesh_pub);
+
+        sensor_msgs::PointCloud2 cloud_aligned_pub;
+        ROS_INFO("%lu points", cloud_aligned->points.size());
+
+        pcl::toROSMsg(*cloud_aligned, cloud_aligned_pub);
+        cloud_aligned_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+        pub_aligned_object.publish(cloud_aligned_pub);
+
+        pub_pose.publish(pose_global);
+
+
 
         ros::spinOnce();
         r.sleep();
@@ -83,8 +130,17 @@ void start_node(int argc, char **argv) {
  */
 bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::objects::Response &res) {
 
+    // If PR2 is not looking at anything.
+    // This causes the whole segmentation and filtering process to be skipped if the cloud is empty
+    // or too small to work on.
+    if (scene->points.size() < 500)
+    {
+        ROS_ERROR("Input from kinect is empty");
+        error_message = "Cloud empty. ";
+        // res.clouds.object_error = error_message;
+        return true;
+    }
     // Execute findCluster()
-    //std::vector<PointCloudRGBPtr> all_clusters = findCluster(scene);
     all_clusters = findCluster(scene);
     ROS_INFO("Suturo Vision: findCluster completed!");
 
@@ -100,6 +156,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     res.clouds.normal_features = current_features_vector;
     res.clouds.color_features = color_features_vector;
     res.clouds.object_amount = all_clusters.size();
+    //res.clouds.object_errors = error_message;
 
     return true;
 
@@ -107,9 +164,8 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
 
 bool getPoses(vision_suturo_msgs::poses::Request &req, vision_suturo_msgs::poses::Response &res) {
     // Get poses for the objects
-    // TODO: Use object information of the last object_information service call!
-    // TODO: Only return a single Pose, depending on the given index!
     // Currently computes all centroids, but only takes the relevant one.
+
     if(!all_clusters.empty()) { // If objects have been perceived
 
         geometry_msgs::PoseStamped pose = findPose(all_clusters[req.index], req.labels);

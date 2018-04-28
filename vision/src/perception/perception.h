@@ -8,6 +8,7 @@
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/common/time.h>
 #include <pcl/features/cvfh.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/filters/extract_indices.h>
@@ -16,6 +17,7 @@
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/registration/icp.h>
 #include <pcl/registration/ia_ransac.h>
+#include <pcl/registration/sample_consensus_prerejective.h>
 #include <pcl/search/kdtree.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/segmentation/sac_segmentation.h>
@@ -63,9 +65,17 @@ void                            getAllFeatures(std::vector<PointCloudRGBPtr> all
 
 std::vector<float>              getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters);
 std::vector<uint64_t>           getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters);
-PointCloudRGBPtr                getTargetByLabel(std::string label);
-
+PointCloudRGBPtr                getTargetByLabel(std::string label, Eigen::Vector4f centroid);
+PointCloudRGBPtr                rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr target);
 
 extern PointCloudRGBPtr cloud_global;
+extern PointCloudRGBPtr cloud_perceived;
+extern PointCloudRGBPtr cloud_aligned;
+extern PointCloudRGBPtr cloud_mesh;
+
+extern geometry_msgs::PoseStamped pose_global;
+extern tf::Matrix3x3 global_tf_rotation;
+
+extern std::string error_message;
 
 #endif //VISION_PERCEPTION_H
