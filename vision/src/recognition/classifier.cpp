@@ -60,7 +60,7 @@ bool classifier::train(std::string directory, bool update) {
                             normalize(parsedCsv, parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
                             normalize(parsedCsv_normalized, parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
 
-                            float highest_feature_index = 0;
+                            int highest_feature_index = 0;
                             float parsedCsv_total_value_normalized = 0.000000;
                             for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
                                 // Fill in sample
@@ -121,9 +121,25 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         }
         Mat predictInput_normalized;
         normalize(predictInput, predictInput_normalized, 1, 0, NORM_L1);
+        int highest_feature_index = 0;
+        float total_features_normalized = 0.000000;
         for(int xD = 0; xD < color_features.size() + cvfh_features.size(); xD++){
             ROS_INFO("%f", predictInput_normalized.at<float>(xD));
+            total_features_normalized = total_features_normalized + predictInput_normalized.at<float>(xD);
+            if(predictInput_normalized.at<float>(xD) > predictInput_normalized.at<float>(highest_feature_index)){
+                highest_feature_index = xD;
+            }
         }
+        ROS_INFO("Total: %f", total_features_normalized);
+        if(total_features_normalized != 1.000000){ // Correct features in case normalize() messed up
+            ROS_INFO("corrected by %f", (total_features_normalized - 1.000000));
+            predictInput_normalized.at<float>(highest_feature_index) =
+                    predictInput_normalized.at<float>(highest_feature_index) - (total_features_normalized - 1.000000);
+        }
+
+
+
+
         cv::Mat predictOutputs;
         predictOutputs.create(1, 1, CV_32SC1);
         Mat predictOutputProbs;
