@@ -58,18 +58,33 @@ bool classifier::train(std::string directory, bool update) {
 
                             std::vector<float> parsedCsv_normalized;
                             normalize(parsedCsv, parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
-                            int parsedCsv_total_value_normalized;
-                            for(int c = 0; c < parsedCsv_normalized.size(); c++){
-                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + parsedCsv_normalized[c];
-                            }
-                            ROS_INFO("Total value after normalizing: %f", parsedCsv_total_value_normalized);
+                            normalize(parsedCsv_normalized, parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
 
-
+                            float highest_feature_index = 0;
+                            float parsedCsv_total_value_normalized = 0.000000;
                             for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
                                 // Fill in sample
                                 training_data.at<float>(parsedCsv_index, sample_counter) = parsedCsv_normalized[parsedCsv_index];
-                                ROS_INFO("%f", training_data.at<float>(parsedCsv_index, sample_counter));
+                                //ROS_INFO("%f", training_data.at<float>(parsedCsv_index, sample_counter));
+                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(parsedCsv_index, sample_counter);
+                                // Save the highest feature. In case of the feature total not being exactly 1.000000, this one should be corrected.
+                                if(training_data.at<float>(parsedCsv_index, sample_counter) > training_data.at<float>(highest_feature_index, sample_counter)){
+                                    highest_feature_index = parsedCsv_index;
+                                }
                             }
+                            ROS_INFO("Total value after normalizing: %f", parsedCsv_total_value_normalized); // Not always exactly 1.000000
+                            if(parsedCsv_total_value_normalized != 1.000000){ // Correct features in case normalize() messed up
+                                training_data.at<float>(highest_feature_index, sample_counter) =
+                                        training_data.at<float>(highest_feature_index, sample_counter) - (parsedCsv_total_value_normalized - 1.000000);
+                            }
+
+                            parsedCsv_total_value_normalized = 0.000000;
+                            for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
+                                //ROS_INFO("%f", training_data.at<float>(parsedCsv_index, sample_counter));
+                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(parsedCsv_index, sample_counter);
+                            }
+                            ROS_INFO("Total value after normalizing AND correcting: %f", parsedCsv_total_value_normalized); // Not always exactly 1.000000
+
                             responses.at<int>(sample_counter) = label_index; // Set label of this sample
                             sample_counter++;
                         }
