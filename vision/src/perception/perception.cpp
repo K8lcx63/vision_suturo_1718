@@ -863,10 +863,10 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
 
-    Eigen::Affine3f transform = Eigen::Affine3f::Identity();/*
-    float theta = M_PI/2; // The angle of rotation in radians
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+//    float theta = M_PI/2; // The angle of rotation in radians
     float yotta = M_PI;
-    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));*/
+    transform.rotate (Eigen::AngleAxisf (yotta, Eigen::Vector3f::UnitX()));
     transform.translation() << centroid.x(), centroid.y(), centroid.z();
 
     pcl::transformPointCloud(*mesh,*result,transform);
