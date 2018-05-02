@@ -67,11 +67,11 @@ bool classifier::train(std::string directory, bool update) {
                             float parsedCsv_total_value_normalized = 0.000000;
                             for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
                                 // Fill in sample
-                                training_data.at<float>(parsedCsv_index, sample_counter) = parsedCsv_normalized[parsedCsv_index];
-                                ROS_INFO("--%f--", training_data.at<float>(parsedCsv_index, sample_counter));
-                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(parsedCsv_index, sample_counter);
+                                training_data.at<float>(sample_counter, parsedCsv_index) = parsedCsv_normalized[parsedCsv_index];
+                                ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
+                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(sample_counter, parsedCsv_index);
                                 // Save the highest feature. In case of the feature total not being exactly 1.000000, this one should be corrected.
-                                if(training_data.at<float>(parsedCsv_index, sample_counter) > training_data.at<float>(highest_feature_index, sample_counter)){
+                                if(training_data.at<float>(sample_counter, parsedCsv_index) > training_data.at<float>(highest_feature_index, sample_counter)){
                                     highest_feature_index = parsedCsv_index;
                                 }
                             }
@@ -103,10 +103,10 @@ bool classifier::train(std::string directory, bool update) {
             /*
             int test_result = -1;
             test_result = classifier->predict(training_data.row(2));
-            ROS_INFO("Sample 300 is a %d", test_result); // TODO: Is always 2?
+            ROS_INFO("Sample 300 is a %d", test_result);
             */
             Mat testing_data;
-            training_data.row(1).copyTo(testing_data);
+            training_data.row(1500).copyTo(testing_data);
             // Below that ,it's similar to 36, with some samples normalized sums being closer to 1.
             // 36: Look somewhat valid. Doesn't add up to 1. [2.31393e+36, 0] -> [1, 0]
             // 37-38: Look somewhat valid. Don't add up to 1. [inf, 0] -> [-nan, 0]
@@ -114,15 +114,13 @@ bool classifier::train(std::string directory, bool update) {
             // 40: Single digit looks valid, others 0. [inf, inf] -> [-nan, -nan]
             // Above that, it's usually all zeroes. [inf, inf] -> [-nan, -nan]
             std::cout << testing_data << std::endl;
-            
 
-            /*
+            
             testing_data.at<float>(1) = testing_data.at<float>(1) + 0.000050;
             testing_data.at<float>(10) = testing_data.at<float>(10) - 0.000050;
 
             testing_data.at<float>(2) = testing_data.at<float>(2) + 0.000100;
             testing_data.at<float>(9) = testing_data.at<float>(9) - 0.000100;
-             */
 
              /*
             ROS_INFO("%f", testing_data.at<float>(10));

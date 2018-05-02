@@ -18,12 +18,12 @@ using namespace cv; // OpenCV API is in the C++ "cv" namespace
 class classifier {
 private:
     Ptr<cv::ml::NormalBayesClassifier> bayes = cv::ml::NormalBayesClassifier::create(); // = cv::ml::NormalBayesClassifier::create();
-    int NUMBER_OF_TRAINING_SAMPLES = 436; // 2165, einzelnd ~217, JaMilch + Salt = 436
+    int NUMBER_OF_TRAINING_SAMPLES = 2165; // 2165, einzelnd ~217, JaMilch + Salt = 436
     int ATTRIBUTES_PER_SAMPLE = 24; // 24 + 308
     int sample_counter = 0;
     cv::Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
     cv::Mat responses = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32SC1);
-    /*
+
     std::string labels[10] = {  "CupEcoOrange",
                                 "EdekaRedBowl",
                                 "HelaCurryKetchup",
@@ -34,9 +34,11 @@ private:
                                 "PringlesSalt",
                                 "SiggBottle",
                                 "TomatoSauceOroDiParma"};
-                                */
+
+    /*
     std::string labels[2] = {   "JaMilch",
                                 "PringlesSalt"};
+                                */
 public:
     classifier();
     bool train(std::string directory, bool update);
