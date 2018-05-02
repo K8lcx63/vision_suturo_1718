@@ -27,13 +27,13 @@ private:
     std::string labels[10] = {  "CupEcoOrange",
                                 "EdekaRedBowl",
                                 "HelaCurryKetchup",
-                                "JaMilch",
+                                "JaMilch",                      // 3
                                 "KellogsToppasMini",
-                                "KoellnMuesliKnusperHonigNuss",
-                                "PringlesPaprika",
-                                "PringlesSalt",
+                                "KoellnMuesliKnusperHonigNuss", // 5
+                                "PringlesPaprika",              // 6
+                                "PringlesSalt",                 // 7
                                 "SiggBottle",
-                                "TomatoSauceOroDiParma"};
+                                "TomatoSauceOroDiParma"};       // 5 - 3 - 6|7
 
     /*
     std::string labels[2] = {   "JaMilch",
