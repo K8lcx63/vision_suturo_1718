@@ -101,7 +101,7 @@ bool classifier::train(std::string directory, bool update) {
             ROS_INFO("Starting to train using the extracted data. This may take a while!");
             random_trees_classifier->train(data);
             random_trees_classifier->save("random_trees_classifier_save");
-            ROS_INFO("The trained classifier has been saved as 'normal_bayes_classifier_save'."
+            ROS_INFO("The trained classifier has been saved as 'random_trees_classifier_save'."
                              "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
             /*
             int test_result = -1;
