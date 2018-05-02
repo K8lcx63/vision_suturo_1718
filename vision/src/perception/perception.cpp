@@ -867,7 +867,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     float theta = M_PI/2; // The angle of rotation in radians
     float yotta = M_PI;
     transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));*/
-    transform.translation() << global_centroid.x(), global_centroid.y(), global_centroid.z();
+    transform.translation() << centroid.x(), centroid.y(), centroid.z();
 
     pcl::transformPointCloud(*mesh,*result,transform);
     return result;
