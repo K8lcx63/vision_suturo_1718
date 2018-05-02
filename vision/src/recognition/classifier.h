@@ -35,10 +35,6 @@ private:
                                 "SiggBottle",
                                 "TomatoSauceOroDiParma"};       // 5 - 3 - 6|7
 
-    /*
-    std::string labels[2] = {   "JaMilch",
-                                "PringlesSalt"};
-                                */
 public:
     classifier();
     bool train(std::string directory, bool update);

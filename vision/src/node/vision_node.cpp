@@ -124,7 +124,8 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
         ROS_INFO("Color histogram size: %d", single_color_features.size());
         ROS_INFO("CVFH histogram size: %d", single_cvfh_features.size());
 
-        my_classifier.classify(single_color_features, single_cvfh_features);
+        std::string classifier_result = my_classifier.classify(single_color_features, single_cvfh_features);
+        ROS_INFO("This is a %s", classifier_result.c_str());
     }
 
     // estimate poses (quaternions)
