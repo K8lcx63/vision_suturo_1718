@@ -56,7 +56,7 @@ bool classifier::train(std::string directory, bool update) {
                                                             ext.size()); // Remove "colors_histogram.csv"
                             full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
-                            //parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
+                            parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
 
 
                             std::vector<float> parsedCsv_normalized;
@@ -71,22 +71,24 @@ bool classifier::train(std::string directory, bool update) {
                                 ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
                                 parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(sample_counter, parsedCsv_index);
                                 // Save the highest feature. In case of the feature total not being exactly 1.000000, this one should be corrected.
-                                if(training_data.at<float>(sample_counter, parsedCsv_index) > training_data.at<float>(highest_feature_index, sample_counter)){
+                                if(training_data.at<float>(sample_counter, parsedCsv_index) > training_data.at<float>(sample_counter, highest_feature_index)){
                                     highest_feature_index = parsedCsv_index;
                                 }
                             }
                             ROS_INFO("Total value after normalizing: %f", parsedCsv_total_value_normalized); // Not always exactly 1.000000
+                            /*
                             if(parsedCsv_total_value_normalized != 1.000000){ // Correct features in case normalize() messed up
-                                training_data.at<float>(highest_feature_index, sample_counter) =
-                                        training_data.at<float>(highest_feature_index, sample_counter) - (parsedCsv_total_value_normalized - 1.000000);
+                                training_data.at<float>(sample_counter, highest_feature_index) =
+                                        training_data.at<float>(sample_counter, highest_feature_index) - (parsedCsv_total_value_normalized - 1.000000);
                             }
 
                             parsedCsv_total_value_normalized = 0.000000;
                             for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
                                 //ROS_INFO("%f", training_data.at<float>(parsedCsv_index, sample_counter));
-                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(parsedCsv_index, sample_counter);
+                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(sample_counter, parsedCsv_index);
                             }
                             ROS_INFO("Total value after normalizing AND correcting: %f", parsedCsv_total_value_normalized); // Not always exactly 1.000000
+                             */
 
                             responses.at<int>(sample_counter) = label_index; // Set label of this sample
                             sample_counter++;
@@ -97,9 +99,12 @@ bool classifier::train(std::string directory, bool update) {
             ROS_INFO("There were %d color histogram CSVs!", csv_counter);
             cv::Ptr<cv::ml::TrainData> data = cv::ml::TrainData::create(training_data, cv::ml::ROW_SAMPLE, responses);
             //cv::Ptr<cv::ml::NormalBayesClassifier> classifier = cv::ml::NormalBayesClassifier::create();
-            cv::Ptr<cv::ml::NormalBayesClassifier> classifier = cv::ml::NormalBayesClassifier::create();
-            classifier->train(data);
-            //bayes->save("normal_bayes_classifier_save");
+            //cv::Ptr<cv::ml::NormalBayesClassifier> classifier = cv::ml::NormalBayesClassifier::create();
+            ROS_INFO("Starting to train using the extracted data. This may take a while!");
+            bayes->train(data);
+            bayes->save("normal_bayes_classifier_save");
+            ROS_INFO("The trained classifier has been saved as 'normal_bayes_classifier_save'."
+                             "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
             /*
             int test_result = -1;
             test_result = classifier->predict(training_data.row(2));
@@ -115,7 +120,7 @@ bool classifier::train(std::string directory, bool update) {
             // Above that, it's usually all zeroes. [inf, inf] -> [-nan, -nan]
             std::cout << testing_data << std::endl;
 
-            
+
             testing_data.at<float>(1) = testing_data.at<float>(1) + 0.000050;
             testing_data.at<float>(10) = testing_data.at<float>(10) - 0.000050;
 
@@ -127,7 +132,7 @@ bool classifier::train(std::string directory, bool update) {
             ROS_INFO("%f", testing_data.at<float>(1));
              */
             int test_result_2 = -1;
-            test_result_2 = classifier->predict(testing_data);
+            test_result_2 = bayes->predict(testing_data);
             ROS_INFO("Slightly modified sample 300 is a %d", test_result_2);
 
 
@@ -136,13 +141,12 @@ bool classifier::train(std::string directory, bool update) {
             Mat predictOutputProbs;
             predictOutputProbs.create(1, 10, CV_32FC1);
 
-            classifier->predictProb(testing_data, predictOutputs, predictOutputProbs);
+            bayes->predictProb(testing_data, predictOutputs, predictOutputProbs);
 
             std::cout << predictOutputs << std::endl;
             std::cout << predictOutputProbs << std::endl;
             Mat predictOutputProbsNormalized;
             normalize(predictOutputProbs, predictOutputProbsNormalized, 1, 0, NORM_L1);
-            //predictOutputProbsNormalized = normalize_properly(predictOutputProbs);
             std::cout << predictOutputProbsNormalized << std::endl;
 
     }
@@ -162,30 +166,33 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         cv::Mat predictInput;
         predictInput.create(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
         for(int color_index = 0; color_index < color_features.size(); color_index++){
-            predictInput.at<float>(color_index) = color_features[color_index];
-            //ROS_INFO("%f", predictInput.at<float>(color_index));
+            predictInput.at<float>(0, color_index) = color_features[color_index];
+            //ROS_INFO("%f", predictInput.at<float>(0, color_index));
         }
         for(int cvfh_index = 0; cvfh_index < cvfh_features.size(); cvfh_index++){
-            predictInput.at<float>(cvfh_index + color_features.size()) = cvfh_features[cvfh_index];
-            //ROS_INFO("%f", predictInput.at<float>(cvfh_index + color_features.size()));
+            predictInput.at<float>(0, cvfh_index + color_features.size()) = cvfh_features[cvfh_index];
+            //ROS_INFO("%f", predictInput.at<float>(0, cvfh_index + color_features.size()));
         }
         Mat predictInput_normalized;
         normalize(predictInput, predictInput_normalized, 1, 0, NORM_L1);
         int highest_feature_index = 0;
         float total_features_normalized = 0.000000;
         for(int xD = 0; xD < color_features.size() + cvfh_features.size(); xD++){
-            ROS_INFO("%f", predictInput_normalized.at<float>(xD));
+            ROS_INFO("Feature %d: %f", xD, predictInput_normalized.at<float>(0, xD));
             total_features_normalized = total_features_normalized + predictInput_normalized.at<float>(xD);
             if(predictInput_normalized.at<float>(xD) > predictInput_normalized.at<float>(highest_feature_index)){
                 highest_feature_index = xD;
             }
         }
+
         ROS_INFO("Total: %f", total_features_normalized);
+        /*
         if(total_features_normalized != 1.000000){ // Correct features in case normalize() messed up
             ROS_INFO("corrected by %f", (total_features_normalized - 1.000000));
             predictInput_normalized.at<float>(highest_feature_index) =
                     predictInput_normalized.at<float>(highest_feature_index) - (total_features_normalized - 1.000000);
         }
+         */
 
 
 
@@ -193,6 +200,7 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         cv::Mat predictOutputs;
         predictOutputs.create(1, 1, CV_32SC1);
         Mat predictOutputProbs;
+        predictOutputProbs.create(1, 10, CV_32FC1);
 
         bayes->predictProb(predictInput_normalized, predictOutputs, predictOutputProbs);
 
@@ -200,7 +208,6 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         std::cout << predictOutputProbs << std::endl;
         Mat predictOutputProbsNormalized;
         normalize(predictOutputProbs, predictOutputProbsNormalized, 1, 0, NORM_L1);
-        //predictOutputProbsNormalized = normalize_properly(predictOutputProbs);
         std::cout << predictOutputProbsNormalized << std::endl;
     }
     else{
@@ -226,6 +233,7 @@ bool classifier::has_suffix(std::string s, std::string suffix) {
  * @return parsedCsv + new floats from file
  */
 std::vector<float> classifier::read_from_file(std::string full_path, std::vector<float> parsedCsv){
+    int counter = 0;
     std::ifstream data(full_path.c_str());
     if (!data) ROS_INFO("Couldn't open file!");
     else {
@@ -243,10 +251,22 @@ std::vector<float> classifier::read_from_file(std::string full_path, std::vector
                 //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
                 //ROS_INFO("%f", item_float);
                 parsedCsv.push_back(item_float);
-            } else {
+                counter++;
+            } else { // In this case, do this once more. eof doesn't mean the file is finished.
+                // Remove whitespaces
+                for (int i = 0; i < item.length(); i++)
+                    if (item[i] == ' ') item.erase(i, 1);
+                // Convert string to float
+                float item_float = std::strtof(item.c_str(), NULL);
+                //ROS_INFO("Item as float: %f", item_float);
+                //ROS_INFO("Size of current histogram: %d", parsedCsv.size());
+                //ROS_INFO("%f", item_float);
+                parsedCsv.push_back(item_float);
+                counter++;
+
                 ROS_INFO("Finished a file!");
                 data.close();
-                ROS_INFO("Closed file.");
+                ROS_INFO("Closed file. Extracted %d features.", counter);
             }
         }
     }

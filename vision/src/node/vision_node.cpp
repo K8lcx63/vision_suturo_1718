@@ -121,6 +121,9 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
             single_cvfh_features.push_back(current_features_vector[c + (a * 308)]);
             //ROS_INFO("CVFH features: %f", current_features_vector[c+(a*308)]);
         }
+        ROS_INFO("Color histogram size: %d", single_color_features.size());
+        ROS_INFO("CVFH histogram size: %d", single_cvfh_features.size());
+
         my_classifier.classify(single_color_features, single_cvfh_features);
     }
 
