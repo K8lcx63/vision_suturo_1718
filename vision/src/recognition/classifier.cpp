@@ -25,6 +25,7 @@ classifier::classifier(){
 
 bool classifier::train(std::string directory, bool update) {
 
+    int csv_counter = 0;
         if(!update) { // If the classifier is not supposed to be updated, just load the saved classifier data.
             bayes = cv::ml::NormalBayesClassifier::load("normal_bayes_classifier_save");
         }
@@ -33,6 +34,7 @@ bool classifier::train(std::string directory, bool update) {
             for (int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
                 // ../../common_suturo1718/pcd_files / CupEcoOrange
                 std::string current_directory = directory + "/" + labels[label_index]; // Directory for this object
+                //std::string current_directory(directory.append(labels[label_index]));
                 ROS_INFO("Finding the .csv files in the given directory...");
                 DIR *dir = opendir(current_directory.c_str());
                 struct dirent *ent;
@@ -41,6 +43,7 @@ bool classifier::train(std::string directory, bool update) {
                     while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
                         if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
                         } else {
+                            csv_counter++;
                             printf("%s\n", ent->d_name);
                             std::vector<float> parsedCsv;
                             std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
@@ -53,7 +56,7 @@ bool classifier::train(std::string directory, bool update) {
                                                             ext.size()); // Remove "colors_histogram.csv"
                             full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
-                            parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
+                            //parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
 
 
                             std::vector<float> parsedCsv_normalized;
@@ -65,7 +68,7 @@ bool classifier::train(std::string directory, bool update) {
                             for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
                                 // Fill in sample
                                 training_data.at<float>(parsedCsv_index, sample_counter) = parsedCsv_normalized[parsedCsv_index];
-                                //ROS_INFO("%f", training_data.at<float>(parsedCsv_index, sample_counter));
+                                ROS_INFO("--%f--", training_data.at<float>(parsedCsv_index, sample_counter));
                                 parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(parsedCsv_index, sample_counter);
                                 // Save the highest feature. In case of the feature total not being exactly 1.000000, this one should be corrected.
                                 if(training_data.at<float>(parsedCsv_index, sample_counter) > training_data.at<float>(highest_feature_index, sample_counter)){
@@ -91,10 +94,59 @@ bool classifier::train(std::string directory, bool update) {
                     }
                 }
             }
+            ROS_INFO("There were %d color histogram CSVs!", csv_counter);
             cv::Ptr<cv::ml::TrainData> data = cv::ml::TrainData::create(training_data, cv::ml::ROW_SAMPLE, responses);
             //cv::Ptr<cv::ml::NormalBayesClassifier> classifier = cv::ml::NormalBayesClassifier::create();
-            bayes->train(data);
-            bayes->save("normal_bayes_classifier_save");
+            cv::Ptr<cv::ml::NormalBayesClassifier> classifier = cv::ml::NormalBayesClassifier::create();
+            classifier->train(data);
+            //bayes->save("normal_bayes_classifier_save");
+            /*
+            int test_result = -1;
+            test_result = classifier->predict(training_data.row(2));
+            ROS_INFO("Sample 300 is a %d", test_result); // TODO: Is always 2?
+            */
+            Mat testing_data;
+            training_data.row(1).copyTo(testing_data);
+            // Below that ,it's similar to 36, with some samples normalized sums being closer to 1.
+            // 36: Look somewhat valid. Doesn't add up to 1. [2.31393e+36, 0] -> [1, 0]
+            // 37-38: Look somewhat valid. Don't add up to 1. [inf, 0] -> [-nan, 0]
+            // 39: Looks somewhat valid, but three are 0. Doesn't add up to 1. [inf, 0] -> [-nan, 0]
+            // 40: Single digit looks valid, others 0. [inf, inf] -> [-nan, -nan]
+            // Above that, it's usually all zeroes. [inf, inf] -> [-nan, -nan]
+            std::cout << testing_data << std::endl;
+            
+
+            /*
+            testing_data.at<float>(1) = testing_data.at<float>(1) + 0.000050;
+            testing_data.at<float>(10) = testing_data.at<float>(10) - 0.000050;
+
+            testing_data.at<float>(2) = testing_data.at<float>(2) + 0.000100;
+            testing_data.at<float>(9) = testing_data.at<float>(9) - 0.000100;
+             */
+
+             /*
+            ROS_INFO("%f", testing_data.at<float>(10));
+            ROS_INFO("%f", testing_data.at<float>(1));
+             */
+            int test_result_2 = -1;
+            test_result_2 = classifier->predict(testing_data);
+            ROS_INFO("Slightly modified sample 300 is a %d", test_result_2);
+
+
+            cv::Mat predictOutputs;
+            predictOutputs.create(1, 1, CV_32SC1);
+            Mat predictOutputProbs;
+            predictOutputProbs.create(1, 10, CV_32FC1);
+
+            classifier->predictProb(testing_data, predictOutputs, predictOutputProbs);
+
+            std::cout << predictOutputs << std::endl;
+            std::cout << predictOutputProbs << std::endl;
+            Mat predictOutputProbsNormalized;
+            normalize(predictOutputProbs, predictOutputProbsNormalized, 1, 0, NORM_L1);
+            //predictOutputProbsNormalized = normalize_properly(predictOutputProbs);
+            std::cout << predictOutputProbsNormalized << std::endl;
+
     }
     return true;
 }
