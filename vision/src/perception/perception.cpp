@@ -818,7 +818,6 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
     for (int i = 0; i < all_clusters.size(); i++) {
         current_color_features = produceColorHist(all_clusters[i]);
 
-
         for (int x = 0; x < 24; x++) {
             //ROS_INFO("%f", current_color_features[x]);
             result.push_back(current_color_features[x]);
@@ -835,8 +834,9 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
  * @return Object PointCloud out of PCD file
  */
 PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
-    PointCloudRGBPtr mesh(new PointCloudRGB),
-                     result(new PointCloudRGB);
+    PointCloudRGBPtr    result(new PointCloudRGB),
+                        mesh_rgb(new PointCloudRGB);
+    PointCloudXYZPtr mesh(new PointCloudXYZ);
 
 
     if (label == "PringlesPaprika") {
@@ -848,6 +848,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/sigg_bottle.pcd", *mesh);
     } else if (label == "JaMilch") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/ja_milch.pcd", *mesh);
+        ROS_INFO("THIS IS A JA MILCH!");
     } else if (label == "TomatoSauceOroDiParma") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/tomato_sauce_oro_di_parma.pcd", *mesh);
     } else if (label == "KoellnMuesliKnusperHonigNuss") {

@@ -17,6 +17,7 @@ geometry_msgs::PointStamped centroid_stamped;
 
 std::vector<PointCloudRGBPtr> all_clusters;
 
+classifier my_classifier;
 
 ros::Publisher pub_visualization;
 
@@ -81,6 +82,11 @@ void start_node(int argc, char **argv) {
 
 
     ros::Rate r(2.0);
+
+    ROS_INFO("STARTING TRAINING...");
+    std::string train_directory = "../../common_suturo1718/pcd_files";
+    my_classifier.train(train_directory, true);
+    ROS_INFO("TRAINING FINISHED!");
 
     while (n.ok()) {
         sensor_msgs::PointCloud2 cloud_final_pub;
@@ -147,7 +153,26 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     // Calculate features and put them into the message response
     std::vector<float> current_features_vector = getCVFHFeatures(all_clusters);
     std::vector<uint64_t> color_features_vector = getColorFeatures(all_clusters);
-    //getAllFeatures(all_clusters, current_features_vector, color_features_vector);
+
+    std::vector<float> single_cvfh_features;
+    std::vector<uint64_t> single_color_features;
+    for(int a = 0; a < all_clusters.size(); a++) { // Get histograms of each object and classify
+        single_cvfh_features.clear();
+        single_color_features.clear();
+        for (int b = 0; b < 24; b++) {
+            single_color_features.push_back(color_features_vector[b + (a * 24)]);
+            //ROS_INFO("Color features: %d", color_features_vector[b+(a*24)]);
+        }
+        for (int c = 0; c < 308; c++) {
+            single_cvfh_features.push_back(current_features_vector[c + (a * 308)]);
+            //ROS_INFO("CVFH features: %f", current_features_vector[c+(a*308)]);
+        }
+        ROS_INFO("Color histogram size: %d", single_color_features.size());
+        ROS_INFO("CVFH histogram size: %d", single_cvfh_features.size());
+
+        std::string classifier_result = my_classifier.classify(single_color_features, single_cvfh_features);
+        ROS_INFO("This is a %s", classifier_result.c_str());
+    }
 
     // estimate poses (quaternions)
 
