@@ -617,23 +617,9 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
                                        PointCloudRGBPtr target) {
 
 
-    PointCloudRGBPtr intermediate(new PointCloudRGB), new_input(new PointCloudRGB),new_new_input(new PointCloudRGB);
-    intermediate = input;
-    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-    float theta = M_PI/2; // The angle of rotation in radians
-    float yotta = M_PI;
-    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));
-    transform.translation() << global_centroid.x(), global_centroid.y(), global_centroid.z();
-/*
 
-    pcl::transformPointCloud (*intermediate, *new_input, transform);
-    Eigen::Affine3f transform2 = Eigen::Affine3f::Identity();
-    transform2.rotate (Eigen::AngleAxisf (yotta, Eigen::Vector3f::UnitY()));
-    transform2.translation() << 2*global_centroid.x(), 2*global_centroid.y(), 2*global_centroid.z();
-
-    pcl::transformPointCloud(*new_input, *new_new_input, transform2);*/
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
-    icp.setInputSource(new_input);
+    icp.setInputSource(input);
     icp.setInputTarget(target);
     icp.setRANSACIterations(20000);
     icp.setMaximumIterations(20000);
@@ -877,8 +863,14 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
 
+    Eigen::Affine3f transform = Eigen::Affine3f::Identity();/*
+    float theta = M_PI/2; // The angle of rotation in radians
+    float yotta = M_PI;
+    transform.rotate (Eigen::AngleAxisf (theta, Eigen::Vector3f::UnitX()));*/
+    transform.translation() << global_centroid.x(), global_centroid.y(), global_centroid.z();
 
-    return mesh;
+    pcl::transformPointCloud(*mesh,*result,transform);
+    return result;
 }
 
 
