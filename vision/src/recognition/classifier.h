@@ -17,7 +17,7 @@ using namespace cv; // OpenCV API is in the C++ "cv" namespace
 
 class classifier {
 private:
-    Ptr<cv::ml::NormalBayesClassifier> bayes = cv::ml::NormalBayesClassifier::create(); // = cv::ml::NormalBayesClassifier::create();
+    Ptr<cv::ml::RTrees> random_trees_classifier = cv::ml::RTrees::create(); // = cv::ml::NormalBayesClassifier::create();
     int NUMBER_OF_TRAINING_SAMPLES = 2165; // 2165, einzelnd ~217, JaMilch + Salt = 436
     int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
     int sample_counter = 0;

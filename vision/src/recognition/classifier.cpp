@@ -12,7 +12,7 @@
 
 
 classifier::classifier(){
-    bayes = cv::ml::NormalBayesClassifier::create();
+    random_trees_classifier = cv::ml::RTrees::create();
 }
 
 /**
@@ -27,7 +27,7 @@ bool classifier::train(std::string directory, bool update) {
 
     int csv_counter = 0;
         if(!update) { // If the classifier is not supposed to be updated, just load the saved classifier data.
-            bayes = cv::ml::NormalBayesClassifier::load("normal_bayes_classifier_save");
+            random_trees_classifier = cv::ml::RTrees::load("random_trees_classifier_save");
         }
         else {
             // Iterate through all directories, with one directory for each object
@@ -98,11 +98,9 @@ bool classifier::train(std::string directory, bool update) {
             }
             ROS_INFO("There were %d color histogram CSVs!", csv_counter);
             cv::Ptr<cv::ml::TrainData> data = cv::ml::TrainData::create(training_data, cv::ml::ROW_SAMPLE, responses);
-            //cv::Ptr<cv::ml::NormalBayesClassifier> classifier = cv::ml::NormalBayesClassifier::create();
-            //cv::Ptr<cv::ml::NormalBayesClassifier> classifier = cv::ml::NormalBayesClassifier::create();
             ROS_INFO("Starting to train using the extracted data. This may take a while!");
-            bayes->train(data);
-            bayes->save("normal_bayes_classifier_save");
+            random_trees_classifier->train(data);
+            random_trees_classifier->save("random_trees_classifier_save");
             ROS_INFO("The trained classifier has been saved as 'normal_bayes_classifier_save'."
                              "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
             /*
@@ -118,7 +116,7 @@ bool classifier::train(std::string directory, bool update) {
             // 39: Looks somewhat valid, but three are 0. Doesn't add up to 1. [inf, 0] -> [-nan, 0]
             // 40: Single digit looks valid, others 0. [inf, inf] -> [-nan, -nan]
             // Above that, it's usually all zeroes. [inf, inf] -> [-nan, -nan]
-            std::cout << testing_data << std::endl;
+            //std::cout << testing_data << std::endl;
 
 
             testing_data.at<float>(1) = testing_data.at<float>(1) + 0.000050;
@@ -132,22 +130,24 @@ bool classifier::train(std::string directory, bool update) {
             ROS_INFO("%f", testing_data.at<float>(1));
              */
             int test_result_2 = -1;
-            test_result_2 = bayes->predict(testing_data);
-            ROS_INFO("Slightly modified sample 300 is a %d", test_result_2);
+            test_result_2 = random_trees_classifier->predict(testing_data);
+            ROS_INFO("Slightly modified sample 1500 is a %d", test_result_2);
 
 
+            /*
             cv::Mat predictOutputs;
             predictOutputs.create(1, 1, CV_32SC1);
             Mat predictOutputProbs;
             predictOutputProbs.create(1, 10, CV_32FC1);
 
-            bayes->predictProb(testing_data, predictOutputs, predictOutputProbs);
+            classifier->predict(testing_data, predictOutputs, predictOutputProbs);
 
             std::cout << predictOutputs << std::endl;
             std::cout << predictOutputProbs << std::endl;
             Mat predictOutputProbsNormalized;
             normalize(predictOutputProbs, predictOutputProbsNormalized, 1, 0, NORM_L1);
             std::cout << predictOutputProbsNormalized << std::endl;
+             */
 
     }
     return true;
@@ -160,7 +160,7 @@ bool classifier::train(std::string directory, bool update) {
  */
 
 std::string classifier::classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
-    if(bayes->isTrained()) {
+    if(random_trees_classifier->isTrained()) {
         ROS_INFO("Classifying...");
 
         cv::Mat predictInput;
@@ -202,13 +202,9 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         Mat predictOutputProbs;
         predictOutputProbs.create(1, 10, CV_32FC1);
 
-        bayes->predictProb(predictInput_normalized, predictOutputs, predictOutputProbs);
+        int prediction_result = random_trees_classifier->predict(predictInput_normalized);
 
-        std::cout << predictOutputs << std::endl;
-        std::cout << predictOutputProbs << std::endl;
-        Mat predictOutputProbsNormalized;
-        normalize(predictOutputProbs, predictOutputProbsNormalized, 1, 0, NORM_L1);
-        std::cout << predictOutputProbsNormalized << std::endl;
+        ROS_INFO("This is a %d", prediction_result);
     }
     else{
         ROS_ERROR("ERROR: Classifier hasn't been trained, or something went wrong while training!");
