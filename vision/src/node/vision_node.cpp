@@ -156,30 +156,26 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
 
     std::vector<float> single_cvfh_features;
     std::vector<uint64_t> single_color_features;
+    std::vector<std::string> classifier_results;
     for(int a = 0; a < all_clusters.size(); a++) { // Get histograms of each object and classify
         single_cvfh_features.clear();
         single_color_features.clear();
         for (int b = 0; b < 24; b++) {
             single_color_features.push_back(color_features_vector[b + (a * 24)]);
-            //ROS_INFO("Color features: %d", color_features_vector[b+(a*24)]);
         }
         for (int c = 0; c < 308; c++) {
             single_cvfh_features.push_back(current_features_vector[c + (a * 308)]);
-            //ROS_INFO("CVFH features: %f", current_features_vector[c+(a*308)]);
         }
-        ROS_INFO("Color histogram size: %d", single_color_features.size());
-        ROS_INFO("CVFH histogram size: %d", single_cvfh_features.size());
 
-        std::string classifier_result = my_classifier.classify(single_color_features, single_cvfh_features);
-        ROS_INFO("This is a %s", classifier_result.c_str());
+        classifier_results.push_back(my_classifier.classify(single_color_features, single_cvfh_features));
+        ROS_INFO("This is a %s", classifier_results[a].c_str());
     }
 
     // estimate poses (quaternions)
 
 
 
-    res.clouds.normal_features = current_features_vector;
-    res.clouds.color_features = color_features_vector;
+    res.clouds.labels = classifier_results;
     res.clouds.object_amount = all_clusters.size();
     //res.clouds.object_errors = error_message;
 
