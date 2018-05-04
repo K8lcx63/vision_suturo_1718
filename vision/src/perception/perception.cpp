@@ -294,6 +294,7 @@ PointCloudNormalPtr estimateSurfaceNormals(PointCloudRGBPtr input) {
 
     ne.compute(*cloud_normals);
 
+    ROS_INFO("SURFACE NORMALS ESTIMATED SUCCESSFULLY!");
     return cloud_normals;
 }
 
@@ -512,8 +513,9 @@ PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
     // using the total number of points. Note: enabling it will make CVFH
     // invariant to scale just like VFH, but the authors encourage the opposite.
     cvfh.setNormalizeBins(false);
-
+    ROS_INFO("CVFH recognition parameters set. Computing now...");
     cvfh.compute(*descriptors);
+    ROS_INFO("CVFH features computed successfully!");
 
     //float x [308] = descriptors->points[0].histogram; // Save calculated histogram in a float array
     //std::vector<float> result(x, x + sizeof x / sizeof x[0]);
