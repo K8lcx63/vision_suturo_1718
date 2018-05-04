@@ -164,18 +164,16 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
     // add header
 
-    current_pose.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+    current_pose.header.frame_id = "map";
 
-    tf::Quaternion quat_tf;
-    geometry_msgs::Quaternion quat_msg;
-
+    tf::Quaternion quat_tf, quat_tf_map;
+    geometry_msgs::QuaternionStamped quat_msg, quat_msg_map;
 
     ROS_INFO("CALCULATING CENTROID FOR OBJECT");
     // Calculate centroid of current cluster
     Eigen::Vector4f centroid;
     pcl::compute3DCentroid(*input, centroid);
-
-global_centroid = centroid;
+    global_centroid = centroid;
     ROS_INFO("%sCURRENT CLUSTER CENTER\n", "\x1B[32m");
     ROS_INFO("\x1B[32mX: %f\n", centroid.x());
     ROS_INFO("\x1B[32mY: %f\n", centroid.y());
@@ -204,23 +202,55 @@ global_centroid = centroid;
 
 
 
-    global_tf_rotation.getRotation(quat_tf);
+    //global_tf_rotation.getRotation(quat_tf);
+    //quat_tf.normalize();
+
+    // rotate around z-axis
+    float sy ;
+    double x ;
+    double y ;
+    double z ;
+
+
+
+    // create message quaternion
+    // quat_msg.header.frame_id = "head_mount_kinect_rgb_optical_frame";
+    // quat_msg.quaternion.x = quat_tf.x();
+    // quat_msg.quaternion.y = quat_tf.y();
+    // quat_msg.quaternion.z = quat_tf.z();
+    // quat_msg.quaternion.w = quat_tf.w(); // has to be 1 ?
+    //
+
+    // std::cout << "Quaternion Message" << std::endl;
+    // std::cout << quat_msg.x << std::endl;
+    // std::cout << quat_msg.y << std::endl;
+    // std::cout << quat_msg.z << std::endl;
+    // std::cout << quat_msg.w << std::endl;
+
+
+
+    // tf::TransformListener tf_listen;
+    // std::string map = "/map";
+    // tf_listen.transformQuaternion(map, quat_msg, quat_msg_map);
+
+
+//        tf::Matrix3x3 matrix_z(cos(180), -sin(180),0,
+//                               sin(180), cos(180), 0,
+//                               0, 0, 1);
+//        global_tf_rotation =  global_tf_rotation*matrix_z;
+
+    global_tf_rotation.getEulerYPR(z, y, x);
+    quat_tf.setEuler(z, y+M_PI, x);
     quat_tf.normalize();
 
     // create message quaternion
-    quat_msg.x = quat_tf.x();
-    quat_msg.y = quat_tf.y();
-    quat_msg.z = quat_tf.z();
-    quat_msg.w = 1.0; // has to be 1
+    quat_msg_map.header.frame_id = "map";
+    quat_msg_map.quaternion.x = quat_tf.x();
+    quat_msg_map.quaternion.y = quat_tf.y();
+    quat_msg_map.quaternion.z = quat_tf.z();
+    quat_msg_map.quaternion.w = quat_tf.w(); // has to be 1 ?
 
-    std::cout << "Quaternion Message" << std::endl;
-    std::cout << quat_msg.x << std::endl;
-    std::cout << quat_msg.y << std::endl;
-    std::cout << quat_msg.z << std::endl;
-    std::cout << quat_msg.w << std::endl;
-
-    current_pose.pose.orientation = quat_msg;
-
+    current_pose.pose.orientation = quat_msg_map.quaternion;
 
     // calculate and set centroid from mesh
     pcl::compute3DCentroid(*aligned_cloud, centroid);
@@ -229,6 +259,7 @@ global_centroid = centroid;
     current_pose.pose.position.x = centroid.x();
     current_pose.pose.position.y = centroid.y();
     current_pose.pose.position.z = centroid.z();
+
 
 /*
 
@@ -616,21 +647,41 @@ PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr ta
 PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
                                        PointCloudRGBPtr target) {
 
+    PointCloudRGBPtr result (new PointCloudRGB), input_centroid (new PointCloudRGB);
 
+
+////    float theta = M_PI/2; // The angle of rotation in radians
+//
+//    transform.translation() << global_centroid.x(), global_centroid.y(), global_centroid.z();
+//
+//    pcl::transformPointCloud(*input,*input_centroid,transform);
+//    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
+//    float yotta = M_PI;
+//    transform.rotate (Eigen::AngleAxisf (yotta, Eigen::Vector3f::UnitX()));
+//    pcl::transformPointCloud(*input,*input_centroid,transform);
 
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
     icp.setInputSource(input);
     icp.setInputTarget(target);
     icp.setRANSACIterations(20000);
     icp.setMaximumIterations(20000);
-    icp.setMaxCorrespondenceDistance(0.20); // set Max distance btw source <-> target to include into estimation
+    icp.setMaxCorrespondenceDistance(3.0f); // set Max distance btw source <-> target to include into estimation
+
     PointCloudRGBPtr final(new PointCloudRGB);
     icp.align(*final);
     std::cout << "has converged:" << icp.hasConverged() << " score: " <<
               icp.getFitnessScore() << std::endl;
     std::cout << icp.getFinalTransformation() << std::endl;
-
     Eigen::Matrix4f transformation = icp.getFinalTransformation();
+
+//
+//    Eigen::Matrix4f transformation = Eigen::Matrix4f::Identity(); // = icp.getFinalTransformation();
+//
+////    float theta = M_PI/2; // The angle of rotation in radians
+
+
+//    pcl::registration::TransformationEstimationSVD<pcl::PointXYZRGB, pcl::PointXYZRGB> reg;
+//    reg.estimateRigidTransformation(*input,*result, transformation);
 
 
     tf::Matrix3x3 tf_rotation(transformation(0,0),
@@ -835,8 +886,7 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
  */
 PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     PointCloudRGBPtr    result(new PointCloudRGB),
-                        mesh_rgb(new PointCloudRGB);
-    PointCloudXYZPtr mesh(new PointCloudXYZ);
+                        mesh(new PointCloudRGB);
 
 
     if (label == "PringlesPaprika") {
@@ -864,14 +914,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
 
-    Eigen::Affine3f transform = Eigen::Affine3f::Identity();
-//    float theta = M_PI/2; // The angle of rotation in radians
-    float yotta = M_PI;
-    transform.rotate (Eigen::AngleAxisf (yotta, Eigen::Vector3f::UnitX()));
-    transform.translation() << centroid.x(), centroid.y(), centroid.z();
-
-    pcl::transformPointCloud(*mesh,*result,transform);
-    return result;
+    return mesh;
 }
 
 
@@ -945,4 +988,3 @@ PointCloudRGBPtr rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr ta
 
 
 }
-
