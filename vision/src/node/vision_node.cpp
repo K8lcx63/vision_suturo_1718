@@ -83,14 +83,15 @@ void start_node(int argc, char **argv) {
 
     ros::Rate r(2.0);
 
-    ROS_INFO("STARTING TRAINING...");
     std::string train_directory = "../../common_suturo1718/pcd_files";
-    my_classifier.train(train_directory, true);
-    ROS_INFO("TRAINING FINISHED!");
+    my_classifier.train(train_directory, false);
+
+    ROS_INFO("%sVision is ready!\n", "\x1B[32m");
+
 
     while (n.ok()) {
         sensor_msgs::PointCloud2 cloud_final_pub;
-        ROS_INFO("%lu points", cloud_global->points.size());
+        //ROS_INFO("%lu points", cloud_global->points.size());
 
         pcl::toROSMsg(*cloud_global, cloud_final_pub);
         cloud_final_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
@@ -98,21 +99,21 @@ void start_node(int argc, char **argv) {
 
 
         sensor_msgs::PointCloud2 cloud_perceived_pub;
-        ROS_INFO("%lu points", cloud_perceived->points.size());
+        //ROS_INFO("%lu points", cloud_perceived->points.size());
 
         pcl::toROSMsg(*cloud_perceived, cloud_perceived_pub);
         cloud_perceived_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
         pub_perceived_object.publish(cloud_perceived_pub);
 
         sensor_msgs::PointCloud2 cloud_mesh_pub;
-        ROS_INFO("%lu points", cloud_aligned->points.size());
+        //ROS_INFO("%lu points", cloud_aligned->points.size());
 
         pcl::toROSMsg(*cloud_mesh, cloud_mesh_pub);
         cloud_mesh_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";
         pub_mesh_object.publish(cloud_mesh_pub);
 
         sensor_msgs::PointCloud2 cloud_aligned_pub;
-        ROS_INFO("%lu points", cloud_aligned->points.size());
+        //ROS_INFO("%lu points", cloud_aligned->points.size());
 
         pcl::toROSMsg(*cloud_aligned, cloud_aligned_pub);
         cloud_aligned_pub.header.frame_id = "head_mount_kinect_rgb_optical_frame";

@@ -9,7 +9,10 @@
 
 
 classifier::classifier(){
-    random_trees_classifier = cv::ml::RTrees::create();
+    random_trees_color_classifier = cv::ml::RTrees::create();
+    random_trees_color_classifier->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 50, 0.02));
+    random_trees_cvfh_classifier = cv::ml::RTrees::create();
+    random_trees_cvfh_classifier->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 50, 0.02));
 }
 
 /**
@@ -23,7 +26,9 @@ classifier::classifier(){
 bool classifier::train(std::string directory, bool update) {
 
         if(!update) { // If the classifier is not supposed to be updated, just load the saved classifier data.
-            random_trees_classifier = cv::ml::RTrees::load("random_trees_classifier_save");
+            random_trees_color_classifier = cv::ml::RTrees::load("random_trees_color_save");
+            random_trees_cvfh_classifier = cv::ml::RTrees::load("random_trees_cvfh_save");
+
         }
         else {
             // Iterate through all directories, with one directory for each object
@@ -38,10 +43,12 @@ bool classifier::train(std::string directory, bool update) {
                         if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
                         } else {
                             printf("%s\n", ent->d_name);
-                            std::vector<float> parsedCsv;
+                            std::vector<float> color_parsedCsv;
+                            std::vector<float> cvfh_parsedCsv;
+
                             std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
 
-                            parsedCsv = read_from_file(full_path, parsedCsv); // Put color features into parsedCsv
+                            color_parsedCsv = read_from_file(full_path, color_parsedCsv); // Put color features into parsedCsv
 
                             // Now find the correct CVFH-feature .csv
                             const std::string ext("colors_histogram.csv");
@@ -49,21 +56,26 @@ bool classifier::train(std::string directory, bool update) {
                                                             ext.size()); // Remove "colors_histogram.csv"
                             full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
-                            parsedCsv = read_from_file(full_path, parsedCsv); // Add cvfh features to parsedCsv
+                            cvfh_parsedCsv = read_from_file(full_path, cvfh_parsedCsv); // Add cvfh features to parsedCsv
 
 
-                            std::vector<float> parsedCsv_normalized;
-                            normalize(parsedCsv, parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
-                            normalize(parsedCsv_normalized, parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
+                            std::vector<float> color_parsedCsv_normalized;
+                            std::vector<float> cvfh_parsedCsv_normalized;
 
-                            float parsedCsv_total_value_normalized = 0.000000;
-                            for (int parsedCsv_index = 0; parsedCsv_index < parsedCsv_normalized.size(); parsedCsv_index++) {
+                            normalize(color_parsedCsv, color_parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
+                            normalize(cvfh_parsedCsv, cvfh_parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
+
+
+                            for (int parsedCsv_index = 0; parsedCsv_index < color_parsedCsv_normalized.size(); parsedCsv_index++) {
                                 // Fill in sample
-                                training_data.at<float>(sample_counter, parsedCsv_index) = parsedCsv_normalized[parsedCsv_index];
+                                color_training_data.at<float>(sample_counter, parsedCsv_index) = color_parsedCsv_normalized[parsedCsv_index];
                                 //ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
-                                parsedCsv_total_value_normalized = parsedCsv_total_value_normalized + training_data.at<float>(sample_counter, parsedCsv_index);
                             }
-                            ROS_INFO("Total value after normalizing: %f", parsedCsv_total_value_normalized); // Not always exactly 1.000000
+                            for (int parsedCsv_index = 0; parsedCsv_index < cvfh_parsedCsv_normalized.size(); parsedCsv_index++) {
+                                // Fill in sample
+                                cvfh_training_data.at<float>(sample_counter, parsedCsv_index) = cvfh_parsedCsv_normalized[parsedCsv_index];
+                                //ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
+                            }
 
                             responses.at<int>(sample_counter) = label_index; // Set label of this sample
                             sample_counter++;
@@ -71,29 +83,21 @@ bool classifier::train(std::string directory, bool update) {
                     }
                 }
             }
-            cv::Ptr<cv::ml::TrainData> data = cv::ml::TrainData::create(training_data, cv::ml::ROW_SAMPLE, responses);
+            cv::Ptr<cv::ml::TrainData> color_data = cv::ml::TrainData::create(color_training_data, cv::ml::ROW_SAMPLE, responses);
+            cv::Ptr<cv::ml::TrainData> cvfh_data = cv::ml::TrainData::create(cvfh_training_data, cv::ml::ROW_SAMPLE, responses);
+
             ROS_INFO("Starting to train using the extracted data. This may take a while!");
-            random_trees_classifier->train(data);
-            random_trees_classifier->save("random_trees_classifier_save");
-            ROS_INFO("The trained classifier has been saved as 'random_trees_classifier_save'."
+            random_trees_color_classifier->train(color_data);
+            random_trees_cvfh_classifier->train(cvfh_data);
+
+            random_trees_color_classifier->save("random_trees_color_save");
+            random_trees_cvfh_classifier->save("random_trees_cvfh_save");
+
+            ROS_INFO("The trained classifiers have been saved."
                              "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
 
-            // Small test case
-            /**
-            Mat testing_data;
-            training_data.row(1500).copyTo(testing_data);
-
-            testing_data.at<float>(1) = testing_data.at<float>(1) + 0.000050;
-            testing_data.at<float>(10) = testing_data.at<float>(10) - 0.000050;
-
-            testing_data.at<float>(2) = testing_data.at<float>(2) + 0.000100;
-            testing_data.at<float>(9) = testing_data.at<float>(9) - 0.000100;
-
-            int test_result_2 = -1;
-            test_result_2 = random_trees_classifier->predict(testing_data);
-            ROS_INFO("Slightly modified sample 1500 is a %d", test_result_2);
-             **/
     }
+    ROS_INFO("%sTraining finished!\n", "\x1B[32m");
     return true;
 }
 
@@ -104,32 +108,71 @@ bool classifier::train(std::string directory, bool update) {
  */
 
 std::string classifier::classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
-    if(random_trees_classifier->isTrained()) {
+    if(random_trees_color_classifier->isTrained() && random_trees_cvfh_classifier->isTrained()) {
         ROS_INFO("Classifying...");
 
-        cv::Mat predictInput;
-        predictInput.create(1, ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+        cv::Mat color_predictInput;
+        cv::Mat cvfh_predictInput;
+
+        color_predictInput.create(1, COLOR_ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+        cvfh_predictInput.create(1, CVFH_ATTRIBUTES_PER_SAMPLE, CV_32FC1);
+
         for(int color_index = 0; color_index < color_features.size(); color_index++){
-            predictInput.at<float>(0, color_index) = color_features[color_index];
+            color_predictInput.at<float>(0, color_index) = color_features[color_index];
             //ROS_INFO("%f", predictInput.at<float>(0, color_index));
         }
         for(int cvfh_index = 0; cvfh_index < cvfh_features.size(); cvfh_index++){
-            predictInput.at<float>(0, cvfh_index + color_features.size()) = cvfh_features[cvfh_index];
+            cvfh_predictInput.at<float>(0, cvfh_index) = cvfh_features[cvfh_index];
             //ROS_INFO("%f", predictInput.at<float>(0, cvfh_index + color_features.size()));
         }
-        Mat predictInput_normalized;
-        normalize(predictInput, predictInput_normalized, 1, 0, NORM_L1);
-        float total_features_normalized = 0.000000;
+        Mat color_predictInput_normalized;
+        Mat cvfh_predictInput_normalized;
+
+        normalize(color_predictInput, color_predictInput_normalized, 1, 0, NORM_L1);
+        normalize(cvfh_predictInput, cvfh_predictInput_normalized, 1, 0, NORM_L1);
+
         for(int xD = 0; xD < color_features.size() + cvfh_features.size(); xD++){
             //ROS_INFO("Feature %d: %f", xD, predictInput_normalized.at<float>(0, xD));
-            total_features_normalized = total_features_normalized + predictInput_normalized.at<float>(xD);
         }
 
-        ROS_INFO("Total: %f", total_features_normalized);
+        int color_prediction_result = random_trees_color_classifier->predict(color_predictInput_normalized);
+        int cvfh_prediction_result = random_trees_cvfh_classifier->predict(cvfh_predictInput_normalized);
 
-        int prediction_result = random_trees_classifier->predict(predictInput_normalized);
-        ROS_INFO("This is a %d", prediction_result);
-        return labels[prediction_result];
+        Mat color_votes;
+        Mat cvfh_votes;
+
+        random_trees_color_classifier->getVotes(color_predictInput_normalized, color_votes, 0);
+        random_trees_cvfh_classifier->getVotes(cvfh_predictInput_normalized, cvfh_votes, 0);
+
+        Mat combined_votes;
+        cv::add(color_votes, cvfh_votes, combined_votes);
+
+        std::cout << color_votes << std::endl;
+        std::cout << cvfh_votes << std::endl;
+        std::cout << combined_votes << std::endl;
+
+
+        int color_highest_vote_amount = color_votes.at<int>(1, color_prediction_result);
+        int cvfh_highest_vote_amount = cvfh_votes.at<int>(1, cvfh_prediction_result);
+        int combined_prediction_result;
+        int combined_highest_vote_amount = 0;
+        for(int x = 0; x < combined_votes.cols; x++){ // Fill combined_prediction_result and combined_highest_vote_amount manually
+            if(combined_highest_vote_amount < combined_votes.at<int>(1, x)){
+                combined_prediction_result = x;
+                combined_highest_vote_amount = combined_votes.at<int>(1, x);
+            }
+        }
+
+        int color_vote_percentage = color_highest_vote_amount * 2;
+        int cvfh_vote_percentage = cvfh_highest_vote_amount * 2;
+
+        ROS_INFO("Color: %d percent of votes for %s", color_vote_percentage, labels[color_prediction_result].c_str());
+        ROS_INFO("CVFH: %d percent of votes for %s", cvfh_vote_percentage, labels[cvfh_prediction_result].c_str());
+        ROS_INFO("Combined: %d percent of votes for %s", combined_highest_vote_amount, labels[combined_prediction_result].c_str());
+
+
+        ROS_INFO("This is a %d", combined_prediction_result);
+        return labels[combined_prediction_result];
     }
     else{
         ROS_ERROR("ERROR: Classifier hasn't been trained, or something went wrong while training!");

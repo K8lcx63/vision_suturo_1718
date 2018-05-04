@@ -17,11 +17,14 @@ using namespace cv; // OpenCV API is in the C++ "cv" namespace
 
 class classifier {
 private:
-    Ptr<cv::ml::RTrees> random_trees_classifier;
+    Ptr<cv::ml::RTrees> random_trees_color_classifier;
+    Ptr<cv::ml::RTrees> random_trees_cvfh_classifier;
     int NUMBER_OF_TRAINING_SAMPLES = 2165; // 2165, einzelnd ~217, JaMilch + Salt = 436
-    int ATTRIBUTES_PER_SAMPLE = 332; // 24 + 308
+    int COLOR_ATTRIBUTES_PER_SAMPLE = 24;
+    int CVFH_ATTRIBUTES_PER_SAMPLE = 308;
     int sample_counter = 0;
-    cv::Mat training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
+    cv::Mat color_training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, COLOR_ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
+    cv::Mat cvfh_training_data = Mat(NUMBER_OF_TRAINING_SAMPLES, CVFH_ATTRIBUTES_PER_SAMPLE, CV_32FC1); // Input data
     cv::Mat responses = Mat(NUMBER_OF_TRAINING_SAMPLES, 1, CV_32SC1);
 
     std::string labels[10] = {  "CupEcoOrange",
