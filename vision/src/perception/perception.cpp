@@ -160,11 +160,11 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     // instantiate objects for results
     PointCloudRGBPtr aligned_cloud(new PointCloudRGB), icp_cloud(new PointCloudRGB);
 
-    geometry_msgs::PoseStamped current_pose;
+    geometry_msgs::PoseStamped current_pose, map_pose;
 
     // add header
 
-    current_pose.header.frame_id = "map";
+    current_pose.header.frame_id = "head_mount_kinect_rgb_optical_frame";
 
     tf::Quaternion quat_tf, quat_tf_map;
     geometry_msgs::QuaternionStamped quat_msg, quat_msg_map;
@@ -190,20 +190,10 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     // initial alignment
     aligned_cloud = iterativeClosestPoint(mesh, input);
 
-    //aligned_cloud = rigidPoseEstimation(mesh, input);
-    // icp alignment
-    //icp_cloud = iterativeClosestPoint(aligned_cloud, input);
-
-
     cloud_aligned = aligned_cloud;
 
 
     ROS_INFO("Calculate Quaternion from Transformation (rotation)");
-
-
-
-    //global_tf_rotation.getRotation(quat_tf);
-    //quat_tf.normalize();
 
     // rotate around z-axis
     float sy ;
@@ -212,45 +202,15 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     double z ;
 
 
-
-    // create message quaternion
-    // quat_msg.header.frame_id = "head_mount_kinect_rgb_optical_frame";
-    // quat_msg.quaternion.x = quat_tf.x();
-    // quat_msg.quaternion.y = quat_tf.y();
-    // quat_msg.quaternion.z = quat_tf.z();
-    // quat_msg.quaternion.w = quat_tf.w(); // has to be 1 ?
-    //
-
-    // std::cout << "Quaternion Message" << std::endl;
-    // std::cout << quat_msg.x << std::endl;
-    // std::cout << quat_msg.y << std::endl;
-    // std::cout << quat_msg.z << std::endl;
-    // std::cout << quat_msg.w << std::endl;
-
-
-
-    // tf::TransformListener tf_listen;
-    // std::string map = "/map";
-    // tf_listen.transformQuaternion(map, quat_msg, quat_msg_map);
-
-
-//        tf::Matrix3x3 matrix_z(cos(180), -sin(180),0,
-//                               sin(180), cos(180), 0,
-//                               0, 0, 1);
-//        global_tf_rotation =  global_tf_rotation*matrix_z;
-
+    quat_msg.header.frame_id = "head_mount_kinect_rgb_optical_frame";
     global_tf_rotation.getEulerYPR(z, y, x);
-    quat_tf.setEuler(z, y+M_PI, x);
+    quat_tf.setEuler(z, y, x);
     quat_tf.normalize();
 
-    // create message quaternion
-    quat_msg_map.header.frame_id = "map";
-    quat_msg_map.quaternion.x = quat_tf.x();
-    quat_msg_map.quaternion.y = quat_tf.y();
-    quat_msg_map.quaternion.z = quat_tf.z();
-    quat_msg_map.quaternion.w = quat_tf.w(); // has to be 1 ?
-
-    current_pose.pose.orientation = quat_msg_map.quaternion;
+    quat_msg.quaternion.x = quat_tf.x();
+    quat_msg.quaternion.y = quat_tf.y();
+    quat_msg.quaternion.z = quat_tf.z();
+    quat_msg.quaternion.w = quat_tf.w();
 
     // calculate and set centroid from mesh
     pcl::compute3DCentroid(*aligned_cloud, centroid);
@@ -261,16 +221,35 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     current_pose.pose.position.z = centroid.z();
 
 
-/*
+    current_pose.pose.orientation = quat_msg.quaternion;
 
-    current_pose.pose.position.x = rot_mat_reverse(0,3);
-    current_pose.pose.position.y = rot_mat_reverse(1,3);
-    current_pose.pose.position.z = rot_mat_reverse(2,3);
-*/
+    tf::TransformListener t_listener;
+    current_pose.header.stamp = ros::Time(0);
+    map_pose.header.stamp = ros::Time(0);
+    std::string map = "map";
+    t_listener.transformPose(map, current_pose, map_pose);
 
-    pose_global = current_pose;
+    quat_tf.setEuler(z, y, x);
+    quat_tf.normalize();
 
-    return current_pose;
+    // create message quaternion
+    //quat_msg_map.header.frame_id = "map";
+    quat_msg_map.quaternion.x = quat_tf.x();
+    quat_msg_map.quaternion.y = quat_tf.y();
+    quat_msg_map.quaternion.z = quat_tf.z();
+    quat_msg_map.quaternion.w = quat_tf.w();
+
+    map_pose.pose.orientation = quat_msg_map.quaternion;
+
+
+    map_pose.pose.position.x = centroid.x();
+    map_pose.pose.position.y = centroid.y();
+    map_pose.pose.position.z = centroid.z();
+
+
+    pose_global = map_pose;
+
+    return map_pose;
 }
 
 /**
@@ -918,73 +897,108 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
 }
 
 
-PointCloudRGBPtr rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr target){
+PointCloudRGBPtr rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr target) {
 
 
     PointCloudRGBPtr result(new PointCloudRGB);
-    PointCloudVFHS308Ptr input_feats(new pcl::PointCloud<pcl::VFHSignature308>), target_feats(new pcl::PointCloud<pcl::VFHSignature308>);
+    PointCloudVFHS308Ptr input_feats(new pcl::PointCloud<pcl::VFHSignature308>), target_feats(
+            new pcl::PointCloud<pcl::VFHSignature308>);
     input_feats = cvfhRecognition(input);
     target_feats = cvfhRecognition(target);
     const float leaf = 0.005f;
 
 
     // Perform alignment
-    pcl::console::print_highlight ("Starting alignment...\n");
-    pcl::SampleConsensusPrerejective<pcl::PointXYZRGB,pcl::PointXYZRGB,pcl::VFHSignature308> align;
-    align.setInputSource (input);
-    align.setSourceFeatures (input_feats);
-    align.setInputTarget (target);
-    align.setTargetFeatures (target_feats);
-    align.setMaximumIterations (50000); // Number of RANSAC iterations
-    align.setNumberOfSamples (3); // Number of points to sample for generating/prerejecting a pose
-    align.setCorrespondenceRandomness (5); // Number of nearest features to use
-    align.setSimilarityThreshold (0.9f); // Polygonal edge length similarity threshold
-    align.setMaxCorrespondenceDistance (2.5f * leaf); // Inlier threshold
-    align.setInlierFraction (0.25f); // Required inlier fraction for accepting a pose hypothesis
+    pcl::console::print_highlight("Starting alignment...\n");
+    pcl::SampleConsensusPrerejective<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> align;
+    align.setInputSource(input);
+    align.setSourceFeatures(input_feats);
+    align.setInputTarget(target);
+    align.setTargetFeatures(target_feats);
+    align.setMaximumIterations(50000); // Number of RANSAC iterations
+    align.setNumberOfSamples(3); // Number of points to sample for generating/prerejecting a pose
+    align.setCorrespondenceRandomness(5); // Number of nearest features to use
+    align.setSimilarityThreshold(0.9f); // Polygonal edge length similarity threshold
+    align.setMaxCorrespondenceDistance(2.5f * leaf); // Inlier threshold
+    align.setInlierFraction(0.25f); // Required inlier fraction for accepting a pose hypothesis
     {
         pcl::ScopeTime t("Alignment");
-        align.align (*result);
+        align.align(*result);
     }
 
-    if (align.hasConverged ())
-    {
+    if (align.hasConverged()) {
         // Print results
-        printf ("\n");
-        Eigen::Matrix4f transformation = align.getFinalTransformation ();
-        pcl::console::print_info ("    | %6.3f %6.3f %6.3f | \n", transformation (0,0), transformation (0,1), transformation (0,2));
-        pcl::console::print_info ("R = | %6.3f %6.3f %6.3f | \n", transformation (1,0), transformation (1,1), transformation (1,2));
-        pcl::console::print_info ("    | %6.3f %6.3f %6.3f | \n", transformation (2,0), transformation (2,1), transformation (2,2));
-        pcl::console::print_info ("\n");
-        pcl::console::print_info ("t = < %0.3f, %0.3f, %0.3f >\n", transformation (0,3), transformation (1,3), transformation (2,3));
-        pcl::console::print_info ("\n");
-        pcl::console::print_info ("Inliers: %i/%i\n", align.getInliers ().size (), input->size ());
+        printf("\n");
+        Eigen::Matrix4f transformation = align.getFinalTransformation();
+        pcl::console::print_info("    | %6.3f %6.3f %6.3f | \n", transformation(0, 0), transformation(0, 1),
+                                 transformation(0, 2));
+        pcl::console::print_info("R = | %6.3f %6.3f %6.3f | \n", transformation(1, 0), transformation(1, 1),
+                                 transformation(1, 2));
+        pcl::console::print_info("    | %6.3f %6.3f %6.3f | \n", transformation(2, 0), transformation(2, 1),
+                                 transformation(2, 2));
+        pcl::console::print_info("\n");
+        pcl::console::print_info("t = < %0.3f, %0.3f, %0.3f >\n", transformation(0, 3), transformation(1, 3),
+                                 transformation(2, 3));
+        pcl::console::print_info("\n");
+        pcl::console::print_info("Inliers: %i/%i\n", align.getInliers().size(), input->size());
 
         global_first_transformation = transformation;
-        tf::Matrix3x3 tf_rotation(transformation(0,0),
-                                  transformation(0,1),
-                                  transformation(0,2),
-                                  transformation(1,0),
-                                  transformation(1,1),
-                                  transformation(1,2),
-                                  transformation(2,0),
-                                  transformation(2,1),
-                                  transformation(2,2));
+        tf::Matrix3x3 tf_rotation(transformation(0, 0),
+                                  transformation(0, 1),
+                                  transformation(0, 2),
+                                  transformation(1, 0),
+                                  transformation(1, 1),
+                                  transformation(1, 2),
+                                  transformation(2, 0),
+                                  transformation(2, 1),
+                                  transformation(2, 2));
 
         global_tf_rotation = tf_rotation;
 
 
-
         return result;
 
 
-    }
-
-
-    else
-    {
-        pcl::console::print_error ("Alignment failed!\n");
+    } else {
+        pcl::console::print_error("Alignment failed!\n");
         return result;
     }
-
-
 }
+
+
+    bool isObjectAlignedToPlane(PointCloudNormalPtr normal_plane, geometry_msgs::Quaternion quaternion){
+        bool is_aligned;
+        float threshold = 0.2;
+        // prepare
+        pcl::Normal n;
+        pcl::Normal pre;
+
+        for (int i = 1; i < normal_plane->size(); i++){
+            n = normal_plane->points[i];
+            pre = normal_plane->points[i-1];
+
+            n.normal_x += pre.normal_x;
+            n.normal_y += pre.normal_y;
+            n.normal_z += pre.normal_z;
+
+        }
+
+        // normalize vector
+        n.normal_x = n.normal_x / normal_plane->points.size();
+        n.normal_y = n.normal_y / normal_plane->points.size();
+        n.normal_z = n.normal_z / normal_plane->points.size();
+
+        // compare
+
+        if (n.normal_z > quaternion.z + threshold || n.normal_z < quaternion.z + threshold) {
+            is_aligned = false;
+        } else {
+            is_aligned = true;
+
+        }
+
+
+        return is_aligned;
+
+    }
+

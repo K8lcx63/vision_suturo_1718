@@ -71,6 +71,8 @@ std::vector<float>              getCVFHFeatures(std::vector<PointCloudRGBPtr> al
 std::vector<uint64_t>           getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters);
 PointCloudRGBPtr                getTargetByLabel(std::string label, Eigen::Vector4f centroid);
 PointCloudRGBPtr                rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr target);
+bool                            isObjectAlignedToPlane(PointCloudNormalPtr normal_plane,
+                                                       geometry_msgs::Quaternion quaternion);
 
 extern PointCloudRGBPtr cloud_global;
 extern PointCloudRGBPtr cloud_perceived;
