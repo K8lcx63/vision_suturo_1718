@@ -196,18 +196,11 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     quat_tf.setEuler(z, y, x);
     quat_tf.normalize();
 
-    current_pose.pose.position.x = 0.0;
-    current_pose.pose.position.y = 0.0;
-    current_pose.pose.position.z = 0.0;
-
     quat_msg.header.frame_id = "map";
     quat_msg.quaternion.x = quat_tf.x();
     quat_msg.quaternion.y = quat_tf.y();
     quat_msg.quaternion.z = quat_tf.z();
     quat_msg.quaternion.w = quat_tf.w();
-
-    // set original quaternion
-    current_pose.pose.orientation = quat_msg.quaternion;
 
     // calculate and set centroid from mesh
     pcl::compute3DCentroid(*aligned_cloud, centroid);
@@ -215,6 +208,11 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     current_pose.pose.position.y = centroid.y();
     current_pose.pose.position.z = centroid.z();
 
+
+    // set original quaternion
+    current_pose.pose.orientation = quat_msg.quaternion;
+
+    
 /*
     std::string map = "map";
     t_listener.transformPose(map, current_pose, map_pose);
@@ -866,6 +864,8 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
     } else if (label == "EdekaRedBowl") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
+
+    // mesh->header.frame_id = "map";
 
     return mesh;
 }
