@@ -160,14 +160,15 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     // instantiate objects for results
     PointCloudRGBPtr aligned_cloud(new PointCloudRGB),
                      icp_cloud(new PointCloudRGB),
-                     mesh(new PointCloudRGB);
+            mesh_orig(new PointCloudRGB),
+            mesh(new PointCloudRGB);
     geometry_msgs::PoseStamped current_pose,
                                map_pose;
     tf::Quaternion quat_tf,
                    quat_tf_map;
     geometry_msgs::QuaternionStamped quat_msg,
                                      quat_msg_map;
-    Eigen::Vector4f centroid;
+    Eigen::Vector4f centroid, centroid_map;
     double x,y,z;
     tf::TransformListener t_listener;
 
@@ -176,12 +177,11 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     current_pose.header.frame_id = "map";
     current_pose.header.stamp = ros::Time(0);
 
-    // Calculate centroid of current cluster
-    pcl::compute3DCentroid(*input, centroid);
-    global_centroid = centroid;
-
     // Calculate quaternions
     mesh = getTargetByLabel(label, centroid);
+
+    std::string map = "map";
+    std::string kinect_frame = "head_mount_kinect_rgb_optical_frame";
 
     cloud_mesh = mesh;
     ROS_INFO("Alignment: mesh to cluster");
@@ -204,15 +204,23 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
     // calculate and set centroid from mesh
     pcl::compute3DCentroid(*aligned_cloud, centroid);
-    current_pose.pose.position.x = centroid.x();
-    current_pose.pose.position.y = centroid.y();
-    current_pose.pose.position.z = centroid.z();
+
+    geometry_msgs::PointStamped p1,p2;
+    p1.header.frame_id = kinect_frame;
+    p1.point.x = centroid.x();
+    p1.point.y = centroid.y();
+    p1.point.z = centroid.z();
+    t_listener.transformPoint(map, p1,p2);
+
+    current_pose.pose.position.x = p2.point.x;
+    current_pose.pose.position.y = p2.point.y;
+    current_pose.pose.position.z = p2.point.z;
+
 
 
     // set original quaternion
     current_pose.pose.orientation = quat_msg.quaternion;
 
-    
 /*
     std::string map = "map";
     t_listener.transformPose(map, current_pose, map_pose);
@@ -840,6 +848,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
                         mesh(new PointCloudRGB);
 
 
+
     if (label == "PringlesPaprika") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *mesh);
 
@@ -865,7 +874,6 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
 
-    // mesh->header.frame_id = "map";
 
     return mesh;
 }
