@@ -193,7 +193,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
     // create original quaternion
     global_tf_rotation.getEulerYPR(z, y, x);
-    quat_tf.setEuler(z, y, x);
+    quat_tf.setEuler(z, y+M_PI, x);
     quat_tf.normalize();
 
     quat_msg.header.frame_id = "map";
