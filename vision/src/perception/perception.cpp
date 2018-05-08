@@ -221,6 +221,9 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     quat_msg.quaternion.z = quat_tf.z();
     quat_msg.quaternion.w = quat_tf.w();
     global_plane_normals = estimateSurfaceNormals(global_plane);
+
+    //TODO ObjectAligned Function
+    /*
     if (!isObjectAlignedToPlane(global_plane_normals, quat_msg.quaternion )){
         ROS_INFO("Quaternion upside down, correcting...");
         quat_tf.setEuler(z, y+M_PI, x);
@@ -232,7 +235,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
         quat_msg.quaternion.z = quat_tf.z();
         quat_msg.quaternion.w = quat_tf.w();
     }
-
+*/
     ROS_INFO("Quaternion ready ");
 
 
@@ -1013,7 +1016,7 @@ PointCloudRGBPtr rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr ta
 
         // compare
 
-        if (n.normal_z > quaternion.z + threshold || n.normal_z < quaternion.z + threshold) {
+        if (n.normal_z > quaternion.z + threshold || n.normal_z < quaternion.z - threshold) {
             is_aligned = false;
         } else {
             is_aligned = true;
