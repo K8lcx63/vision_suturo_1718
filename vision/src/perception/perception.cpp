@@ -212,6 +212,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     quat_tf.setEuler(z, y, x);
     quat_tf.normalize();
     quat_msg.header.frame_id = "map";
+    quat_msg.header.stamp = ros::Time(0);
     quat_msg.quaternion.x = quat_tf.x();
     quat_msg.quaternion.y = quat_tf.y();
     quat_msg.quaternion.z = quat_tf.z();
@@ -221,6 +222,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
         quat_tf.setEuler(z, y+M_PI, x);
         quat_tf.normalize();
         quat_msg.header.frame_id = "map";
+        quat_msg.header.stamp = ros::Time(0);
         quat_msg.quaternion.x = quat_tf.x();
         quat_msg.quaternion.y = quat_tf.y();
         quat_msg.quaternion.z = quat_tf.z();
