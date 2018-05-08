@@ -465,6 +465,7 @@ PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
         point.rgba = input->points[i].rgba;
         result->push_back(point);
     }
+    ROS_INFO("size: %d", result->size());
     ROS_INFO("Finished MLS Filter!");
     return result;
 }
@@ -482,6 +483,7 @@ PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input) {
     sor.setInputCloud(input);
     sor.setLeafSize(0.005f, 0.005f, 0.005f);
     sor.filter(*result);
+    ROS_INFO("size: %d", result->size());
     return result;
 }
 
