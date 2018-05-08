@@ -536,8 +536,8 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
 
     PointIndicesVector cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
-    ec.setClusterTolerance(0.01); // 4cm
-    ec.setMinClusterSize(300);
+    ec.setClusterTolerance(0.01);
+    ec.setMinClusterSize(200);
     ec.setMaxClusterSize(25000);
     ec.setSearchMethod(tree);
     ec.setInputCloud(input);
