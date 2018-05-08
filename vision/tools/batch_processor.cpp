@@ -256,7 +256,7 @@ void batchPCD2histograms(std::string input) {
 
             pcl::VoxelGrid<pcl::PointXYZRGB> sor;
             sor.setInputCloud(input_sampler);
-            sor.setLeafSize(0.0025f, 0.0025f, 0.0025f); //from 0.005 (perception) zu
+            sor.setLeafSize(0.0025f, 0.0025f, 0.0025f); //from 0.0025 (perception) zu
             sor.filter(*input_cloud);
             // prepare files
             std::cout << "cloud size is: " << input_cloud->size() << std::endl;
