@@ -229,7 +229,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
         quat_msg.quaternion.z = quat_tf.z();
         quat_msg.quaternion.w = quat_tf.w();
     }
-*/ //
+*/ 
     ROS_INFO("Quaternion ready ");
 
 
