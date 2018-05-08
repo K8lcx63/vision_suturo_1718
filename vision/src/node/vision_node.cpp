@@ -169,7 +169,6 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
         }
 
         classifier_results.push_back(my_classifier.classify(single_color_features, single_cvfh_features));
-        ROS_INFO("This is a %s", classifier_results[a].c_str());
     }
 
     // estimate poses (quaternions)

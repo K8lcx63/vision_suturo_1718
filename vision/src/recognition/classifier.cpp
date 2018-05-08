@@ -171,13 +171,19 @@ std::string classifier::classify(std::vector<uint64_t> color_features, std::vect
         ROS_INFO("Combined: %d percent of votes for %s", combined_highest_vote_amount, labels[combined_prediction_result].c_str());
 
 
-        ROS_INFO("This is a %d", combined_prediction_result);
+        if(combined_highest_vote_amount > 19){
+            ROS_INFO("This is a %s", labels[combined_prediction_result].c_str());
+        }
+        else{
+            ROS_INFO("This is either a %s, or not an object in our dataset.", labels[combined_prediction_result].c_str());
+        }
+
         return labels[combined_prediction_result];
     }
     else{
         ROS_ERROR("ERROR: Classifier hasn't been trained, or something went wrong while training!");
+        return "";
     }
-    return "";
 }
 
 /**
