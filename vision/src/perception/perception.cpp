@@ -28,10 +28,12 @@ enum mesh_enum {
 
 Eigen::Matrix<float,4,4> rot_mat;
 
-PointCloudRGBPtr cloud_global(new PointCloudRGB);
-PointCloudRGBPtr cloud_perceived(new PointCloudRGB);
-PointCloudRGBPtr cloud_aligned(new PointCloudRGB);
-PointCloudRGBPtr cloud_mesh(new PointCloudRGB);
+PointCloudRGBPtr cloud_global(new PointCloudRGB),
+                 cloud_perceived(new PointCloudRGB),
+                 cloud_aligned(new PointCloudRGB),
+                 cloud_mesh(new PointCloudRGB),
+                 global_plane(new PointCloudRGB);
+PointCloudNormalPtr global_plane_normals;
 geometry_msgs::PoseStamped pose_global;
 
 Eigen::Matrix4f global_first_transformation;
@@ -73,13 +75,26 @@ PointCloudRGBPtr segmentPlanes(PointCloudRGBPtr cloud_cluster) {
     int segmentations_amount = 0;
     int plane_size_threshold = 8000;
     PointIndices plane_indices(new pcl::PointIndices);
+    int c = 0;
     for (int n = 0; loop_segmentations; n++) {
         plane_indices = estimatePlaneIndices(cloud_cluster);
+        global_plane = cloud_cluster;
+
         if (plane_indices->indices.size() > plane_size_threshold)         // is the extracted plane big enough?
         {
+
+            if ( c < 1) {
+                global_plane = extractCluster(global_plane, plane_indices, false);
+                c++;
+
+            }
+
             ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
             ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
             cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
+
+
+
             n++;
         } else loop_segmentations = false;          // if not big enough, stop looping.
         segmentations_amount = n;
@@ -190,17 +205,30 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     aligned_cloud = iterativeClosestPoint(mesh, input);
     cloud_aligned = aligned_cloud;
 
+// compare normals and quaternion
 
     // create original quaternion
     global_tf_rotation.getEulerYPR(z, y, x);
-    quat_tf.setEuler(z, y+M_PI, x);
+    quat_tf.setEuler(z, y, x);
     quat_tf.normalize();
-
     quat_msg.header.frame_id = "map";
     quat_msg.quaternion.x = quat_tf.x();
     quat_msg.quaternion.y = quat_tf.y();
     quat_msg.quaternion.z = quat_tf.z();
     quat_msg.quaternion.w = quat_tf.w();
+    global_plane_normals = estimateSurfaceNormals(global_plane);
+    if (!isObjectAlignedToPlane(global_plane_normals, quat_msg.quaternion )){
+        quat_tf.setEuler(z, y+M_PI, x);
+        quat_tf.normalize();
+        quat_msg.header.frame_id = "map";
+        quat_msg.quaternion.x = quat_tf.x();
+        quat_msg.quaternion.y = quat_tf.y();
+        quat_msg.quaternion.z = quat_tf.z();
+        quat_msg.quaternion.w = quat_tf.w();
+    }
+
+
+
 
     // calculate and set centroid from mesh
     pcl::compute3DCentroid(*aligned_cloud, centroid);
@@ -210,8 +238,9 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     p1.point.x = centroid.x();
     p1.point.y = centroid.y();
     p1.point.z = centroid.z();
-    t_listener.transformPoint(map, p1,p2);
 
+    // transform point
+    t_listener.transformPoint(map, p1,p2);
     current_pose.pose.position.x = p2.point.x;
     current_pose.pose.position.y = p2.point.y;
     current_pose.pose.position.z = p2.point.z;
@@ -531,7 +560,7 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
          it != cluster_indices.end(); ++it) {
         PointCloudRGBPtr cloud_cluster(new PointCloudRGB);
         for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
-            cloud_cluster->points.push_back(input->points[*pit]); //*
+            cloud_cluster->points.push_back(input->points[*pit]);
         cloud_cluster->width = cloud_cluster->points.size();
         cloud_cluster->height = 1;
         cloud_cluster->is_dense = true;
