@@ -189,12 +189,10 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
 
     // add header and time
-    ROS_INFO("Add header and time to pose");
     current_pose.header.frame_id = "map";
     current_pose.header.stamp = ros::Time(0);
 
     // Calculate quaternions
-    ROS_INFO("Acquiring mesh");
     mesh = getTargetByLabel(label, centroid);
 
     std::string map = "map";
@@ -209,13 +207,11 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
 // compare normals and quaternion
 
-    ROS_INFO("Calculate Quaternion from rotation matrix");
     // create original quaternion
     global_tf_rotation.getEulerYPR(z, y, x);
     quat_tf.setEuler(z, y, x);
     quat_tf.normalize();
     quat_msg.header.frame_id = "map";
-    quat_msg.header.stamp = ros::Time(0);
     quat_msg.quaternion.x = quat_tf.x();
     quat_msg.quaternion.y = quat_tf.y();
     quat_msg.quaternion.z = quat_tf.z();
@@ -225,11 +221,9 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     //TODO ObjectAligned Function
     /*
     if (!isObjectAlignedToPlane(global_plane_normals, quat_msg.quaternion )){
-        ROS_INFO("Quaternion upside down, correcting...");
         quat_tf.setEuler(z, y+M_PI, x);
         quat_tf.normalize();
         quat_msg.header.frame_id = "map";
-        quat_msg.header.stamp = ros::Time(0);
         quat_msg.quaternion.x = quat_tf.x();
         quat_msg.quaternion.y = quat_tf.y();
         quat_msg.quaternion.z = quat_tf.z();
@@ -240,7 +234,6 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
 
 
-    ROS_INFO("Calculate centroid");
     // calculate and set centroid from mesh
     pcl::compute3DCentroid(*aligned_cloud, centroid);
 
@@ -250,7 +243,6 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     p1.point.y = centroid.y();
     p1.point.z = centroid.z();
 
-    ROS_INFO("Set centroid (Pose)");
     // transform point
     t_listener.transformPoint(map, p1,p2);
     current_pose.pose.position.x = p2.point.x;
@@ -260,7 +252,6 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
 
     // set original quaternion
-    ROS_INFO("Set Quaternion (Pose)");
     current_pose.pose.orientation = quat_msg.quaternion;
 
 /*
@@ -680,7 +671,7 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     icp.setInputTarget(target);
     icp.setRANSACIterations(20000);
     icp.setMaximumIterations(20000);
-    icp.setMaxCorrespondenceDistance(5.0f); // set Max distance btw source <-> target to include into estimation
+    icp.setMaxCorrespondenceDistance(3.0f); // set Max distance btw source <-> target to include into estimation
 
     PointCloudRGBPtr final(new PointCloudRGB);
     icp.align(*final);
