@@ -38,6 +38,7 @@ geometry_msgs::PoseStamped pose_global;
 
 Eigen::Matrix4f global_first_transformation;
 Eigen::Vector4f global_centroid;
+float xyz_centroid[3];
 
 
 
@@ -173,114 +174,68 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
  */
 geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string label) {
     // instantiate objects for results
-    PointCloudRGBPtr aligned_cloud(new PointCloudRGB),
-                     icp_cloud(new PointCloudRGB),
-            mesh_orig(new PointCloudRGB),
-            mesh(new PointCloudRGB);
-    geometry_msgs::PoseStamped current_pose,
-                               map_pose;
-    tf::Quaternion quat_tf,
-                   quat_tf_map;
-    geometry_msgs::QuaternionStamped quat_msg,
-                                     quat_msg_map;
-    Eigen::Vector4f centroid, centroid_map;
+
+    geometry_msgs::PoseStamped current_pose, map_pose;
+    tf::Quaternion quat_tf;
+    geometry_msgs::QuaternionStamped quat_msg;
+    Eigen::Vector4f centroid;
     double x,y,z;
     tf::TransformListener t_listener;
-
-
-    // add header and time
-    current_pose.header.frame_id = "map";
-    current_pose.header.stamp = ros::Time(0);
-
-    // Calculate quaternions
-    mesh = getTargetByLabel(label, centroid);
 
     std::string map = "map";
     std::string kinect_frame = "head_mount_kinect_rgb_optical_frame";
 
-    cloud_mesh = mesh;
+    // add header and time
+    current_pose.header.stamp = ros::Time(0);
+    current_pose.header.frame_id = kinect_frame;
+
+    // Calculate quaternions
+    cloud_mesh = getTargetByLabel(label, centroid);
+
+
     ROS_INFO("Alignment: mesh to cluster");
 
     // initial alignment
-    aligned_cloud = iterativeClosestPoint(mesh, input);
-    cloud_aligned = aligned_cloud;
+    cloud_aligned = iterativeClosestPoint(cloud_mesh, input);
 
 // compare normals and quaternion
 
     // create original quaternion
-    global_tf_rotation.getEulerYPR(z, y, x);
-    quat_tf.setEuler(z, y, x);
-    quat_tf.normalize();
-    quat_msg.header.frame_id = "map";
+
+//    global_tf_rotation.getEulerYPR(z, y, x);
+//    quat_tf.setEuler(z, y, x);
+    tf::StampedTransform t_transform, z_up_transform;
+    t_transform.setBasis(global_tf_rotation);
+    quat_tf = t_transform.getRotation();
     quat_msg.quaternion.x = quat_tf.x();
     quat_msg.quaternion.y = quat_tf.y();
     quat_msg.quaternion.z = quat_tf.z();
     quat_msg.quaternion.w = quat_tf.w();
-    global_plane_normals = estimateSurfaceNormals(global_plane);
 
-    //TODO ObjectAligned Function
-    /*
-    if (!isObjectAlignedToPlane(global_plane_normals, quat_msg.quaternion )){
-        quat_tf.setEuler(z, y+M_PI, x);
-        quat_tf.normalize();
-        quat_msg.header.frame_id = "map";
-        quat_msg.quaternion.x = quat_tf.x();
-        quat_msg.quaternion.y = quat_tf.y();
-        quat_msg.quaternion.z = quat_tf.z();
-        quat_msg.quaternion.w = quat_tf.w();
-    }
-*/ 
+
+
     ROS_INFO("Quaternion ready ");
 
 
-
     // calculate and set centroid from mesh
-    pcl::compute3DCentroid(*aligned_cloud, centroid);
+    pcl::compute3DCentroid(*cloud_aligned, centroid);
+    current_pose.pose.position.x = xyz_centroid[0];
+    current_pose.pose.position.y = xyz_centroid[1];
+    current_pose.pose.position.z = xyz_centroid[2];
 
-    geometry_msgs::PointStamped p1,p2;
-    p1.header.frame_id = kinect_frame;
-    p1.point.x = centroid.x();
-    p1.point.y = centroid.y();
-    p1.point.z = centroid.z();
-
-    // transform point
-    t_listener.transformPoint(map, p1,p2);
-    current_pose.pose.position.x = p2.point.x;
-    current_pose.pose.position.y = p2.point.y;
-    current_pose.pose.position.z = p2.point.z;
 
 
 
     // set original quaternion
+
+
     current_pose.pose.orientation = quat_msg.quaternion;
-
-/*
-    std::string map = "map";
-    t_listener.transformPose(map, current_pose, map_pose);
-    map_pose.header.frame_id = map;
-    map_pose.header.stamp = ros::Time(0);
-    //current_pose = map_pose;
-
-    quat_tf_map.setEuler(z, y+M_PI, x);
-    quat_tf_map.normalize();
-
-    // create message quaternion
-    //quat_msg_map.header.frame_id = "map";
-    quat_msg_map.quaternion.x = quat_tf_map.x();
-    quat_msg_map.quaternion.y = quat_tf_map.y();
-    quat_msg_map.quaternion.z = quat_tf_map.z();
-    quat_msg_map.quaternion.w = quat_tf_map.w();
-
-    map_pose.pose.orientation = quat_msg_map.quaternion;
+    //t_listener.transformPose(map,current_pose, map_pose);
 
 
-    map_pose.pose.position.x = centroid.x();
-    map_pose.pose.position.y = centroid.y();
-    map_pose.pose.position.z = centroid.z();
 
 
-    pose_global = map_pose;
-*/
+
     pose_global = current_pose;
     return current_pose;
 }
@@ -669,9 +624,8 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     pcl::IterativeClosestPoint<pcl::PointXYZRGB, pcl::PointXYZRGB> icp;
     icp.setInputSource(input);
     icp.setInputTarget(target);
-    icp.setRANSACIterations(20000);
     icp.setMaximumIterations(20000);
-    icp.setMaxCorrespondenceDistance(3.0f); // set Max distance btw source <-> target to include into estimation
+    icp.setMaxCorrespondenceDistance(6.0f); // set Max distance btw source <-> target to include into estimation
 
     PointCloudRGBPtr final(new PointCloudRGB);
     icp.align(*final);
@@ -689,6 +643,19 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
                               transformation(2,0),
                               transformation(2,1),
                               transformation(2,2));
+
+//    tf::Matrix3x3 tf_rotation(transformation(0,0),
+//                              transformation(1,0),
+//                              transformation(2,0),
+//                              transformation(0,1),
+//                              transformation(1,1),
+//                              transformation(2,1),
+//                              transformation(0,2),
+//                              transformation(1,2),
+//                              transformation(2,2));
+    xyz_centroid[0] = transformation(0,3);
+    xyz_centroid[1] = transformation(1,3);
+    xyz_centroid[2]= transformation(2,3);
 
 
     global_tf_rotation = tf_rotation;
@@ -902,7 +869,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/koelln_muesli_knusper_honig_nuss.pcd",
                              *mesh);
     } else if (label == "KelloggsToppasMini") {
-        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.pcd", *mesh);
+        pcl::io::loadPLYFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.ply", *mesh);
     } else if (label == "HelaCurryKetchup") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/hela_curry_ketchup.pcd", *mesh);
     } else if (label == "CupEcoOrange") {
@@ -1020,4 +987,40 @@ PointCloudRGBPtr rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr ta
         return is_aligned;
 
     }
+
+pcl::PointCloud<pcl::PointNormal>::Ptr createPointNormals(PointCloudRGBPtr cloud, pcl::PointCloud<pcl::Normal>::Ptr normals){
+    pcl::PointCloud<pcl::PointNormal>::Ptr result (new pcl::PointCloud<pcl::PointNormal>);
+
+    if (cloud->size() != normals->size()){
+        ROS_INFO("Cloud and normals differ in size!");
+    }
+    for (int i = 0 ; i < cloud->size(); i++){
+        pcl::PointNormal pn ;
+        pcl::PointXYZRGB p = cloud->points[i];
+        pcl::Normal n = normals->points[i];
+        ROS_INFO("Point instantiation OKAY");
+        pn.x = p.x;
+        pn.y = p.y;
+        pn.z = p.z;
+        pn.data[3] = 1.0f;
+        ROS_INFO("Point  OKAY");
+
+        pn.normal_x = n.normal_x;
+        pn.normal_y = n.normal_y;
+        pn.normal_z = n.normal_z;
+        pn.data_n[3] = 0.0f;
+        pn.curvature = n.curvature;
+        ROS_INFO("Normal OKAY");
+
+
+
+        result->push_back( pn);
+        ROS_INFO("declaration OKAY");
+
+    }
+
+    return result;
+}
+
+
 
