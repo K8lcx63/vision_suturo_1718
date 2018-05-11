@@ -190,8 +190,6 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     current_pose.header.frame_id = kinect_frame;
 
     // Calculate quaternions
-    pcl::compute3DCentroid(*input, centroid);
-
     cloud_mesh = getTargetByLabel(label, centroid);
 
 
@@ -221,7 +219,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     double thresh = 0.2;
     double sweetspot = 1.3;
 
-    // check orientation
+    // check orientation 
     if ((abs(quat_tf.w()) + abs(quat_tf.z())) > (sweetspot - thresh) || (abs(quat_tf.w()) + abs(quat_tf.z())) < (sweetspot + thresh)){
         quat_rot.setX(0.0);
         quat_rot.setY(0.0);
@@ -238,6 +236,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
 
     // calculate and set centroid from mesh
+    pcl::compute3DCentroid(*cloud_aligned, centroid);
     current_pose.pose.position.x = xyz_centroid[0];
     current_pose.pose.position.y = xyz_centroid[1];
     current_pose.pose.position.z = xyz_centroid[2];
@@ -670,7 +669,7 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
     icp.setInputSource(input);
     icp.setInputTarget(target);
     icp.setMaximumIterations(20000);
-    icp.setMaxCorrespondenceDistance(0.3f); // set Max distance btw source <-> target to include into estimation
+    icp.setMaxCorrespondenceDistance(6.0f); // set Max distance btw source <-> target to include into estimation
 
     PointCloudRGBPtr final(new PointCloudRGB);
     icp.align(*final);
@@ -921,11 +920,8 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid) {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
 
-    Eigen::Affine3f transform;
-    transform.translation() << centroid.x(), centroid.y(), centroid.z();
-    pcl::transformPointCloud(*mesh,*result, transform);
 
-    return result;
+    return mesh;
 }
 
 
