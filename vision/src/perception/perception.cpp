@@ -865,7 +865,6 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/sigg_bottle.pcd", *mesh);
     } else if (label == "JaMilch") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/ja_milch.pcd", *mesh);
-        ROS_INFO("THIS IS A JA MILCH!");
     } else if (label == "TomatoSauceOroDiParma") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/tomato_sauce_oro_di_parma.pcd", *mesh);
     } else if (label == "KoellnMuesliKnusperHonigNuss") {
