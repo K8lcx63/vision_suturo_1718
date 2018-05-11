@@ -157,7 +157,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         obj_files << "object_" << i;
         savePointCloudRGBNamed(result[i], obj_files.str());
     }
-    
+
 
 
     return result;
@@ -176,12 +176,12 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     tf::Quaternion quat_tf, quat_rot;
     geometry_msgs::QuaternionStamped quat_msg;
     Eigen::Vector4f centroid;
-    double x, y, z;
     tf::TransformListener t_listener;
 
     std::string map = "map";
     std::string kinect_frame = "head_mount_kinect_rgb_optical_frame";
 
+    ROS_INFO("Starting pose estimatation");
     // add header and time
     current_pose.header.stamp = ros::Time(0);
     current_pose.header.frame_id = kinect_frame;
@@ -189,18 +189,20 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     // Calculate quaternions
     cloud_mesh = getTargetByLabel(label, centroid);
 
-
-    ROS_INFO("Alignment: mesh to cluster");
-
+    ROS_INFO("Alignment...");
     // initial alignment
     cloud_aligned = iterativeClosestPoint(cloud_mesh, input);
 
-    // compare normals and quaternion
+    ROS_INFO("Calculating centroid");
+    // calculate and set centroid from mesh
+    pcl::compute3DCentroid(*cloud_aligned, centroid);
+    current_pose.pose.position.x = centroid.x();
+    current_pose.pose.position.y = centroid.y();
+    current_pose.pose.position.z = centroid.z();
 
-    // create original quaternion
+    ROS_INFO("Calculating quaternion");
 
-    // global_tf_rotation.getEulerYPR(z, y, x);
-    // quat_tf.setEuler(z, y, x);
+    // calculate quaternion
     tf::StampedTransform t_transform, map_transform, rotated_transform;
 
     t_transform.setBasis(global_tf_rotation);
@@ -212,12 +214,13 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     quat_msg.quaternion.w = quat_tf.w();
 
 
-    ROS_INFO("Quaternion ready ");
-    double thresh = 0.2;
+    double thresh = 0.3;
     double sweetspot = 1.3;
 
     // check orientation 
-    if ((abs(quat_tf.w()) + abs(quat_tf.z())) > (sweetspot - thresh) || (abs(quat_tf.w()) + abs(quat_tf.z())) < (sweetspot + thresh)){
+    if (abs(quat_tf.x()) > 0.7){
+        ROS_INFO("Wrong rotation! Flipping quaternion");
+
         quat_rot.setX(0.0);
         quat_rot.setY(0.0);
         quat_rot.setZ(-1.0);
@@ -231,51 +234,12 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
         quat_msg.quaternion.w = quat_tf.w();
     }
 
-
-    // calculate and set centroid from mesh
-    pcl::compute3DCentroid(*cloud_aligned, centroid);
-    current_pose.pose.position.x = xyz_centroid[0];
-    current_pose.pose.position.y = xyz_centroid[1];
-    current_pose.pose.position.z = xyz_centroid[2];
-
-
-//    map_transform.stamp_ = ros::Time(0);
-//    t_listener.lookupTransform(map,kinect_frame,ros::Time(0),map_transform);
-//
-//    double xt,yt,zt,xm,ym,zm;
-//    map_pose.header.stamp = ros::Time(0);
-//    t_listener.transformPose(map,current_pose,map_pose);
-//
-//
-//    map_pose.pose.orientation.x = 0.0;
-//    map_pose.pose.orientation.y = 0.0;
-//    map_pose.pose.orientation.z = 0.0;
-//    map_pose.pose.orientation.w = 1.0;
-//
+    ROS_INFO("Quaternion ready ");
+    current_pose.pose.orientation = quat_msg.quaternion;
 
     pose_map_global = map_pose;
-//    t_transform.getBasis().getEulerYPR(zt,yt,xt);
-//    map_transform.getBasis().getEulerYPR(zm,ym,xm);
-//
-//
-//    std::cout << "object: x(" << xt << ") y(" << yt << ") z(" << zt << ")" << " w(" << t_transform.getRotation().w() << ")" << std::endl;
-//    std::cout << "map:  x(" << xm << ") y(" << ym << ") z(" << zm << ")" << " w(" << map_transform.getRotation().w() << ")" << std::endl;
-
-    //    double degree = 180;
-    //    tf::Matrix3x3 transformation_x(1.0,0.0,0.0,0.0,cos(degree),sin(degree),0.0,-sin(degree),cos(degree)); //rotate degree around x-axis
-
-
-    // set original quaternion
-
-
-    current_pose.pose.orientation = quat_msg.quaternion;
-    //t_listener.transformPose(map,current_pose, map_pose);
-
-
-
-
-
     pose_global = current_pose;
+
     ROS_INFO("POSE ESTIMATION DONE");
     return current_pose;
 }
