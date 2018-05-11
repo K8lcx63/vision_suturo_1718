@@ -93,7 +93,7 @@ bool classifier::train(std::string directory, bool update) {
             random_trees_color_classifier->save("random_trees_color_save");
             random_trees_cvfh_classifier->save("random_trees_cvfh_save");
 
-            ROS_INFO("The trained classifiers have been saved."
+            ROS_INFO("The trained classifiers have been saved. "
                              "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
 
     }
