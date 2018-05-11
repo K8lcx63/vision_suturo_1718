@@ -24,7 +24,7 @@ PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
     ROS_INFO("Removing points below the ground plane...");
     PointCloudRGBPtr cloud_odom_combined(new PointCloudRGB);
 
-    cloud_odom_combined = CloudTransformer::transform(input, "map", "head_mount_kinect_rgb_optical_frame");
+    cloud_odom_combined = CloudTransformer::transform(input, "base_link", "head_mount_kinect_rgb_optical_frame");
 
     // Find the bottom plane
     PointIndices planeIndices(new pcl::PointIndices);
@@ -101,7 +101,7 @@ PointCloudRGBPtr CloudTransformer::extractAbovePlane(PointCloudRGBPtr input) {
 
 
     PointCloudRGBPtr result_transformed_back (new PointCloudRGB);
-    result_transformed_back = CloudTransformer::transform(result, "head_mount_kinect_rgb_optical_frame", "map");
+    result_transformed_back = CloudTransformer::transform(result, "head_mount_kinect_rgb_optical_frame", "base_link");
     return result_transformed_back;
 
 
