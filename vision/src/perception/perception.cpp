@@ -204,7 +204,8 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
 
 //    global_tf_rotation.getEulerYPR(z, y, x);
 //    quat_tf.setEuler(z, y, x);
-    tf::StampedTransform t_transform, z_up_transform;
+    tf::StampedTransform t_transform, z_up_transform, rotated_transform;
+
     t_transform.setBasis(global_tf_rotation);
     quat_tf = t_transform.getRotation();
     quat_msg.quaternion.x = quat_tf.x();
@@ -224,6 +225,8 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     current_pose.pose.position.z = xyz_centroid[2];
 
 
+//    double degree = 180;
+//    tf::Matrix3x3 transformation_x(1.0,0.0,0.0,0.0,cos(degree),sin(degree),0.0,-sin(degree),cos(degree)); //rotate degree around x-axis
 
 
     // set original quaternion
@@ -869,7 +872,7 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid){
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/koelln_muesli_knusper_honig_nuss.pcd",
                              *mesh);
     } else if (label == "KelloggsToppasMini") {
-        pcl::io::loadPLYFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.ply", *mesh);
+        pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/kelloggs_toppas_mini.pcd", *mesh);
     } else if (label == "HelaCurryKetchup") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/hela_curry_ketchup.pcd", *mesh);
     } else if (label == "CupEcoOrange") {
