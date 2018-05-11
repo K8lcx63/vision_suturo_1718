@@ -4,85 +4,81 @@
 
 #include "classifier.h"
 
-/** std::string labels[2] = {  "CupEcoOrange",
-                            "EdekaRedBowl",}; **/
-
 
 classifier::classifier(){
     random_trees_color_classifier = cv::ml::RTrees::create();
-    random_trees_color_classifier->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 50, 0.02));
+    random_trees_color_classifier->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 50, 0.02)); // 50 trees
     random_trees_cvfh_classifier = cv::ml::RTrees::create();
     random_trees_cvfh_classifier->setTermCriteria(TermCriteria(TermCriteria::MAX_ITER, 50, 0.02));
 }
 
 /**
- * Trains a single PointCloud.
- * @param cloud: A partial view PointCloud of an object
- * @param label_index: The label of this object as an index from mesh_enum in perception.cpp
- * @param update: True keeps previous training data
+ * Trains using .csv files in all sub-directories of the given path. Every sub-directory should be named after its according label.
+ * @param directory: The directory that contains said sub-directories
+ * @param update: True causes the classifier to train again. False causes it to load data that has been trained in a previous run.
  * @return Whether the training was successful
  */
 
 bool classifier::train(std::string directory, bool update) {
+    if(!update) { // If the classifier is not supposed to be updated, just load the saved classifier data.
+        random_trees_color_classifier = cv::ml::RTrees::load(pkg_path + "/random_trees_color_save");
+        random_trees_cvfh_classifier = cv::ml::RTrees::load(pkg_path + "/random_trees_cvfh_save");
+        ROS_INFO("%sLoading of training data finished!\n", "\x1B[32m");
+    }
+    else {
+        // Iterate through all directories, with one directory for each object
+        for (int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
+            std::string current_directory = directory + "/" + labels[label_index]; // Directory for this object
+            ROS_INFO("Finding the .csv files in the given directory...");
+            DIR *dir = opendir(current_directory.c_str());
+            struct dirent *ent;
+            if (dir) {
+                ROS_INFO("Directory found");
+                while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
+                    if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
+                    } else {
+                        printf("%s\n", ent->d_name);
+                        std::vector<float> color_parsedCsv;
+                        std::vector<float> cvfh_parsedCsv;
 
-        if(!update) { // If the classifier is not supposed to be updated, just load the saved classifier data.
-            random_trees_color_classifier = cv::ml::RTrees::load("random_trees_color_save");
-            random_trees_cvfh_classifier = cv::ml::RTrees::load("random_trees_cvfh_save");
+                        std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
 
-        }
-        else {
-            // Iterate through all directories, with one directory for each object
-            for (int label_index = 0; label_index < (sizeof(labels) / 8); label_index++) {
-                std::string current_directory = directory + "/" + labels[label_index]; // Directory for this object
-                ROS_INFO("Finding the .csv files in the given directory...");
-                DIR *dir = opendir(current_directory.c_str());
-                struct dirent *ent;
-                if (dir) {
-                    ROS_INFO("Directory found");
-                    while ((ent = readdir(dir)) != NULL) { // Read every .csv one by one
-                        if (!has_suffix(ent->d_name, "colors_histogram.csv")) {
-                        } else {
-                            printf("%s\n", ent->d_name);
-                            std::vector<float> color_parsedCsv;
-                            std::vector<float> cvfh_parsedCsv;
+                        color_parsedCsv = read_from_file(full_path, color_parsedCsv); // Put color features into parsedCsv
 
-                            std::string full_path = current_directory + "/" + ent->d_name; // Path of this .csv file
+                        // Now find the correct CVFH-feature .csv
+                        const std::string ext("colors_histogram.csv");
+                        full_path = full_path.substr(0, full_path.size() -
+                                                        ext.size()); // Remove "colors_histogram.csv"
+                        full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
 
-                            color_parsedCsv = read_from_file(full_path, color_parsedCsv); // Put color features into parsedCsv
-
-                            // Now find the correct CVFH-feature .csv
-                            const std::string ext("colors_histogram.csv");
-                            full_path = full_path.substr(0, full_path.size() -
-                                                            ext.size()); // Remove "colors_histogram.csv"
-                            full_path = full_path + "normals_histogram.csv"; // Add "normals_histogram.csv"
-
-                            cvfh_parsedCsv = read_from_file(full_path, cvfh_parsedCsv); // Add cvfh features to parsedCsv
-
-
-                            std::vector<float> color_parsedCsv_normalized;
-                            std::vector<float> cvfh_parsedCsv_normalized;
-
-                            normalize(color_parsedCsv, color_parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
-                            normalize(cvfh_parsedCsv, cvfh_parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
+                        cvfh_parsedCsv = read_from_file(full_path, cvfh_parsedCsv); // Add cvfh features to parsedCsv
 
 
-                            for (int parsedCsv_index = 0; parsedCsv_index < color_parsedCsv_normalized.size(); parsedCsv_index++) {
-                                // Fill in sample
-                                color_training_data.at<float>(sample_counter, parsedCsv_index) = color_parsedCsv_normalized[parsedCsv_index];
-                                //ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
-                            }
-                            for (int parsedCsv_index = 0; parsedCsv_index < cvfh_parsedCsv_normalized.size(); parsedCsv_index++) {
-                                // Fill in sample
-                                cvfh_training_data.at<float>(sample_counter, parsedCsv_index) = cvfh_parsedCsv_normalized[parsedCsv_index];
-                                //ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
-                            }
+                        std::vector<float> color_parsedCsv_normalized;
+                        std::vector<float> cvfh_parsedCsv_normalized;
 
-                            responses.at<int>(sample_counter) = label_index; // Set label of this sample
-                            sample_counter++;
+                        normalize(color_parsedCsv, color_parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
+                        normalize(cvfh_parsedCsv, cvfh_parsedCsv_normalized, 1, 0, NORM_L1); // Normalize training data
+
+
+                        for (int parsedCsv_index = 0; parsedCsv_index < color_parsedCsv_normalized.size(); parsedCsv_index++) {
+                            // Fill in sample
+                            color_training_data.at<float>(sample_counter, parsedCsv_index) = color_parsedCsv_normalized[parsedCsv_index];
+                            //ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
                         }
+                        for (int parsedCsv_index = 0; parsedCsv_index < cvfh_parsedCsv_normalized.size(); parsedCsv_index++) {
+                            // Fill in sample
+                            cvfh_training_data.at<float>(sample_counter, parsedCsv_index) = cvfh_parsedCsv_normalized[parsedCsv_index];
+                            //ROS_INFO("--%f--", training_data.at<float>(sample_counter, parsedCsv_index));
+                        }
+
+                        responses.at<int>(sample_counter) = label_index; // Set label of this sample
+                        sample_counter++;
                     }
                 }
             }
+        }
+        if(sample_counter > 0){
             cv::Ptr<cv::ml::TrainData> color_data = cv::ml::TrainData::create(color_training_data, cv::ml::ROW_SAMPLE, responses);
             cv::Ptr<cv::ml::TrainData> cvfh_data = cv::ml::TrainData::create(cvfh_training_data, cv::ml::ROW_SAMPLE, responses);
 
@@ -90,21 +86,27 @@ bool classifier::train(std::string directory, bool update) {
             random_trees_color_classifier->train(color_data);
             random_trees_cvfh_classifier->train(cvfh_data);
 
-            random_trees_color_classifier->save("random_trees_color_save");
-            random_trees_cvfh_classifier->save("random_trees_cvfh_save");
+            random_trees_color_classifier->save(pkg_path + "/random_trees_color_save");
+            random_trees_cvfh_classifier->save(pkg_path + "/random_trees_cvfh_save");
 
-            ROS_INFO("The trained classifiers have been saved. "
+            ROS_INFO("The trained classifiers have been saved."
                              "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
+            ROS_INFO("%sTraining finished!\n", "\x1B[32m");
+        }
+        else{
+            ROS_ERROR("Training failed: Can't find any .csv files.");
+            return false;
+        }
 
     }
-    ROS_INFO("%sTraining finished!\n", "\x1B[32m");
     return true;
 }
 
 /**
- * Classifies a single PointCloud using previously trained data.
- * @param cloud: The cloud to classify
- * @return The label of the classified object
+ * Classifies a single PointCloud using its features. classifier::train() has to be successfully called beforehand.
+ * @param color_features: Can be calculated using produceColorHist()
+ * @param cvfh_features: Can be calculated using cvfhRecognition()
+ * @return The label of the classified object. Returns nothing if classifying failed.
  */
 
 std::string classifier::classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {

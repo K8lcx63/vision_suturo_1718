@@ -7,6 +7,7 @@
 #include "../perception/perception.h"
 #include <opencv2/ml.hpp>
 #include <dirent.h>
+#include <ros/package.h>
 
 #include <cv.h>       // opencv general include file
 #include <ml.h>		  // opencv machine learning include file
@@ -37,6 +38,7 @@ private:
                                 "PringlesSalt",                 // 7
                                 "SiggBottle",
                                 "TomatoSauceOroDiParma"};       // 5 - 3 - 6|7
+    std::string pkg_path = ros::package::getPath("vision_suturo");
 
 public:
     classifier();
