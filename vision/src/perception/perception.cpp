@@ -187,7 +187,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     std::string map = "map";
     std::string kinect_frame = "head_mount_kinect_rgb_optical_frame";
 
-    ROS_INFO("Starting pose estimatation");
+    ROS_INFO("Starting pose estimation");
     // add header and time
     current_pose.header.stamp = ros::Time(0);
     current_pose.header.frame_id = kinect_frame;
@@ -220,11 +220,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     quat_msg.quaternion.w = quat_tf.w();
 
 
-    double thresh = 0.3;
-    double sweetspot = 1.3;
-
-    // check orientation 
-    if (abs(quat_tf.x()) > 0.7){
+    if (quat_tf.getAxis().z() > 0.0){
         ROS_INFO("Wrong rotation! Flipping quaternion");
 
         quat_rot.setX(0.0);
