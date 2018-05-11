@@ -80,7 +80,7 @@ extern PointCloudRGBPtr cloud_perceived;
 extern PointCloudRGBPtr cloud_aligned;
 extern PointCloudRGBPtr cloud_mesh;
 
-extern geometry_msgs::PoseStamped pose_global;
+extern geometry_msgs::PoseStamped pose_global, pose_map_global;
 extern tf::Matrix3x3 global_tf_rotation;
 
 extern std::string error_message;
