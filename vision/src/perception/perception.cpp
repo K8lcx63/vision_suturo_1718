@@ -157,7 +157,7 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         obj_files << "object_" << i;
         savePointCloudRGBNamed(result[i], obj_files.str());
     }
-    */
+    
 
 
     return result;
