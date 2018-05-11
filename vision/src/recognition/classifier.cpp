@@ -13,10 +13,9 @@ classifier::classifier(){
 }
 
 /**
- * Trains a single PointCloud.
- * @param cloud: A partial view PointCloud of an object
- * @param label_index: The label of this object as an index from mesh_enum in perception.cpp
- * @param update: True keeps previous training data
+ * Trains using .csv files in all sub-directories of the given path. Every sub-directory should be named after its according label.
+ * @param directory: The directory that contains said sub-directories
+ * @param update: True causes the classifier to train again. False causes it to load data that has been trained in a previous run.
  * @return Whether the training was successful
  */
 
@@ -79,28 +78,35 @@ bool classifier::train(std::string directory, bool update) {
                 }
             }
         }
-        cv::Ptr<cv::ml::TrainData> color_data = cv::ml::TrainData::create(color_training_data, cv::ml::ROW_SAMPLE, responses);
-        cv::Ptr<cv::ml::TrainData> cvfh_data = cv::ml::TrainData::create(cvfh_training_data, cv::ml::ROW_SAMPLE, responses);
+        if(sample_counter > 0){
+            cv::Ptr<cv::ml::TrainData> color_data = cv::ml::TrainData::create(color_training_data, cv::ml::ROW_SAMPLE, responses);
+            cv::Ptr<cv::ml::TrainData> cvfh_data = cv::ml::TrainData::create(cvfh_training_data, cv::ml::ROW_SAMPLE, responses);
 
-        ROS_INFO("Starting to train using the extracted data. This may take a while!");
-        random_trees_color_classifier->train(color_data);
-        random_trees_cvfh_classifier->train(cvfh_data);
+            ROS_INFO("Starting to train using the extracted data. This may take a while!");
+            random_trees_color_classifier->train(color_data);
+            random_trees_cvfh_classifier->train(cvfh_data);
 
-        random_trees_color_classifier->save(pkg_path + "/random_trees_color_save");
-        random_trees_cvfh_classifier->save(pkg_path + "/random_trees_cvfh_save");
+            random_trees_color_classifier->save(pkg_path + "/random_trees_color_save");
+            random_trees_cvfh_classifier->save(pkg_path + "/random_trees_cvfh_save");
 
-        ROS_INFO("The trained classifiers have been saved."
-                         "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
-        ROS_INFO("%sTraining finished!\n", "\x1B[32m");
+            ROS_INFO("The trained classifiers have been saved."
+                             "Setting 'update' to false when starting the node for the next time will cause it to load the data instead of training again!");
+            ROS_INFO("%sTraining finished!\n", "\x1B[32m");
+        }
+        else{
+            ROS_ERROR("Training failed: Can't find any .csv files.");
+            return false;
+        }
 
     }
     return true;
 }
 
 /**
- * Classifies a single PointCloud using previously trained data.
- * @param cloud: The cloud to classify
- * @return The label of the classified object
+ * Classifies a single PointCloud using its features. classifier::train() has to be successfully called beforehand.
+ * @param color_features: Can be calculated using produceColorHist()
+ * @param cvfh_features: Can be calculated using cvfhRecognition()
+ * @return The label of the classified object. Returns nothing if classifying failed.
  */
 
 std::string classifier::classify(std::vector<uint64_t> color_features, std::vector<float> cvfh_features) {
