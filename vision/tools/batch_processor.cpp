@@ -213,6 +213,69 @@ std::vector<uint64_t> produceColorHist(pcl::PointCloud<pcl::PointXYZRGB>::Ptr  c
 
 }
 
+PointCloudRGBPtr mlsFilter(PointCloudRGBPtr input) {
+    PointCloudRGBPtr result(new PointCloudRGB);
+
+    int poly_ord = 1;
+
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
+    pcl::PointCloud<pcl::PointNormal> mls_points;
+    pcl::MovingLeastSquares<pcl::PointXYZRGB, pcl::PointNormal> mls;
+
+    mls.setComputeNormals(true);
+    mls.setInputCloud(input);
+    mls.setPolynomialOrder(poly_ord); // the lower the smoother, the higher the more exact
+    mls.setSearchMethod(tree);
+    mls.setSearchRadius(0.03);
+    mls.process(mls_points);
+
+    for (int i = 0; i < mls_points.size(); i++) {
+        pcl::PointXYZRGB point;
+
+        point.x = mls_points.points[i].x;
+        point.y = mls_points.points[i].y;
+        point.z = mls_points.points[i].z;
+        point.r = input->points[i].r;
+        point.g = input->points[i].g;
+        point.b = input->points[i].b;
+        point.rgb = input->points[i].rgb;
+        point.rgba = input->points[i].rgba;
+        result->push_back(point);
+    }
+    return result;
+}
+
+PointCloudRGBPtr euclideanClusterExtraction(PointCloudRGBPtr input) {
+    pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZRGB>);
+    tree->setInputCloud(input);
+
+    PointIndicesVector cluster_indices;
+    pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
+    ec.setClusterTolerance(0.01);
+    ec.setMinClusterSize(200);
+    ec.setMaxClusterSize(25000);
+    ec.setSearchMethod(tree);
+    ec.setInputCloud(input);
+    ec.extract(cluster_indices);
+
+    std::vector<PointCloudRGBPtr> result;
+
+    int j = 0;
+    for (std::vector<pcl::PointIndices>::const_iterator it = cluster_indices.begin();
+         it != cluster_indices.end(); ++it) {
+        PointCloudRGBPtr cloud_cluster(new PointCloudRGB);
+        for (std::vector<int>::const_iterator pit = it->indices.begin(); pit != it->indices.end(); ++pit)
+            cloud_cluster->points.push_back(input->points[*pit]);
+        cloud_cluster->width = cloud_cluster->points.size();
+        cloud_cluster->height = 1;
+        cloud_cluster->is_dense = true;
+        j++;
+
+        result.push_back(cloud_cluster);
+    }
+    return result[0];
+}
+
 
 void batchPCD2histograms(std::string input) {
     std::ifstream is(input.c_str());
@@ -268,6 +331,9 @@ void batchPCD2histograms(std::string input) {
             //std::string normals_list = line + "_curvature.csv";
             //std::ofstream os_normals_list(normals_list.c_str());
 
+
+            input_cloud = mlsFilter(input_cloud);
+            input_cloud = euclideanClusterExtraction(input_cloud);
 
             // estimate features
 
