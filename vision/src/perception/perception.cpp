@@ -120,13 +120,19 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
             prism_indices(new pcl::PointIndices);
 
     ROS_INFO("Starting Cluster extraction");
+    savePointCloudRGBNamed(kinect, "1_kinect");
 
     cloud_preprocessed = preprocessCloud(kinect);
+    savePointCloudRGBNamed(cloud_preprocessed, "2_cloud_preprocessed");
 
     cloud_preprocessed = transform_cloud.extractAbovePlane(cloud_preprocessed);
+    savePointCloudRGBNamed(cloud_preprocessed, "3_extracted_above_plane");
+
     cloud_cluster = cloud_preprocessed;
 
     cloud_cluster = segmentPlanes(cloud_cluster);
+    savePointCloudRGBNamed(cloud_cluster, "4_cloud_final");
+
     ROS_INFO("Points after segmentation: %lu", cloud_cluster->points.size());
     cloud_global = cloud_cluster;
 
