@@ -4,6 +4,7 @@
 
 #include "vision_node.h"
 #include <tf/transform_broadcaster.h>
+
 const char *SIM_KINECT_POINTS_FRAME = "/head_mount_kinect/depth_registered/points";
 const char *REAL_KINECT_POINTS_FRAME = "/kinect_head/depth_registered/points";
 const char *PCD_KINECT_POINTS_FRAME = "/cloud_pcd";
@@ -39,7 +40,7 @@ void sub_kinect_callback(sensor_msgs::PointCloud2 kinect) {
 
     static tf::TransformBroadcaster br;
     tf::Transform transform;
-    transform.setOrigin( tf::Vector3(pose_global.pose.position.x, pose_global.pose.position.y, 0.0) );
+    transform.setOrigin(tf::Vector3(pose_global.pose.position.x, pose_global.pose.position.y, 0.0));
     tf::Quaternion q;
     q.setRPY(0, 0, pose_global.pose.orientation.z);
     transform.setRotation(q);
@@ -63,13 +64,13 @@ void start_node(int argc, char **argv) {
     ros::Subscriber sub = n.subscribe("object/pose", 10, &sub_kinect_callback);
 
     /** services and clients **/
-
     ros::ServiceServer object_service = n.advertiseService("vision_suturo/objects_information", getObjects);
     ros::ServiceServer pose_service = n.advertiseService("vision_suturo/objects_poses", getPoses);
     ROS_INFO("%sSuturo-Vision: Services ready\n", "\x1B[32m");
 
     // Visualization Publisher for debugging purposes
-    ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/visualization_cloud", 0);
+    ros::Publisher pub_visualization_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/visualization_cloud",
+                                                                                    0);
 
 
     ros::Publisher pub_perceived_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/perceived_object", 0);
@@ -79,6 +80,7 @@ void start_node(int argc, char **argv) {
 
     ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseStamped>("vision_suturo/pose", 0);
 
+    ros::Publisher pub_pose_map = n.advertise<geometry_msgs::PoseStamped>("vision_suturo/pose_map", 0);
 
 
     ros::Rate r(2.0);
@@ -120,7 +122,7 @@ void start_node(int argc, char **argv) {
         pub_aligned_object.publish(cloud_aligned_pub);
 
         pub_pose.publish(pose_global);
-
+        pub_pose_map.publish(pose_map_global);
 
 
         ros::spinOnce();
@@ -140,8 +142,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     // If PR2 is not looking at anything.
     // This causes the whole segmentation and filtering process to be skipped if the cloud is empty
     // or too small to work on.
-    if (scene->points.size() < 500)
-    {
+    if (scene->points.size() < 500) {
         ROS_ERROR("Input from kinect is empty");
         error_message = "Cloud empty. ";
         // res.clouds.object_error = error_message;
@@ -158,7 +159,7 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
     std::vector<float> single_cvfh_features;
     std::vector<uint64_t> single_color_features;
     std::vector<std::string> classifier_results;
-    for(int a = 0; a < all_clusters.size(); a++) { // Get histograms of each object and classify
+    for (int a = 0; a < all_clusters.size(); a++) { // Get histograms of each object and classify
         single_cvfh_features.clear();
         single_color_features.clear();
         for (int b = 0; b < 24; b++) {
@@ -170,10 +171,6 @@ bool getObjects(vision_suturo_msgs::objects::Request &req, vision_suturo_msgs::o
 
         classifier_results.push_back(my_classifier.classify(single_color_features, single_cvfh_features));
     }
-
-    // estimate poses (quaternions)
-
-
 
     res.clouds.labels = classifier_results;
     res.clouds.object_amount = all_clusters.size();
@@ -187,12 +184,11 @@ bool getPoses(vision_suturo_msgs::poses::Request &req, vision_suturo_msgs::poses
     // Get poses for the objects
     // Currently computes all centroids, but only takes the relevant one.
 
-    if(!all_clusters.empty()) { // If objects have been perceived
+    if (!all_clusters.empty()) { // If objects have been perceived
 
         geometry_msgs::PoseStamped pose = findPose(all_clusters[req.index], req.labels);
         res.object_pose = pose;
-    }
-    else{
+    } else {
         geometry_msgs::PoseStamped dummy_pose;
         res.object_pose = dummy_pose;
         ROS_WARN("Returned empty pose. Call 'vision_suturo/objects_information' first!");
