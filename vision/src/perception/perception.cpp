@@ -125,6 +125,11 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
     cloud_preprocessed = preprocessCloud(kinect);
     savePointCloudRGBNamed(cloud_preprocessed, "2_cloud_preprocessed");
 
+    // Delete everything that's not in a cluster with the table
+    std::vector<PointCloudRGBPtr> extracted_cloud_preprocessed;
+    extracted_cloud_preprocessed = euclideanClusterExtraction(cloud_preprocessed);
+    cloud_preprocessed = extracted_cloud_preprocessed[0];
+
     cloud_preprocessed = transform_cloud.extractAbovePlane(cloud_preprocessed);
     savePointCloudRGBNamed(cloud_preprocessed, "3_extracted_above_plane");
 
@@ -512,8 +517,8 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
     PointIndicesVector cluster_indices;
     pcl::EuclideanClusterExtraction<pcl::PointXYZRGB> ec;
     ec.setClusterTolerance(0.01);
-    ec.setMinClusterSize(200);
-    ec.setMaxClusterSize(25000);
+    ec.setMinClusterSize(100);
+    ec.setMaxClusterSize(100000);
     ec.setSearchMethod(tree);
     ec.setInputCloud(input);
     ROS_INFO("BEFORE EXTRACT");
