@@ -1,7 +1,5 @@
 #include "perception.h"
 
-int best_ia_index = 0;
-
 std::string mesh_array[] = {"cup_eco_orange.pcd",
                             "edeka_red_bowl.pcd",
                             "hela_curry_ketchup.pcd",
@@ -13,33 +11,11 @@ std::string mesh_array[] = {"cup_eco_orange.pcd",
                             "sigg_bottle.pcd",
                             "tomato_sauce_oro_di_parma.pcd"};
 
-enum mesh_enum {
-    CUP_ECO_ORANGE,
-    EDEKA_RED_BOWL,
-    HELA_CURRY_KETCHUP,
-    JA_MILCH,
-    KELLOGS_TOPPAS_MINI,
-    KOELLN_MUESLI_KNUSPER_HONIG_NUSS,
-    PRINGLES_PAPRIKA,
-    PRINGLES_SALT,
-    SIGG_BOTTLE,
-    TOMATO_SAUCE_ORO_DI_PARMA
-};
-
-Eigen::Matrix<float, 4, 4> rot_mat;
-
 PointCloudRGBPtr cloud_global(new PointCloudRGB),
         cloud_perceived(new PointCloudRGB),
         cloud_aligned(new PointCloudRGB),
-        cloud_mesh(new PointCloudRGB),
-        global_plane(new PointCloudRGB);
-PointCloudNormalPtr global_plane_normals;
-geometry_msgs::PoseStamped pose_global, pose_map_global;
-
-Eigen::Matrix4f global_first_transformation;
-Eigen::Vector4f global_centroid;
-float xyz_centroid[3];
-
+        cloud_mesh(new PointCloudRGB);
+geometry_msgs::PoseStamped pose_global;
 
 std::string error_message; // Used by the objects_information service
 tf::Matrix3x3 global_tf_rotation;
@@ -56,12 +32,9 @@ PointCloudRGBPtr preprocessCloud(PointCloudRGBPtr kinect) {
             cloud_prism(new PointCloudRGB),
             cloud_preprocessed(new PointCloudRGB);
     cloud_3df = apply3DFilter(kinect, 0.4, 0.4, 1.5);   // passthrough filter
-// std::cout << "after 3dfilter cluster is of size: " << cloud_3df->size() << std::endl;
     cloud_voxelgridf = voxelGridFilter(cloud_3df);      // voxel grid filter
-// std::cout << "after vgfilter cluster is of size: " << cloud_voxelgridf->size() << std::endl;
     cloud_mlsf = mlsFilter(cloud_voxelgridf);           // moving least square filter
-//std::cout << "after mlsfilter cluster is of size: " << cloud_mlsf->size() << std::endl;
-    cloud_preprocessed = cloud_mlsf; // cloud_f set after last filtering function is applied
+    cloud_preprocessed = cloud_mlsf;
     return cloud_preprocessed;
 }
 
@@ -78,22 +51,13 @@ PointCloudRGBPtr segmentPlanes(PointCloudRGBPtr cloud_cluster) {
     int c = 0;
     for (int n = 0; loop_segmentations; n++) {
         plane_indices = estimatePlaneIndices(cloud_cluster);
-        global_plane = cloud_cluster;
 
         if (plane_indices->indices.size() > plane_size_threshold)         // is the extracted plane big enough?
         {
 
-            if (c < 1) {
-                global_plane = extractCluster(global_plane, plane_indices, false);
-                c++;
-
-            }
-
             ROS_INFO("plane_indices: %lu", plane_indices->indices.size());
             ROS_INFO("cloud_cluster: %lu", cloud_cluster->points.size());
             cloud_cluster = extractCluster(cloud_cluster, plane_indices, true); // actually extract the object
-
-
 
             n++;
         } else loop_segmentations = false;          // if not big enough, stop looping.
@@ -141,12 +105,6 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
     ROS_INFO("Points after segmentation: %lu", cloud_cluster->points.size());
     cloud_global = cloud_cluster;
 
-    /*
-     * We currently don't need outlierRemoval here, because euclideanClusterExtraction
-     * already has a set minimum point value, which causes smaller clusters / amounts of outliers  to be extracted
-     * anyway.
-     */
-
     // Split cloud_final into one PointCloud per object
 
     result = euclideanClusterExtraction(cloud_cluster);
@@ -162,17 +120,13 @@ std::vector<PointCloudRGBPtr> findCluster(PointCloudRGBPtr kinect) {
         error_message = "";
     }
 
-
     for (int i = 0; i < result.size(); i++) {
         std::stringstream obj_files;
         obj_files << "object_" << i;
         savePointCloudRGBNamed(result[i], obj_files.str());
     }
 
-
-
     return result;
-
 }
 
 /**
@@ -225,7 +179,7 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     quat_msg.quaternion.w = quat_tf.w();
 
 
-    if (quat_tf.getAxis().z() > 0.0){
+    if (global_tf_rotation.getRow(2).z() > 0.0) {
         ROS_INFO("Wrong rotation! Flipping quaternion");
 
         quat_rot.setX(0.0);
@@ -244,7 +198,6 @@ geometry_msgs::PoseStamped findPose(const PointCloudRGBPtr input, std::string la
     ROS_INFO("Quaternion ready ");
     current_pose.pose.orientation = quat_msg.quaternion;
 
-    pose_map_global = map_pose;
     pose_global = current_pose;
 
     ROS_INFO("POSE ESTIMATION DONE");
@@ -445,22 +398,6 @@ PointCloudRGBPtr voxelGridFilter(PointCloudRGBPtr input) {
 }
 
 /**
- * Removes statistical outliers from a PointCloud.
- * @param input PointCloud
- * @return Filtered PointCloud
- */
-PointCloudRGBPtr outlierRemoval(PointCloudRGBPtr input) {
-    PointCloudRGBPtr cloud_filtered(new PointCloudRGB);
-    pcl::StatisticalOutlierRemoval<pcl::PointXYZRGB> sor;
-    sor.setInputCloud(input);
-    sor.setMeanK(50);
-    sor.setStddevMulThresh(2.0);
-    sor.filter(*cloud_filtered);
-
-    return cloud_filtered;
-}
-
-/**
  * Estimates features of an object in a PointCloud using VFHSignature308.
  * @param input PointCloud
  * @return VFHSignature308 Features
@@ -483,23 +420,12 @@ PointCloudVFHS308Ptr cvfhRecognition(PointCloudRGBPtr input) {
     cvfh.setInputCloud(input);
     cvfh.setInputNormals(normals);
     cvfh.setSearchMethod(kdtree);
-    // Set the maximum allowable deviation of the normals,
-    // for the region segmentation step.
     cvfh.setEPSAngleThreshold(5.0 / 180.0 * M_PI); // 5 degrees.
-    // Set the curvature threshold (maximum disparity between curvatures),
-    // for the region segmentation step.
     cvfh.setCurvatureThreshold(1.0);
-    // Set to true to normalize the bins of the resulting histogram,
-    // using the total number of points. Note: enabling it will make CVFH
-    // invariant to scale just like VFH, but the authors encourage the opposite.
     cvfh.setNormalizeBins(false);
     ROS_INFO("CVFH recognition parameters set. Computing now...");
     cvfh.compute(*descriptors);
     ROS_INFO("CVFH features computed successfully!");
-
-    //float x [308] = descriptors->points[0].histogram; // Save calculated histogram in a float array
-    //std::vector<float> result(x, x + sizeof x / sizeof x[0]);
-    //std::vector<float> result(std::begin(descriptors->points[0].histogram), std::end(descriptors->points[0].histogram)); // Array to vector
 
     return descriptors; // to vector
 }
@@ -551,75 +477,6 @@ std::vector<PointCloudRGBPtr> euclideanClusterExtraction(PointCloudRGBPtr input)
     return result;
 }
 
-/**
- * Calculating the alignment of an object to a certain target using sample consensus.
- * @param PointClouds objects
- * @param VFHSignature308 features
- * @param target PointCloud
- * @return Output PointCloud
- */
-PointCloudRGBPtr SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr target) {
-
-    PointCloudRGBPtr result(new PointCloudRGB);
-    PointCloudVFHS308Ptr input_feats(new pcl::PointCloud<pcl::VFHSignature308>), target_feats(
-            new pcl::PointCloud<pcl::VFHSignature308>);
-    input_feats = cvfhRecognition(input);
-    target_feats = cvfhRecognition(target);
-
-    std::cout << "size of input: " << input->points.size() << std::endl;
-    std::cout << "size of input features: " << input_feats->points.size() << std::endl;
-
-    pcl::SampleConsensusInitialAlignment<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> sac_ia;
-
-    sac_ia.setInputSource(input);
-    sac_ia.setSourceFeatures(input_feats);
-    sac_ia.setInputTarget(target);
-    sac_ia.setTargetFeatures(target_feats);
-    sac_ia.setMinSampleDistance(0.01);
-    sac_ia.setRANSACIterations(50000);
-    PointCloudRGB registration_output;
-    sac_ia.align(registration_output);
-
-    // get fitness score with max squared distance for correspondence
-    float fitness_score = (float) sac_ia.getFitnessScore(0.01f * 0.01f);
-    Eigen::Matrix4f transformation_matrix = sac_ia.getFinalTransformation();
-
-
-    // Print the rotation matrix and translation vector
-    Eigen::Matrix3f rotation = transformation_matrix.block<3, 3>(0, 0);
-    Eigen::Vector3f translation = transformation_matrix.block<3, 1>(0, 3);
-
-
-
-
-// possible to create Eigen::affine3f from translation and rotation
-    // then to tf::transform
-    // ROS is right handed rotation (usually) look for ros rotation convention
-    // khan academy
-    // tf::Transform::setBasis(Rotation Matrix)
-    // be careful with configuration of objects
-    // pcl::transformPointCloud(*input, registration_output, transformation_matrix);
-
-
-    //ROS_INFO("Estimate transformation");
-    // estimate rigid transformation from input (object cluster) to mesh (object mesh pcd)
-    tf::Matrix3x3 tf_rotation(transformation_matrix(0, 0),
-                              transformation_matrix(0, 1),
-                              transformation_matrix(0, 2),
-                              transformation_matrix(1, 0),
-                              transformation_matrix(1, 1),
-                              transformation_matrix(1, 2),
-                              transformation_matrix(2, 0),
-                              transformation_matrix(2, 1),
-                              transformation_matrix(2, 2));
-
-    global_tf_rotation = tf_rotation;
-
-    *result = registration_output;
-
-
-    return result;
-}
 
 /**
  * Calculates the alignment of an object to a certain target using iterative closest point algorithm.
@@ -645,7 +502,6 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
               icp.getFitnessScore() << std::endl;
     std::cout << icp.getFinalTransformation() << std::endl;
     Eigen::Matrix4f transformation = icp.getFinalTransformation();
-
     tf::Matrix3x3 tf_rotation(transformation(0, 0),
                               transformation(0, 1),
                               transformation(0, 2),
@@ -655,19 +511,6 @@ PointCloudRGBPtr iterativeClosestPoint(PointCloudRGBPtr input,
                               transformation(2, 0),
                               transformation(2, 1),
                               transformation(2, 2));
-
-//    tf::Matrix3x3 tf_rotation(transformation(0,0),
-//                              transformation(1,0),
-//                              transformation(2,0),
-//                              transformation(0,1),
-//                              transformation(1,1),
-//                              transformation(2,1),
-//                              transformation(0,2),
-//                              transformation(1,2),
-//                              transformation(2,2));
-    xyz_centroid[0] = transformation(0, 3);
-    xyz_centroid[1] = transformation(1, 3);
-    xyz_centroid[2] = transformation(2, 3);
 
 
     global_tf_rotation = tf_rotation;
@@ -784,26 +627,10 @@ std::vector<uint64_t> produceColorHist(PointCloudRGBPtr cloud) {
         result.push_back(blue[b]);
     }
 
-
     return result;
 
 }
 
-/**
- * Gets both CVFH and color features for all object clusters
- * @param PointClouds all_clusters
- */
-void getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters, std::vector<float> vfhs_vector,
-                    std::vector<uint64_t> color_features_vector) {
-
-
-    getCVFHFeatures(all_clusters);
-    ROS_INFO("Vision: CVFH filling completed");
-
-    // do the same for the color histogram
-    getColorFeatures(all_clusters);
-    ROS_INFO("Vision: Color Histogram filling completed");
-}
 
 /**
  * Gets the CVFH features from PointClouds.
@@ -823,9 +650,9 @@ std::vector<float> getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters) {
         for (int x = 0; x < 308; x++) {
             //ROS_INFO("%f", current_features[x]);
             result.push_back(vfhs->points[0].histogram[x]);
-
         }
     }
+
     return result;
 }
 
@@ -846,10 +673,9 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
         for (int x = 0; x < 24; x++) {
             //ROS_INFO("%f", current_color_features[x]);
             result.push_back(current_color_features[x]);
-
         }
-
     }
+
     return result;
 }
 
@@ -861,7 +687,6 @@ std::vector<uint64_t> getColorFeatures(std::vector<PointCloudRGBPtr> all_cluster
 PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid) {
     PointCloudRGBPtr result(new PointCloudRGB),
             mesh(new PointCloudRGB);
-
 
     if (label == "PringlesPaprika") {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/pringles.pcd", *mesh);
@@ -887,149 +712,5 @@ PointCloudRGBPtr getTargetByLabel(std::string label, Eigen::Vector4f centroid) {
         pcl::io::loadPCDFile("../../../src/vision_suturo_1718/vision/meshes/edeka_red_bowl.pcd", *mesh);
     }
 
-
     return mesh;
 }
-
-
-PointCloudRGBPtr rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr target) {
-
-
-    PointCloudRGBPtr result(new PointCloudRGB);
-    PointCloudVFHS308Ptr input_feats(new pcl::PointCloud<pcl::VFHSignature308>), target_feats(
-            new pcl::PointCloud<pcl::VFHSignature308>);
-    input_feats = cvfhRecognition(input);
-    target_feats = cvfhRecognition(target);
-    const float leaf = 0.005f;
-
-
-    // Perform alignment
-    pcl::console::print_highlight("Starting alignment...\n");
-    pcl::SampleConsensusPrerejective<pcl::PointXYZRGB, pcl::PointXYZRGB, pcl::VFHSignature308> align;
-    align.setInputSource(input);
-    align.setSourceFeatures(input_feats);
-    align.setInputTarget(target);
-    align.setTargetFeatures(target_feats);
-    align.setMaximumIterations(50000); // Number of RANSAC iterations
-    align.setNumberOfSamples(3); // Number of points to sample for generating/prerejecting a pose
-    align.setCorrespondenceRandomness(5); // Number of nearest features to use
-    align.setSimilarityThreshold(0.9f); // Polygonal edge length similarity threshold
-    align.setMaxCorrespondenceDistance(2.5f * leaf); // Inlier threshold
-    align.setInlierFraction(0.25f); // Required inlier fraction for accepting a pose hypothesis
-    {
-        pcl::ScopeTime t("Alignment");
-        align.align(*result);
-    }
-
-    if (align.hasConverged()) {
-        // Print results
-        printf("\n");
-        Eigen::Matrix4f transformation = align.getFinalTransformation();
-        pcl::console::print_info("    | %6.3f %6.3f %6.3f | \n", transformation(0, 0), transformation(0, 1),
-                                 transformation(0, 2));
-        pcl::console::print_info("R = | %6.3f %6.3f %6.3f | \n", transformation(1, 0), transformation(1, 1),
-                                 transformation(1, 2));
-        pcl::console::print_info("    | %6.3f %6.3f %6.3f | \n", transformation(2, 0), transformation(2, 1),
-                                 transformation(2, 2));
-        pcl::console::print_info("\n");
-        pcl::console::print_info("t = < %0.3f, %0.3f, %0.3f >\n", transformation(0, 3), transformation(1, 3),
-                                 transformation(2, 3));
-        pcl::console::print_info("\n");
-        pcl::console::print_info("Inliers: %i/%i\n", align.getInliers().size(), input->size());
-
-        global_first_transformation = transformation;
-        tf::Matrix3x3 tf_rotation(transformation(0, 0),
-                                  transformation(0, 1),
-                                  transformation(0, 2),
-                                  transformation(1, 0),
-                                  transformation(1, 1),
-                                  transformation(1, 2),
-                                  transformation(2, 0),
-                                  transformation(2, 1),
-                                  transformation(2, 2));
-
-        global_tf_rotation = tf_rotation;
-
-
-        return result;
-
-
-    } else {
-        pcl::console::print_error("Alignment failed!\n");
-        return result;
-    }
-}
-
-
-bool isObjectAlignedToPlane(PointCloudNormalPtr normal_plane, geometry_msgs::Quaternion quaternion) {
-    bool is_aligned;
-    float threshold = 0.2;
-    // prepare
-    pcl::Normal n;
-    pcl::Normal pre;
-
-    for (int i = 1; i < normal_plane->size(); i++) {
-        n = normal_plane->points[i];
-        pre = normal_plane->points[i - 1];
-
-        n.normal_x += pre.normal_x;
-        n.normal_y += pre.normal_y;
-        n.normal_z += pre.normal_z;
-
-    }
-
-    // normalize vector
-    n.normal_x = n.normal_x / normal_plane->points.size();
-    n.normal_y = n.normal_y / normal_plane->points.size();
-    n.normal_z = n.normal_z / normal_plane->points.size();
-
-    // compare
-
-    if (n.normal_z > quaternion.z + threshold || n.normal_z < quaternion.z - threshold) {
-        is_aligned = false;
-    } else {
-        is_aligned = true;
-
-    }
-
-
-    return is_aligned;
-
-}
-
-pcl::PointCloud<pcl::PointNormal>::Ptr
-createPointNormals(PointCloudRGBPtr cloud, pcl::PointCloud<pcl::Normal>::Ptr normals) {
-    pcl::PointCloud<pcl::PointNormal>::Ptr result(new pcl::PointCloud<pcl::PointNormal>);
-
-    if (cloud->size() != normals->size()) {
-        ROS_INFO("Cloud and normals differ in size!");
-    }
-    for (int i = 0; i < cloud->size(); i++) {
-        pcl::PointNormal pn;
-        pcl::PointXYZRGB p = cloud->points[i];
-        pcl::Normal n = normals->points[i];
-        ROS_INFO("Point instantiation OKAY");
-        pn.x = p.x;
-        pn.y = p.y;
-        pn.z = p.z;
-        pn.data[3] = 1.0f;
-        ROS_INFO("Point  OKAY");
-
-        pn.normal_x = n.normal_x;
-        pn.normal_y = n.normal_y;
-        pn.normal_z = n.normal_z;
-        pn.data_n[3] = 0.0f;
-        pn.curvature = n.curvature;
-        ROS_INFO("Normal OKAY");
-
-
-        result->push_back(pn);
-        ROS_INFO("declaration OKAY");
-
-    }
-
-    return result;
-}
-
-
-
