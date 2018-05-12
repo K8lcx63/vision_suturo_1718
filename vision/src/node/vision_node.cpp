@@ -79,9 +79,7 @@ void start_node(int argc, char **argv) {
     ros::Publisher pub_aligned_object = n.advertise<sensor_msgs::PointCloud2>("vision_suturo/aligned_object", 0);
 
     ros::Publisher pub_pose = n.advertise<geometry_msgs::PoseStamped>("vision_suturo/pose", 0);
-
-    ros::Publisher pub_pose_map = n.advertise<geometry_msgs::PoseStamped>("vision_suturo/pose_map", 0);
-
+    
 
     ros::Rate r(2.0);
 
@@ -122,7 +120,6 @@ void start_node(int argc, char **argv) {
         pub_aligned_object.publish(cloud_aligned_pub);
 
         pub_pose.publish(pose_global);
-        pub_pose_map.publish(pose_map_global);
 
 
         ros::spinOnce();

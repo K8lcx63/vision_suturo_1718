@@ -46,8 +46,6 @@ std::vector<PointCloudRGBPtr>           findCluster(const PointCloudRGBPtr kinec
 PointStamped                            findCenterGazebo();
 geometry_msgs::PoseStamped      findPose(const PointCloudRGBPtr input, std::string label);
 PointCloudNormalPtr             estimateSurfaceNormals(PointCloudRGBPtr input);
-PointCloudPointNormalPtr        createPointNormals(PointCloudRGBPtr input,
-                                                   PointCloudNormalPtr normals);
 PointIndices                    estimatePlaneIndices(PointCloudRGBPtr input);
 PointCloudRGBPtr                extractCluster(PointCloudRGBPtr input,
                                                PointIndices indices,
@@ -59,29 +57,19 @@ PointCloudRGBPtr                apply3DFilter(PointCloudRGBPtr input,
 PointCloudRGBPtr                mlsFilter(PointCloudRGBPtr input);
 std::vector<PointCloudRGBPtr>   euclideanClusterExtraction(PointCloudRGBPtr input);
 PointCloudRGBPtr                voxelGridFilter(PointCloudRGBPtr input);
-PointCloudRGBPtr                outlierRemoval(PointCloudRGBPtr input);
 PointCloudVFHS308Ptr            cvfhRecognition(PointCloudRGBPtr input);
-PointCloudRGBPtr                SACInitialAlignment(PointCloudRGBPtr input, PointCloudRGBPtr target);
 PointCloudRGBPtr                iterativeClosestPoint(PointCloudRGBPtr input, PointCloudRGBPtr target);
 std::vector<uint64_t>           produceColorHist(PointCloudRGBPtr cloud);
-void                            getAllFeatures(std::vector<PointCloudRGBPtr> all_clusters,
-                                               std::vector<float> vfhs_vector,
-                                               std::vector<uint64_t> color_features_vector);
-
 std::vector<float>              getCVFHFeatures(std::vector<PointCloudRGBPtr> all_clusters);
 std::vector<uint64_t>           getColorFeatures(std::vector<PointCloudRGBPtr> all_clusters);
 PointCloudRGBPtr                getTargetByLabel(std::string label, Eigen::Vector4f centroid);
-PointCloudRGBPtr                rigidPoseEstimation(PointCloudRGBPtr input, PointCloudRGBPtr target);
-bool                            isObjectAlignedToPlane(PointCloudNormalPtr normal_plane,
-                                                       geometry_msgs::Quaternion quaternion);
 
 extern PointCloudRGBPtr cloud_global;
 extern PointCloudRGBPtr cloud_perceived;
 extern PointCloudRGBPtr cloud_aligned;
 extern PointCloudRGBPtr cloud_mesh;
 
-extern geometry_msgs::PoseStamped pose_global, pose_map_global;
-extern tf::Matrix3x3 global_tf_rotation;
+extern geometry_msgs::PoseStamped pose_global;
 
 extern std::string error_message;
 
